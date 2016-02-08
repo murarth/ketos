@@ -188,7 +188,7 @@ fn print_instruction(scope: &Scope, lambda: &Lambda,
 fn fn_get_const(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
     match args[0] {
         Value::Lambda(ref l) => {
-            let n: usize = try!(FromValueRef::from_value_ref(&args[1]));
+            let n = try!(usize::from_value_ref(&args[1]));
 
             let v = try!(l.code.consts.get(n)
                 .ok_or(ExecError::OutOfBounds(n)));
