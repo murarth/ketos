@@ -1,0 +1,29 @@
+[package]
+name = "ketos"
+description = "Lisp-like scripting and extension language"
+
+documentation = "http://murarth.github.io/ketos/ketos/index.html"
+homepage = "https://github.com/murarth/ketos"
+repository = "https://github.com/murarth/ketos"
+
+keywords = [ "scripting", "extension", "functional", "language", "lisp" ]
+license = "MIT/Apache-2.0"
+readme = "README.md"
+
+version = "0.0.1"
+authors = ["Murarth <murarth@gmail.com>"]
+
+[[bin]]
+name = "ketos"
+path = "src/bin/repl.rs"
+
+[lib]
+name = "ketos"
+path = "src/ketos/lib.rs"
+
+[dependencies]
+byteorder = "0.4"
+getopts = "0.2"
+libc = "0.2"
+num = "0.1.28"
+rand = "0.3"

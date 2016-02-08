@@ -1,0 +1,720 @@
+//! Arbitrary precision integer and ratio types.
+
+use std::fmt;
+use std::mem::transmute;
+use std::ops;
+use std::str::FromStr;
+
+pub use num::bigint::Sign;
+
+use num::{self, BigInt, BigRational};
+use num::{FromPrimitive, ToPrimitive, Integer as NumInteger, Signed, Num, Zero, One};
+
+/// Arbitrary precision signed integer
+#[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
+pub struct Integer(BigInt);
+
+/// Arbitrary precision signed integer ratio
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub struct Ratio(BigRational);
+
+/// Error produced when failing to parse an `Integer` from `&str`.
+#[derive(Debug, PartialEq)]
+pub struct FromStrIntError(<BigInt as FromStr>::Err);
+
+/// Error produced when failing to parse a `Ratio` from `&str`.
+#[derive(Debug, PartialEq)]
+pub struct FromStrRatioError(<BigRational as FromStr>::Err);
+
+/// Error produced when failing to parse an `Integer` with radix from `&str`.
+#[derive(Debug, PartialEq)]
+pub struct FromStrRadixError(<BigInt as Num>::FromStrRadixErr);
+
+impl fmt::Display for FromStrIntError {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&self.0, f)
+    }
+}
+
+impl fmt::Display for FromStrRatioError {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&self.0, f)
+    }
+}
+
+impl fmt::Display for FromStrRadixError {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&self.0, f)
+    }
+}
+
+impl Integer {
+    /// Creates an `Integer` from a sign and a series of big-endian bytes.
+    #[inline]
+    pub fn from_bytes_be(sign: Sign, bytes: &[u8]) -> Integer {
+        Integer(BigInt::from_bytes_be(sign, bytes))
+    }
+
+    /// Creates an `Integer` from a sign and a series of little-endian bytes.
+    #[inline]
+    pub fn from_bytes_le(sign: Sign, bytes: &[u8]) -> Integer {
+        Integer(BigInt::from_bytes_le(sign, bytes))
+    }
+
+    /// Creates an `Integer` with the value of the given `f64`.
+    /// Returns `None` if the value cannot be converted.
+    #[inline]
+    pub fn from_f64(f: f64) -> Option<Integer> {
+        BigInt::from_f64(f).map(Integer)
+    }
+
+    /// Creates an `Integer` with the value of the given `i8`.
+    #[inline]
+    pub fn from_i8(i: i8) -> Integer {
+        Integer(BigInt::from_i8(i).unwrap())
+    }
+
+    /// Creates an `Integer` with the value of the given `i16`.
+    #[inline]
+    pub fn from_i16(i: i16) -> Integer {
+        Integer(BigInt::from_i16(i).unwrap())
+    }
+
+    /// Creates an `Integer` with the value of the given `i32`.
+    #[inline]
+    pub fn from_i32(i: i32) -> Integer {
+        Integer(BigInt::from_i32(i).unwrap())
+    }
+
+    /// Creates an `Integer` with the value of the given `i64`.
+    #[inline]
+    pub fn from_i64(i: i64) -> Integer {
+        Integer(BigInt::from_i64(i).unwrap())
+    }
+
+    /// Creates an `Integer` with the value of the given `isize`.
+    #[inline]
+    pub fn from_isize(i: isize) -> Integer {
+        Integer(BigInt::from_isize(i).unwrap())
+    }
+
+    /// Creates an `Integer` with the value of the given `u8`.
+    #[inline]
+    pub fn from_u8(i: u8) -> Integer {
+        Integer(BigInt::from_u8(i).unwrap())
+    }
+
+    /// Creates an `Integer` with the value of the given `u16`.
+    #[inline]
+    pub fn from_u16(i: u16) -> Integer {
+        Integer(BigInt::from_u16(i).unwrap())
+    }
+
+    /// Creates an `Integer` with the value of the given `u32`.
+    #[inline]
+    pub fn from_u32(i: u32) -> Integer {
+        Integer(BigInt::from_u32(i).unwrap())
+    }
+
+    /// Creates an `Integer` with the value of the given `u64`.
+    #[inline]
+    pub fn from_u64(i: u64) -> Integer {
+        Integer(BigInt::from_u64(i).unwrap())
+    }
+
+    /// Creates an `Integer` with the value of the given `usize`.
+    #[inline]
+    pub fn from_usize(u: usize) -> Integer {
+        Integer(BigInt::from_usize(u).unwrap())
+    }
+
+    /// Returns an `Integer` represented by a string in the given radix.
+    /// `radix` must be in the range `[2, 36]`.
+    #[inline]
+    pub fn from_str_radix(s: &str, radix: u32) -> Result<Integer, FromStrRadixError> {
+        BigInt::from_str_radix(s, radix)
+            .map(Integer).map_err(FromStrRadixError)
+    }
+
+    /// Returns integer sign and a series of big-endian bytes.
+    #[inline]
+    pub fn to_bytes_be(&self) -> (Sign, Vec<u8>) {
+        self.0.to_bytes_be()
+    }
+
+    /// Returns integer sign and a series of little-endian bytes.
+    #[inline]
+    pub fn to_bytes_le(&self) -> (Sign, Vec<u8>) {
+        self.0.to_bytes_le()
+    }
+
+    /// Returns a string representation of the `Integer` in the given radix.
+    /// `radix` must be in the range `[2, 36]`.
+    pub fn to_str_radix(&self, radix: u32) -> String {
+        self.0.to_str_radix(radix)
+    }
+
+    /// Returns the `Integer` as an `i8` value.
+    #[inline]
+    pub fn to_i8(&self) -> Option<i8> {
+        self.0.to_i8()
+    }
+
+    /// Returns the `Integer` as an `i16` value.
+    #[inline]
+    pub fn to_i16(&self) -> Option<i16> {
+        self.0.to_i16()
+    }
+
+    /// Returns the `Integer` as an `i32` value.
+    #[inline]
+    pub fn to_i32(&self) -> Option<i32> {
+        self.0.to_i32()
+    }
+
+    /// Returns the `Integer` as an `i64` value.
+    #[inline]
+    pub fn to_i64(&self) -> Option<i64> {
+        self.0.to_i64()
+    }
+
+    /// Returns the `Integer` as an `isize` value.
+    #[inline]
+    pub fn to_isize(&self) -> Option<isize> {
+        self.0.to_isize()
+    }
+
+    /// Returns the `Integer` as an `u8` value.
+    #[inline]
+    pub fn to_u8(&self) -> Option<u8> {
+        self.0.to_u8()
+    }
+
+    /// Returns the `Integer` as an `u16` value.
+    #[inline]
+    pub fn to_u16(&self) -> Option<u16> {
+        self.0.to_u16()
+    }
+
+    /// Returns the `Integer` as an `u32` value.
+    #[inline]
+    pub fn to_u32(&self) -> Option<u32> {
+        self.0.to_u32()
+    }
+
+    /// Returns the `Integer` as an `u64` value.
+    #[inline]
+    pub fn to_u64(&self) -> Option<u64> {
+        self.0.to_u64()
+    }
+
+    /// Returns the `Integer` as an `usize` value.
+    #[inline]
+    pub fn to_usize(&self) -> Option<usize> {
+        self.0.to_usize()
+    }
+
+    /// Returns the `Integer` as an `f32` value.
+    #[inline]
+    pub fn to_f32(&self) -> Option<f32> {
+        self.0.to_f32()
+    }
+
+    /// Returns the `Integer` as an `f64` value.
+    #[inline]
+    pub fn to_f64(&self) -> Option<f64> {
+        self.0.to_f64()
+    }
+
+    /// Raises the value to the power of `exp`.
+    #[inline]
+    pub fn pow(self, exp: usize) -> Integer {
+        Integer(num::pow(self.0, exp))
+    }
+
+    /// Returns the absolute value of an `Integer`.
+    #[inline]
+    pub fn abs(&self) -> Integer {
+        Integer(self.0.abs())
+    }
+
+    /// Returns whether `self` is a multiple of `rhs`.
+    #[inline]
+    pub fn is_multiple_of(&self, rhs: &Integer) -> bool {
+        self.0.is_multiple_of(&rhs.0)
+    }
+
+    /// Returns whether the `Integer` is less than zero.
+    #[inline]
+    pub fn is_negative(&self) -> bool {
+        self.0.is_negative()
+    }
+
+    /// Returns whether the `Integer` is greater than zero.
+    #[inline]
+    pub fn is_positive(&self) -> bool {
+        self.0.is_positive()
+    }
+
+    /// Returns whether the `Integer` is equal to zero.
+    #[inline]
+    pub fn is_zero(&self) -> bool {
+        self.0.is_zero()
+    }
+
+    /// Returns an `Integer` of the value zero.
+    #[inline]
+    pub fn zero() -> Integer {
+        Integer(BigInt::zero())
+    }
+
+    /// Returns whether the `Integer` is equal to one.
+    #[inline]
+    pub fn is_one(&self) -> bool {
+        self.to_u32() == Some(1)
+    }
+
+    /// Returns an `Integer` of the value one.
+    #[inline]
+    pub fn one() -> Integer {
+        Integer(BigInt::one())
+    }
+}
+
+impl Ratio {
+    /// Constructs a `Ratio` from numerator and denominator.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `denom` is zero.
+    #[inline]
+    pub fn new(numer: Integer, denom: Integer) -> Ratio {
+        Ratio(BigRational::new(numer.0, denom.0))
+    }
+
+    /// Creates a `Ratio` with the value of the given `f32`.
+    /// Returns `None` if the value cannot be converted.
+    #[inline]
+    pub fn from_f32(f: f32) -> Option<Ratio> {
+        BigRational::from_float(f).map(Ratio)
+    }
+
+    /// Creates a `Ratio` with the value of the given `f64`.
+    /// Returns `None` if the value cannot be converted.
+    #[inline]
+    pub fn from_f64(f: f64) -> Option<Ratio> {
+        BigRational::from_float(f).map(Ratio)
+    }
+
+    /// Creates a `Ratio` from an `Integer` value.
+    #[inline]
+    pub fn from_integer(i: Integer) -> Ratio {
+        Ratio(BigRational::from_integer(i.0))
+    }
+
+    /// Returns the `Ratio` as an `f32` value.
+    #[inline]
+    pub fn to_f32(&self) -> Option<f32> {
+        self.numer().to_f32().and_then(
+            |n| self.denom().to_f32().map(|d| n / d))
+    }
+
+    /// Returns the `Ratio` as an `f64` value.
+    #[inline]
+    pub fn to_f64(&self) -> Option<f64> {
+        self.numer().to_f64().and_then(
+            |n| self.denom().to_f64().map(|d| n / d))
+    }
+
+    /// Truncates a `Ratio` and returns the whole portion as an `Integer`.
+    #[inline]
+    pub fn to_integer(&self) -> Integer {
+        Integer(self.0.to_integer())
+    }
+
+    /// Returns whether the `Ratio` is an integer; i.e. its denominator is `1`.
+    #[inline]
+    pub fn is_integer(&self) -> bool {
+        self.denom().is_one()
+    }
+
+    /// Returns the absolute value of the `Ratio`.
+    #[inline]
+    pub fn abs(&self) -> Ratio {
+        Ratio(self.0.abs())
+    }
+
+    /// Returns the `Ratio` rounded towards positive infinity.
+    #[inline]
+    pub fn ceil(&self) -> Ratio {
+        Ratio(self.0.ceil())
+    }
+
+    /// Returns the `Ratio` rounded towards negative infinity.
+    #[inline]
+    pub fn floor(&self) -> Ratio {
+        Ratio(self.0.floor())
+    }
+
+    /// Returns the fractional portion of a `Ratio`.
+    #[inline]
+    pub fn fract(&self) -> Ratio {
+        Ratio(self.0.fract())
+    }
+
+    /// Returns the `Ratio` rounded to the nearest integer.
+    /// Rounds half-way cases away from zero.
+    #[inline]
+    pub fn round(&self) -> Ratio {
+        Ratio(self.0.round())
+    }
+
+    /// Returns the `Ratio` rounded towards zero.
+    #[inline]
+    pub fn trunc(&self) -> Ratio {
+        Ratio(self.0.trunc())
+    }
+
+    /// Returns the reciprocal of a `Ratio`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the numerator is zero.
+    #[inline]
+    pub fn recip(&self) -> Ratio {
+        Ratio(self.0.recip())
+    }
+
+    /// Returns the `Ratio`'s numerator.
+    #[inline]
+    pub fn numer(&self) -> &Integer {
+        unsafe { transmute(self.0.numer()) }
+    }
+
+    /// Returns the `Ratio`'s denominator.
+    #[inline]
+    pub fn denom(&self) -> &Integer {
+        unsafe { transmute(self.0.denom()) }
+    }
+
+    /// Returns whether the `Ratio` is equal to zero.
+    pub fn is_zero(&self) -> bool {
+        self.numer().is_zero()
+    }
+
+    /// Returns whether the `Ratio` is less than zero.
+    pub fn is_negative(&self) -> bool {
+        self.numer().is_negative()
+    }
+
+    /// Returns whether the `Ratio` is greater than zero.
+    pub fn is_positive(&self) -> bool {
+        self.numer().is_positive()
+    }
+
+    /// Returns a `Ratio` of value zero.
+    pub fn zero() -> Ratio {
+        Ratio(BigRational::zero())
+    }
+
+    /// Returns a `Ratio` of value one.
+    pub fn one() -> Ratio {
+        Ratio(BigRational::one())
+    }
+}
+
+impl PartialEq<Integer> for Ratio {
+    fn eq(&self, rhs: &Integer) -> bool {
+        self.denom().is_one() && self.numer() == rhs
+    }
+
+    fn ne(&self, rhs: &Integer) -> bool {
+        !self.denom().is_one() || self.numer() != rhs
+    }
+}
+
+impl PartialEq<Ratio> for Integer {
+    fn eq(&self, rhs: &Ratio) -> bool { rhs == self }
+    fn ne(&self, rhs: &Ratio) -> bool { rhs != self }
+}
+
+impl fmt::Display for Integer {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&self.0, f)
+    }
+}
+
+impl FromStr for Integer {
+    type Err = FromStrIntError;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Integer, FromStrIntError> {
+        s.parse().map(Integer).map_err(FromStrIntError)
+    }
+}
+
+impl ops::Shl<usize> for Integer {
+    type Output = Integer;
+
+    #[inline]
+    fn shl(self, rhs: usize) -> Integer {
+        Integer(self.0.shl(rhs))
+    }
+}
+
+impl<'a> ops::Shl<usize> for &'a Integer {
+    type Output = Integer;
+
+    #[inline]
+    fn shl(self, rhs: usize) -> Integer {
+        Integer(self.0.clone().shl(rhs))
+    }
+}
+
+impl ops::Shr<usize> for Integer {
+    type Output = Integer;
+
+    #[inline]
+    fn shr(self, rhs: usize) -> Integer {
+        Integer(self.0.shr(rhs))
+    }
+}
+
+impl<'a> ops::Shr<usize> for &'a Integer {
+    type Output = Integer;
+
+    #[inline]
+    fn shr(self, rhs: usize) -> Integer {
+        Integer(self.0.clone().shr(rhs))
+    }
+}
+
+macro_rules! impl_ops {
+    ( $ty:ident ) => {
+        impl ::std::ops::Add<$ty> for $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn add(self, rhs: $ty) -> $ty {
+                $ty(self.0.add(rhs.0))
+            }
+        }
+
+        impl<'a> ::std::ops::Add<&'a $ty> for $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn add(self, rhs: &$ty) -> $ty {
+                $ty(self.0.add(rhs.0.clone()))
+            }
+        }
+
+        impl<'a> ::std::ops::Add<$ty> for &'a $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn add(self, rhs: $ty) -> $ty {
+                $ty(self.0.clone().add(rhs.0))
+            }
+        }
+
+        impl<'a, 'b> ::std::ops::Add<&'a $ty> for &'b $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn add(self, rhs: &$ty) -> $ty {
+                $ty(self.0.clone().add(rhs.0.clone()))
+            }
+        }
+
+        impl ::std::ops::Sub<$ty> for $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn sub(self, rhs: $ty) -> $ty {
+                $ty(self.0.sub(rhs.0))
+            }
+        }
+
+        impl<'a> ::std::ops::Sub<&'a $ty> for $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn sub(self, rhs: &$ty) -> $ty {
+                $ty(self.0.sub(rhs.0.clone()))
+            }
+        }
+
+        impl<'a> ::std::ops::Sub<$ty> for &'a $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn sub(self, rhs: $ty) -> $ty {
+                $ty(self.0.clone().sub(rhs.0))
+            }
+        }
+
+        impl<'a, 'b> ::std::ops::Sub<&'a $ty> for &'b $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn sub(self, rhs: &$ty) -> $ty {
+                $ty(self.0.clone().sub(rhs.0.clone()))
+            }
+        }
+
+        impl ::std::ops::Mul<$ty> for $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn mul(self, rhs: $ty) -> $ty {
+                $ty(self.0.mul(rhs.0))
+            }
+        }
+
+        impl<'a> ::std::ops::Mul<&'a $ty> for $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn mul(self, rhs: &$ty) -> $ty {
+                $ty(self.0.mul(rhs.0.clone()))
+            }
+        }
+
+        impl<'a> ::std::ops::Mul<$ty> for &'a $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn mul(self, rhs: $ty) -> $ty {
+                $ty(self.0.clone().mul(rhs.0))
+            }
+        }
+
+        impl<'a, 'b> ::std::ops::Mul<&'a $ty> for &'b $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn mul(self, rhs: &$ty) -> $ty {
+                $ty(self.0.clone().mul(rhs.0.clone()))
+            }
+        }
+
+        impl ::std::ops::Div<$ty> for $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn div(self, rhs: $ty) -> $ty {
+                $ty(self.0.div(rhs.0))
+            }
+        }
+
+        impl<'a> ::std::ops::Div<&'a $ty> for $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn div(self, rhs: &$ty) -> $ty {
+                $ty(self.0.div(rhs.0.clone()))
+            }
+        }
+
+        impl<'a> ::std::ops::Div<$ty> for &'a $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn div(self, rhs: $ty) -> $ty {
+                $ty(self.0.clone().div(rhs.0))
+            }
+        }
+
+        impl<'a, 'b> ::std::ops::Div<&'a $ty> for &'b $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn div(self, rhs: &$ty) -> $ty {
+                $ty(self.0.clone().div(rhs.0.clone()))
+            }
+        }
+
+        impl ::std::ops::Rem<$ty> for $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn rem(self, rhs: $ty) -> $ty {
+                $ty(self.0.rem(rhs.0))
+            }
+        }
+
+        impl<'a> ::std::ops::Rem<&'a $ty> for $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn rem(self, rhs: &$ty) -> $ty {
+                $ty(self.0.rem(rhs.0.clone()))
+            }
+        }
+
+        impl<'a> ::std::ops::Rem<$ty> for &'a $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn rem(self, rhs: $ty) -> $ty {
+                $ty(self.0.clone().rem(rhs.0))
+            }
+        }
+
+        impl<'a, 'b> ::std::ops::Rem<&'a $ty> for &'b $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn rem(self, rhs: &$ty) -> $ty {
+                $ty(self.0.clone().rem(rhs.0.clone()))
+            }
+        }
+
+        impl ::std::ops::Neg for $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn neg(self) -> $ty {
+                $ty(self.0.neg())
+            }
+        }
+
+        impl<'a> ::std::ops::Neg for &'a $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn neg(self) -> $ty {
+                $ty(self.0.clone().neg())
+            }
+        }
+
+        impl ::num::Zero for $ty {
+            #[inline]
+            fn is_zero(&self) -> bool { self.0.is_zero() }
+            #[inline]
+            fn zero() -> $ty { $ty(Zero::zero()) }
+        }
+    }
+}
+
+impl_ops!{Integer}
+impl_ops!{Ratio}
+
+impl fmt::Display for Ratio {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&self.0, f)
+    }
+}
+
+impl FromStr for Ratio {
+    type Err = FromStrRatioError;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Ratio, FromStrRatioError> {
+        s.parse().map(Ratio).map_err(FromStrRatioError)
+    }
+}
