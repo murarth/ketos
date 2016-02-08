@@ -16,6 +16,7 @@ authors = ["Murarth <murarth@gmail.com>"]
 [[bin]]
 name = "ketos"
 path = "src/bin/repl.rs"
+doc = false
 
 [lib]
 name = "ketos"
