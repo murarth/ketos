@@ -1,6 +1,28 @@
-//! Ketos
+//! Ketos is a Lisp-like functional programming language, designed to be
+//! a scripting and extension language for Rust programs.
 //!
-//! Lisp dialect. Or maybe Lisp-inspired something-or-other.
+//! ```
+//! use ketos::{Interpreter, FromValueRef};
+//!
+//! // Create an interpreter.
+//! let interp = Interpreter::new();
+//!
+//! // Define a function.
+//! interp.run_code(r#"
+//!     (define (foo a)
+//!       (* a 2))
+//!     "#, None).unwrap();
+//!
+//! // Call the function.
+//! let result = interp.call("foo", vec![123.into()]).unwrap();
+//!
+//! // Get a Rust value back.
+//! let n = i32::from_value_ref(&result).unwrap();
+//!
+//! assert_eq!(n, 246);
+//! ```
+//!
+//! See `examples/` for more examples on interacting with the Ketos interpreter.
 
 #![deny(missing_docs)]
 
