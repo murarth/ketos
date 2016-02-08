@@ -5,7 +5,7 @@ use std::cmp::Ordering;
 use ketos::{ExecError, Error, ForeignValue, Interpreter, Scope, Value};
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd)]
-struct MyType {
+pub struct MyType {
     a: i32,
 }
 
