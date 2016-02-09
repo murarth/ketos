@@ -17,7 +17,7 @@ pub fn load(scope: Scope) -> Module {
         .finish()
 }
 
-/// `random` returns a random float value in the range `[0.0, 1.0]`.
+/// `random` returns a random float value in the range `[0.0, 1.0)`.
 fn fn_random(_scope: &Scope, _args: &mut [Value]) -> Result<Value, Error> {
     Ok(thread_rng().next_f64().into())
 }
