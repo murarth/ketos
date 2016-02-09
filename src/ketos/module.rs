@@ -138,6 +138,15 @@ pub trait ModuleLoader {
     /// Loads the named module.
     /// A new `Scope` should be created for the new module.
     fn load_module(&self, name: Name, scope: &Scope) -> Result<Module, Error>;
+
+    /// Creates a `ChainModuleLoader` using this loader and another.
+    fn chain<T>(self, second: T) -> ChainModuleLoader<Self, T>
+            where Self: Sized {
+        ChainModuleLoader{
+            first: self,
+            second: second,
+        }
+    }
 }
 
 /// Loads no modules.
@@ -146,6 +155,33 @@ pub struct NullModuleLoader;
 impl ModuleLoader for NullModuleLoader {
     fn load_module(&self, name: Name, _scope: &Scope) -> Result<Module, Error> {
         Err(From::from(CompileError::ModuleError(name)))
+    }
+}
+
+/// A chained module loader contains two `ModuleLoader` implementations.
+///
+/// It will attempt to load a module from the first loader and, if the loader
+/// fails to find a module, it will attempt to load the module from the second
+/// loader.
+///
+/// If the first module loader encounters an error while loading the desired
+/// module (e.g. a compile error in a file), the chain loader will return the
+/// error immediately, without attempting the second loader.
+pub struct ChainModuleLoader<A, B> {
+    first: A,
+    second: B,
+}
+
+impl<A, B> ModuleLoader for ChainModuleLoader<A, B>
+        where A: ModuleLoader, B: ModuleLoader {
+    fn load_module(&self, name: Name, scope: &Scope) -> Result<Module, Error> {
+        match self.first.load_module(name, scope) {
+            // Check that the names match so we know that this module lookup
+            // failed and not another contained module being imported.
+            Err(Error::CompileError(CompileError::ModuleError(mname)))
+                if mname == name => self.second.load_module(name, scope),
+            res => res
+        }
     }
 }
 
@@ -177,6 +213,8 @@ fn load_builtin_module(name: Name, scope: Scope) -> Result<Module, Error> {
 }
 
 /// Loads modules from a file.
+///
+/// If a module file is not found, it falls back to loading built-in modules.
 pub struct FileModuleLoader {
     /// Tracks import chains to prevent infinite recursion
     chain: RefCell<Vec<PathBuf>>,
@@ -363,4 +401,16 @@ fn check_exports(scope: &Scope, mod_name: Name) -> Result<(), CompileError> {
             Err(CompileError::MissingExport)
         }
     })
+}
+
+#[cfg(test)]
+mod test {
+    use super::{ModuleLoader, BuiltinModuleLoader, NullModuleLoader};
+
+    #[test]
+    fn test_chain_loader() {
+        let a = NullModuleLoader;
+        let b = BuiltinModuleLoader;
+        let _ = a.chain(b);
+    }
 }
