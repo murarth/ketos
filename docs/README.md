@@ -21,6 +21,22 @@ ketos=> (+ 1 2)
 3
 ```
 
+### Comments
+
+Line comments begin with a semicolon (`;`) and terminate at the end of a line.
+
+Block comments begin with `#|` and end with `|#`.
+These can be arbitrarily nested, unlike C block comments.
+
+It is generally preferred to use line comments to document code. Block comments
+should only be used when you want to "comment out" a chunk of code.
+
+```lisp
+; This is a comment!
+
+(foo) ; This comment draws attention to a line of code.
+```
+
 ### Functions
 
 System functions perform basic functions on standard values.
