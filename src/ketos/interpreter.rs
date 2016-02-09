@@ -3,7 +3,7 @@
 use std::cell::RefCell;
 use std::fs::File;
 use std::io::{stderr, Read, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use bytecode::Code;
@@ -51,6 +51,13 @@ impl Interpreter {
                 modules,
                 io)),
         }
+    }
+
+    /// Creates a new `Interpreter` that searches for module files in a given
+    /// series of directories.
+    pub fn with_search_paths(paths: Vec<PathBuf>) -> Interpreter {
+        Interpreter::with_loader(Box::new(
+            FileModuleLoader::with_search_paths(paths)))
     }
 
     /// Clears cached source from the contained `CodeMap`.

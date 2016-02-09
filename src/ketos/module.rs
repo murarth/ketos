@@ -218,6 +218,8 @@ fn load_builtin_module(name: Name, scope: Scope) -> Result<Module, Error> {
 pub struct FileModuleLoader {
     /// Tracks import chains to prevent infinite recursion
     chain: RefCell<Vec<PathBuf>>,
+    /// Directories to search for files
+    paths: Vec<PathBuf>,
 }
 
 /// File extension for `ketos` source files.
@@ -227,11 +229,24 @@ pub const FILE_EXTENSION: &'static str = "kts";
 pub const COMPILED_FILE_EXTENSION: &'static str = "ktsc";
 
 impl FileModuleLoader {
-    /// Creates a new `FileModuleLoader`.
+    /// Creates a new `FileModuleLoader` that will search the current
+    /// directory for modules.
     pub fn new() -> FileModuleLoader {
+        FileModuleLoader::with_search_paths(vec![PathBuf::new()])
+    }
+
+    /// Creates a new `FileModuleLoader` that will search the given series
+    /// of directories to load modules.
+    pub fn with_search_paths(paths: Vec<PathBuf>) -> FileModuleLoader {
         FileModuleLoader{
             chain: RefCell::new(Vec::new()),
+            paths: paths,
         }
+    }
+
+    /// Adds a directory to search for module files.
+    pub fn add_search_path(&mut self, path: PathBuf) {
+        self.paths.push(path);
     }
 
     fn guard_import<F, T>(&self, name: Name, path: &Path, f: F) -> Result<T, Error>
@@ -250,7 +265,7 @@ impl FileModuleLoader {
 
 impl ModuleLoader for FileModuleLoader {
     fn load_module(&self, name: Name, scope: &Scope) -> Result<Module, Error> {
-        let (src_path, code_path) = try!(scope.with_name(name, |name_str| {
+        let (src_fname, code_fname) = try!(scope.with_name(name, |name_str| {
             if name_str.chars().any(|c| c == '.' || c == '/' || c == '\\') {
                 Err(CompileError::InvalidModuleName(name))
             } else {
@@ -259,45 +274,61 @@ impl ModuleLoader for FileModuleLoader {
             }
         }));
 
+        for base in &self.paths {
+            let src_path = base.join(&src_fname);
+            let code_path = base.join(&code_fname);
+
+            match try!(find_module_file(&code_path, &src_path)) {
+                ModuleFileResult::UseCode => {
+                    let new_scope = GlobalScope::new_using(scope);
+
+                    return self.guard_import(name, &src_path, || {
+                        match read_bytecode_file(&code_path, &new_scope) {
+                            Ok(m) => {
+                                for &(name, ref code) in &m.macros {
+                                    let mac = Lambda::new(code.clone(), scope);
+                                    new_scope.add_macro(name, mac);
+                                }
+                                run_module_code(name, new_scope, m)
+                            }
+                            Err(Error::DecodeError(DecodeError::IncorrectVersion(_)))
+                                    if src_path.exists() => {
+                                load_module_from_file(new_scope, name, &src_path, &code_path)
+                            }
+                            Err(e) => Err(e)
+                        }
+                    });
+                }
+                ModuleFileResult::UseSource => {
+                    let new_scope = GlobalScope::new_using(scope);
+
+                    return self.guard_import(name, &src_path,
+                        || load_module_from_file(new_scope, name, &src_path, &code_path))
+                }
+                ModuleFileResult::NotFound => ()
+            }
+        }
+
         let new_scope = GlobalScope::new_using(scope);
 
-        let use_code = try!(use_code_file(&code_path, &src_path));
-
-        if use_code {
-            self.guard_import(name, &src_path, || {
-                match read_bytecode_file(&code_path, &new_scope) {
-                    Ok(m) => {
-                        for &(name, ref code) in &m.macros {
-                            let mac = Lambda::new(code.clone(), scope);
-                            new_scope.add_macro(name, mac);
-                        }
-                        run_module_code(name, new_scope, m)
-                    }
-                    Err(Error::DecodeError(DecodeError::IncorrectVersion(_)))
-                            if src_path.exists() => {
-                        load_module_from_file(new_scope, name, &src_path, &code_path)
-                    }
-                    Err(e) => Err(e)
-                }
-            })
-        } else if src_path.exists() {
-            self.guard_import(name, &src_path,
-                || load_module_from_file(new_scope, name, &src_path, &code_path))
-        } else {
-            load_builtin_module(name, new_scope)
-        }
+        load_builtin_module(name, new_scope)
     }
 }
 
-fn use_code_file(code_path: &Path, src_path: &Path) -> Result<bool, Error> {
-    if code_path.exists() {
-        if src_path.exists() {
-            is_younger(code_path, src_path)
-        } else {
-            Ok(true)
-        }
-    } else {
-        Ok(false)
+#[derive(Copy, Clone)]
+enum ModuleFileResult {
+    NotFound,
+    UseCode,
+    UseSource,
+}
+
+fn find_module_file(code_path: &Path, src_path: &Path) -> Result<ModuleFileResult, Error> {
+    match (code_path.exists(), src_path.exists()) {
+        (true, true) if try!(is_younger(code_path, src_path)) =>
+            Ok(ModuleFileResult::UseCode),
+        (_, true) => Ok(ModuleFileResult::UseSource),
+        (true, false) => Ok(ModuleFileResult::UseCode),
+        (false, false) => Ok(ModuleFileResult::NotFound)
     }
 }
 

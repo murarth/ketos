@@ -3,7 +3,7 @@ extern crate ketos;
 extern crate libc;
 
 use std::io::{stderr, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use getopts::{Options, ParsingStyle};
 use ketos::{Interpreter, Error, ParseErrorKind};
@@ -23,11 +23,12 @@ fn run() -> i32 {
     // Allow arguments that appear to be options to be passed to scripts
     opts.parsing_style(ParsingStyle::StopAtFirstFree);
 
-    opts.optopt ("e", "", "Evaluate one expression and exit", "EXPR");
-    opts.optflag("h", "help", "Print this help message and exit");
-    opts.optflag("i", "interactive", "Run interactively even with a file");
-    opts.optflag("", "no-rc", "Do not run ~/.ketosrc.kts on startup");
-    opts.optflag("V", "version", "Print version and exit");
+    opts.optopt  ("e", "", "Evaluate one expression and exit", "EXPR");
+    opts.optflag ("h", "help", "Print this help message and exit");
+    opts.optflag ("i", "interactive", "Run interactively even with a file");
+    opts.optmulti("I", "", "Add DIR to list of module search paths", "DIR");
+    opts.optflag ("", "no-rc", "Do not run ~/.ketosrc.kts on startup");
+    opts.optflag ("V", "version", "Print version and exit");
 
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
@@ -46,21 +47,17 @@ fn run() -> i32 {
         return 0;
     }
 
+    // Search current directory first
+    let mut paths = vec![PathBuf::new()];
+
+    for path in matches.opt_strs("I") {
+        paths.push(PathBuf::from(path));
+    }
+
+    let interp = Interpreter::with_search_paths(paths);
+
     let interactive = matches.opt_present("interactive") ||
         (matches.free.is_empty() && !matches.opt_present("e"));
-
-    let interp = Interpreter::new();
-
-    if !matches.opt_present("no-rc") {
-        if let Some(p) = std::env::home_dir() {
-            let rc = p.join(".ketosrc.kts");
-            if rc.is_file() {
-                if !run_file(&interp, &rc) && !interactive {
-                    return 1;
-                }
-            }
-        }
-    }
 
     if let Some(expr) = matches.opt_str("e") {
         if !run_expr(&interp, &expr) && !interactive {
@@ -74,6 +71,16 @@ fn run() -> i32 {
     }
 
     if interactive {
+        if !matches.opt_present("no-rc") {
+            if let Some(p) = std::env::home_dir() {
+                let rc = p.join(".ketosrc.kts");
+                if rc.is_file() {
+                    // Ignore error in interactive mode
+                    run_file(&interp, &rc);
+                }
+            }
+        }
+
         run_repl(&interp);
     }
 
