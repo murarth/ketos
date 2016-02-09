@@ -140,6 +140,15 @@ pub trait ModuleLoader {
     fn load_module(&self, name: Name, scope: &Scope) -> Result<Module, Error>;
 }
 
+/// Loads no modules.
+pub struct NullModuleLoader;
+
+impl ModuleLoader for NullModuleLoader {
+    fn load_module(&self, name: Name, _scope: &Scope) -> Result<Module, Error> {
+        Err(From::from(CompileError::ModuleError(name)))
+    }
+}
+
 /// Loads builtin modules.
 pub struct BuiltinModuleLoader;
 
