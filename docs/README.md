@@ -21,6 +21,10 @@ ketos=> (+ 1 2)
 3
 ```
 
+### Comments
+
+Every line starting with a `;` is considered to be a comment.
+
 ### Functions
 
 System functions perform basic functions on standard values.
