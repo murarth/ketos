@@ -4,7 +4,7 @@
 
 use std::cmp::Ordering;
 
-use ketos::{ExecError, Error, ForeignValue, Interpreter, Scope, Value};
+use ketos::{Context, ExecError, Error, ForeignValue, Interpreter, Value};
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct MyType {
@@ -46,7 +46,7 @@ fn eval(interp: &Interpreter, input: &str) -> Result<String, Error> {
 fn test_foreign_value() {
     let interp = Interpreter::new();
 
-    interp.get_scope().add_named_value(
+    interp.scope().add_named_value(
         "my-value", Value::new_foreign(MyType{a: 123}));
 
     assert_eq!(eval(&interp, "my-value").unwrap(), "MyType { a: 123 }");
@@ -54,7 +54,7 @@ fn test_foreign_value() {
     assert_eq!(eval(&interp, "(is 'my-type my-value)").unwrap(), "true");
 }
 
-fn reflect_args(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn reflect_args(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     Ok(args.into())
 }
 
@@ -62,12 +62,12 @@ fn reflect_args(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 fn test_raw_foreign_fn() {
     let interp = Interpreter::new();
 
-    interp.get_scope().add_value_with_name("reflect-args",
+    interp.scope().add_value_with_name("reflect-args",
         |name| Value::new_foreign_fn(name, reflect_args));
 
     assert_eq!(eval(&interp, "(reflect-args 1 2 3)").unwrap(), "(1 2 3)");
 
-    interp.get_scope().add_value_with_name("closure-args",
+    interp.scope().add_value_with_name("closure-args",
         |name| Value::new_foreign_fn(name, |_scope, args| Ok(args.into())));
 
     assert_eq!(eval(&interp, "(closure-args 3 2 1)").unwrap(), "(3 2 1)");
@@ -92,7 +92,7 @@ fn hello(s: &str) -> Result<String, Error> {
 #[test]
 fn test_foreign_fn() {
     let interp = Interpreter::new();
-    let scope = interp.get_scope();
+    let scope = interp.scope();
 
     ketos_fn!{ scope => "new-my-type" => fn new_my_type(a: i32) -> MyType }
     ketos_fn!{ scope => "get-value" => fn get_value(a: &MyType) -> i32 }

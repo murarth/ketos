@@ -12,13 +12,14 @@ use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
 
 use bytecode::{BYTECODE_VERSION, Code};
 use error::Error;
+use exec::Context;
 use function::Lambda;
 use integer::{Integer, Ratio, Sign};
 use io::{IoError, IoMode};
 use module::ModuleCode;
 use name::{Name, NameMap, NameSet, NameStore,
     NameInputConversion, NameOutputConversion};
-use scope::{ImportSet, Scope};
+use scope::ImportSet;
 use value::{StructDef, Value};
 
 /// First four bytes written to a compiled bytecode file.
@@ -100,15 +101,15 @@ impl fmt::Display for EncodeError {
 }
 
 /// Read compiled bytecode from a file
-pub fn read_bytecode_file(path: &Path, scope: &Scope) -> Result<ModuleCode, Error> {
+pub fn read_bytecode_file(path: &Path, ctx: &Context) -> Result<ModuleCode, Error> {
     let mut f = try!(File::open(path)
         .map_err(|e| IoError::new(IoMode::Open, path, e)));
-    read_bytecode(&mut f, path, scope)
+    read_bytecode(&mut f, path, ctx)
 }
 
 /// Read compiled bytecode
-pub fn read_bytecode<R: Read>(r: &mut R, path: &Path,
-        scope: &Scope) -> Result<ModuleCode, Error> {
+pub fn read_bytecode<R: Read>(r: &mut R, path: &Path, ctx: &Context)
+        -> Result<ModuleCode, Error> {
     let mut buf = [0; 4];
 
     try!(r.read_exact(&mut buf)
@@ -123,13 +124,13 @@ pub fn read_bytecode<R: Read>(r: &mut R, path: &Path,
     try!(r.read_to_end(&mut buf)
         .map_err(|e| IoError::new(IoMode::Read, path, e)));
 
-    let mut dec = ValueDecoder::new(scope, &buf);
+    let mut dec = ValueDecoder::new(ctx, &buf);
 
     let n_names = try!(dec.read_uint());
     let mut names = NameInputConversion::new();
 
     {
-        let mut name_store = scope.get_names().borrow_mut();
+        let mut name_store = ctx.scope().get_names().borrow_mut();
 
         for _ in 0..n_names {
             let s = try!(dec.read_string());
@@ -322,17 +323,17 @@ fn check_version(num: &[u8; 4]) -> Result<(), DecodeError> {
 /// Reads values from a byte stream
 struct ValueDecoder<'a, 'data> {
     data: Cursor<&'data [u8]>,
-    scope: &'a Scope,
+    ctx: &'a Context,
 }
 
 impl<'a, 'data> ValueDecoder<'a, 'data> {
     /// Creates a new `ValueDecoder` reading from the given byte stream.
-    /// `scope` is the module-level scope that will be passed to newly created
-    /// `Lambda` objects.
-    fn new(scope: &'a Scope, data: &'data [u8]) -> ValueDecoder<'a, 'data> {
+    /// `ctx` is the execution context whose module-level scope
+    /// will be passed to newly created `Lambda` objects.
+    fn new(ctx: &'a Context, data: &'data [u8]) -> ValueDecoder<'a, 'data> {
         ValueDecoder{
             data: Cursor::new(data),
-            scope: scope,
+            ctx: ctx,
         }
     }
 
@@ -445,7 +446,7 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
             }
             LAMBDA => {
                 let code = try!(self.read_code(names));
-                Ok(Value::Lambda(Lambda::new(Rc::new(code), &self.scope)))
+                Ok(Value::Lambda(Lambda::new(Rc::new(code), self.ctx.scope())))
             }
             _ => Err(DecodeError::InvalidType(ty))
         }

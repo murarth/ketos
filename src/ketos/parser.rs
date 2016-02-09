@@ -6,9 +6,12 @@ use std::fmt;
 
 use num::Num;
 
+use error::Error;
+use exec::Context;
 use integer::{Integer, Ratio};
 use lexer::{Lexer, Span, Token};
 use name::{get_standard_name_for, standard_names, Name, NameDisplay, NameStore};
+use restrict::RestrictError;
 use string;
 use value::Value;
 
@@ -17,7 +20,7 @@ const MODULE_DOC_COMMENT: &'static str = ";;;";
 /// Parses a stream of tokens into an expression.
 pub struct Parser<'a, 'lex> {
     lexer: Lexer<'lex>,
-    names: &'a mut NameStore,
+    ctx: &'a Context,
     name_cache: HashMap<&'lex str, Name>,
     cur_token: Option<(Span, Token<'lex>)>,
 }
@@ -137,12 +140,11 @@ enum Group<'lex> {
 
 impl<'a, 'lex> Parser<'a, 'lex> {
     /// Creates a new `Parser` using the given `Lexer`.
-    /// Identifiers received from the lexer will be inserted into the given
-    /// `NameStore`.
-    pub fn new(names: &'a mut NameStore, lexer: Lexer<'lex>) -> Parser<'a, 'lex> {
+    /// Identifiers received from the lexer will be inserted into the given context.
+    pub fn new(ctx: &'a Context, lexer: Lexer<'lex>) -> Parser<'a, 'lex> {
         Parser{
             lexer: lexer,
-            names: names,
+            ctx: ctx,
             name_cache: HashMap::new(),
             cur_token: None,
         }
@@ -154,19 +156,23 @@ impl<'a, 'lex> Parser<'a, 'lex> {
     }
 
     /// Parses an expression from the input stream.
-    pub fn parse_expr(&mut self) -> Result<Value, ParseError> {
+    pub fn parse_expr(&mut self) -> Result<Value, Error> {
         let mut stack = Vec::new();
         let mut total_backticks = 0;
 
         loop {
+            if stack.len() >= self.ctx.restrict().max_syntax_nesting {
+                return Err(From::from(RestrictError::MaxSyntaxNestingExceeded));
+            }
+
             let mut doc = try!(self.read_doc_comment());
 
             let (sp, tok) = try!(self.next());
 
             let r = match tok {
                 Token::DocComment(_) =>
-                    return Err(ParseError::new(doc.unwrap().0,
-                        ParseErrorKind::CannotDocumentItem)),
+                    return Err(From::from(ParseError::new(
+                        doc.unwrap().0, ParseErrorKind::CannotDocumentItem))),
                 Token::LeftParen => {
                     if let Some((doc_sp, _)) = doc {
                         match try!(self.peek()) {
@@ -176,8 +182,8 @@ impl<'a, 'lex> Parser<'a, 'lex> {
                             (_, Token::Name("macro")) |
                             (_, Token::Name("struct"))
                                 => (),
-                            _ => return Err(ParseError::new(doc_sp,
-                                ParseErrorKind::CannotDocumentItem))
+                            _ => return Err(From::from(ParseError::new(
+                                doc_sp, ParseErrorKind::CannotDocumentItem)))
                         }
                     }
 
@@ -190,27 +196,26 @@ impl<'a, 'lex> Parser<'a, 'lex> {
 
                     match group {
                         Group::Parens(values, doc) =>
-                            insert_doc_comment(values, doc),
-                        _ => Err(ParseError::new(sp,
+                            insert_doc_comment(values, doc)
+                                .map_err(From::from),
+                        _ => Err(From::from(ParseError::new(sp,
                             ParseErrorKind::UnexpectedToken{
                                 expected: "expression",
                                 found: ")",
-                            }))
+                            })))
                     }
                 }
                 Token::Float(f) => parse_float(f)
                     .map(Value::Float)
-                    .map_err(|kind| ParseError::new(sp, kind)),
-                Token::Integer(i, base) => parse_integer(i, base)
-                    .map(Value::Integer)
-                    .map_err(|kind| ParseError::new(sp, kind)),
-                Token::Ratio(r) => parse_ratio(r)
-                    .map(Value::Ratio)
-                    .map_err(|_| ParseError::new(sp, ParseErrorKind::LiteralParseError)),
+                    .map_err(|kind| From::from(ParseError::new(sp, kind))),
+                Token::Integer(i, base) => parse_integer(self.ctx, i, base, sp)
+                    .map(Value::Integer),
+                Token::Ratio(r) => parse_ratio(self.ctx, r, sp)
+                    .map(Value::Ratio),
                 Token::Char(ch) => parse_char(ch)
-                    .map(Value::Char),
+                    .map(Value::Char).map_err(From::from),
                 Token::String(s) => parse_string(s)
-                    .map(Value::String),
+                    .map(Value::String).map_err(From::from),
                 Token::Name(name) => Ok(self.name_value(name)),
                 Token::Keyword(name) => Ok(Value::Keyword(self.add_name(name))),
                 Token::BackQuote => {
@@ -224,7 +229,7 @@ impl<'a, 'lex> Parser<'a, 'lex> {
                 }
                 Token::Comma => {
                     if total_backticks <= 0 {
-                        return Err(ParseError::new(sp, ParseErrorKind::UnbalancedComma));
+                        return Err(From::from(ParseError::new(sp, ParseErrorKind::UnbalancedComma)));
                     }
                     total_backticks -= 1;
                     if let Some(&mut Group::Backticks(ref mut n)) = stack.last_mut() {
@@ -236,7 +241,7 @@ impl<'a, 'lex> Parser<'a, 'lex> {
                 }
                 Token::CommaAt => {
                     if total_backticks <= 0 {
-                        return Err(ParseError::new(sp, ParseErrorKind::UnbalancedComma));
+                        return Err(From::from(ParseError::new(sp, ParseErrorKind::UnbalancedComma)));
                     }
                     total_backticks -= 1;
                     stack.push(Group::CommaAt);
@@ -252,8 +257,8 @@ impl<'a, 'lex> Parser<'a, 'lex> {
                 }
                 Token::End => {
                     if let Some((doc_sp, _)) = doc {
-                        return Err(ParseError::new(doc_sp,
-                            ParseErrorKind::DocCommentEof));
+                        return Err(From::from(ParseError::new(doc_sp,
+                            ParseErrorKind::DocCommentEof)));
                     }
 
                     let any_paren = stack.iter().any(|group| {
@@ -264,18 +269,18 @@ impl<'a, 'lex> Parser<'a, 'lex> {
                     });
 
                     if any_paren {
-                        Err(ParseError::new(sp,
-                            ParseErrorKind::MissingCloseParen))
+                        Err(From::from(ParseError::new(sp,
+                            ParseErrorKind::MissingCloseParen)))
                     } else {
-                        Err(ParseError::new(sp,
-                            ParseErrorKind::UnexpectedEof))
+                        Err(From::from(ParseError::new(sp,
+                            ParseErrorKind::UnexpectedEof)))
                     }
                 }
             };
 
             if let Some((doc_sp, _)) = doc {
-                return Err(ParseError::new(doc_sp,
-                    ParseErrorKind::CannotDocumentItem));
+                return Err(From::from(ParseError::new(doc_sp,
+                    ParseErrorKind::CannotDocumentItem)));
             }
 
             let mut v = try!(r);
@@ -316,20 +321,20 @@ impl<'a, 'lex> Parser<'a, 'lex> {
 
     /// Parses a single expression from the input stream.
     /// If any tokens remain after the expression, an error is returned.
-    pub fn parse_single_expr(&mut self) -> Result<Value, ParseError> {
+    pub fn parse_single_expr(&mut self) -> Result<Value, Error> {
         let expr = try!(self.parse_expr());
 
         match try!(self.next()) {
             (_, Token::End) => Ok(expr),
-            (sp, tok) => Err(ParseError::new(sp, ParseErrorKind::UnexpectedToken{
+            (sp, tok) => Err(From::from(ParseError::new(sp, ParseErrorKind::UnexpectedToken{
                 expected: "eof",
                 found: tok.name(),
-            }))
+            })))
         }
     }
 
     /// Parse a series of expressions from the input stream.
-    pub fn parse_exprs(&mut self) -> Result<Vec<Value>, ParseError> {
+    pub fn parse_exprs(&mut self) -> Result<Vec<Value>, Error> {
         let mut res = Vec::new();
 
         if let Some((_, doc)) = try!(self.read_module_doc_comment()) {
@@ -376,7 +381,7 @@ impl<'a, 'lex> Parser<'a, 'lex> {
     }
 
     fn add_name(&mut self, name: &'lex str) -> Name {
-        let names = &mut *self.names;
+        let mut names = self.ctx.scope().borrow_names_mut();
         *self.name_cache.entry(name).or_insert_with(
             || get_standard_name_for(name).unwrap_or_else(|| names.add(name)))
     }
@@ -466,19 +471,52 @@ fn parse_float(s: &str) -> Result<f64, ParseErrorKind> {
         .map_err(|_| ParseErrorKind::LiteralParseError)
 }
 
-fn parse_integer(s: &str, base: u32) -> Result<Integer, ParseErrorKind> {
+fn parse_integer(ctx: &Context, s: &str, base: u32, sp: Span)
+        -> Result<Integer, Error> {
     let s = match base {
         10 => s,
         _ => &s[2..]
     };
 
-    Integer::from_str_radix(&strip_underscores(s), base)
-        .map_err(|_| ParseErrorKind::LiteralParseError)
+    let s = strip_underscores(s);
+
+    try!(check_integer(ctx, &s, base));
+
+    Integer::from_str_radix(&s, base)
+        .map_err(|_| From::from(ParseError::new(sp,
+            ParseErrorKind::LiteralParseError)))
 }
 
-fn parse_ratio(s: &str) -> Result<Ratio, ParseErrorKind> {
-    strip_underscores(s).parse()
-        .map_err(|_| ParseErrorKind::LiteralParseError)
+fn parse_ratio(ctx: &Context, s: &str, sp: Span) -> Result<Ratio, Error> {
+    let s = strip_underscores(s);
+
+    try!(check_integer(ctx, &s, 10));
+
+    s.parse().map_err(|_| From::from(ParseError::new(sp,
+        ParseErrorKind::LiteralParseError)))
+}
+
+fn check_integer(ctx: &Context, mut s: &str, base: u32) -> Result<(), RestrictError> {
+    let limit = ctx.restrict().max_integer_size;
+
+    if limit == usize::max_value() {
+        return Ok(());
+    }
+
+    if s.starts_with('-') {
+        s = &s[1..].trim_left_matches('0');
+    } else {
+        s = s.trim_left_matches('0');
+    }
+
+    // Approximate the number of bits that could be represented by a number of bytes.
+    let n_bits = (s.len() as f32 * (base as f32).log2()).ceil() as usize;
+
+    if n_bits > limit {
+        Err(RestrictError::IntegerLimitExceeded)
+    } else {
+        Ok(())
+    }
 }
 
 fn strip_underscores(s: &str) -> Cow<str> {
@@ -491,15 +529,27 @@ fn strip_underscores(s: &str) -> Cow<str> {
 
 #[cfg(test)]
 mod test {
+    use std::rc::Rc;
+
     use super::{ParseError, ParseErrorKind, Parser};
+    use error::Error;
+    use exec::Context;
     use lexer::{Span, Lexer};
-    use name::NameStore;
+    use restrict::RestrictConfig;
+    use scope::GlobalScope;
     use value::Value;
 
     fn parse(s: &str) -> Result<Value, ParseError> {
-        let mut names = NameStore::new();
-        let mut p = Parser::new(&mut names, Lexer::new(s, 0));
-        p.parse_single_expr()
+        let scope = Rc::new(GlobalScope::default("main"));
+        let ctx = Context::new(scope, RestrictConfig::permissive());
+
+        let mut p = Parser::new(&ctx, Lexer::new(s, 0));
+        p.parse_single_expr().map_err(|e| {
+            match e {
+                Error::ParseError(e) => e,
+                _ => panic!("parse returned error: {:?}", e)
+            }
+        })
     }
 
     #[test]

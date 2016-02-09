@@ -7,12 +7,11 @@ use std::mem::{replace, transmute};
 use std::rc::Rc;
 
 use error::Error;
-use exec::ExecError;
+use exec::{Context, ExecError};
 use function::{Function, Lambda};
 use integer::{Integer, Ratio};
 use name::{Name, NameDebug, NameDisplay, NameMapSlice, NameStore};
 use rc_vec::RcVec;
-use scope::Scope;
 
 /// Represents a value.
 #[derive(Clone, Debug)]
@@ -69,7 +68,7 @@ impl Value {
 
     /// Returns a value containing a foreign function.
     pub fn new_foreign_fn<F>(name: Name, f: F) -> Value
-            where F: Any + Fn(&Scope, &mut [Value]) -> Result<Value, Error> {
+            where F: Any + Fn(&Context, &mut [Value]) -> Result<Value, Error> {
         Value::new_foreign(ForeignFn{
             name: name,
             f: f,
@@ -277,6 +276,35 @@ impl Value {
         }
     }
 
+    #[doc(hidden)]
+    // Estimates the size of memory held by the value.
+    // Used in applying restrictions to code execution.
+    pub fn size(&self) -> usize {
+        match *self {
+            Value::Integer(ref i) => 1 + i.bits() / 8,
+            Value::Ratio(ref r) => {
+                let numer = r.numer().bits();
+                let denom = r.denom().bits();
+                1 + numer + denom
+            }
+            Value::Struct(ref s) =>
+                1 + s.fields.iter().map(|&(_, ref f)| f.size()).fold(0, |a, b| a + b),
+            Value::StructDef(ref d) => 1 + d.fields.len(),
+            Value::String(ref s) => 1 + s.len(),
+            Value::Comma(ref v, _) |
+            Value::CommaAt(ref v, _) |
+            Value::Quasiquote(ref v, _) |
+            Value::Quote(ref v, _) => 1 + v.size(),
+            Value::List(ref li) =>
+                1 + li.iter().map(|v| v.size()).fold(0, |a, b| a + b),
+            Value::Lambda(ref l) =>
+                1 + l.values.as_ref().map_or(0,
+                    |v| v.iter().map(|v| v.size()).fold(0, |a, b| a + b)),
+            Value::Foreign(ref v) => v.size(),
+            _ => 1
+        }
+    }
+
     /// Returns the value, comma'd.
     pub fn comma(self, n: u32) -> Value {
         match self {
@@ -424,7 +452,7 @@ pub trait ForeignValue: AnyValue + fmt::Debug {
     /// Calls the value as a function.
     ///
     /// The default implementation unconditionally returns an error.
-    fn call_value(&self, _scope: &Scope, _args: &mut [Value])
+    fn call_value(&self, _ctx: &Context, _args: &mut [Value])
             -> Result<Value, Error> {
         Err(From::from(ExecError::TypeError{
             expected: "function",
@@ -432,6 +460,12 @@ pub trait ForeignValue: AnyValue + fmt::Debug {
             value: None,
         }))
     }
+
+    /// Returns an estimate of the memory held by this value.
+    ///
+    /// The result will be used in applying memory restrictions to executing code.
+    /// The result **MUST NOT** change for the lifetime of the value.
+    fn size(&self) -> usize { 2 }
 }
 
 impl ForeignValue {
@@ -479,7 +513,7 @@ impl<F> fmt::Debug for ForeignFn<F> {
 }
 
 impl<F> ForeignValue for ForeignFn<F>
-        where F: Any + Fn(&Scope, &mut [Value]) -> Result<Value, Error> {
+        where F: Any + Fn(&Context, &mut [Value]) -> Result<Value, Error> {
     fn compare_to(&self, _rhs: &ForeignValue) -> Result<Ordering, ExecError> {
         Err(ExecError::CannotCompare("foreign-fn"))
     }
@@ -504,8 +538,8 @@ impl<F> ForeignValue for ForeignFn<F>
 
     fn type_name(&self) -> &'static str { "foreign-fn" }
 
-    fn call_value(&self, scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
-        (self.f)(scope, args)
+    fn call_value(&self, ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
+        (self.f)(ctx, args)
     }
 }
 

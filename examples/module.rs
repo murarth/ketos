@@ -4,6 +4,7 @@
 
 use ketos::{
     CompileError,
+    Context,
     Error,
     Interpreter,
     BuiltinModuleLoader, Module, ModuleLoader,
@@ -34,21 +35,21 @@ fn main() {
 struct CustomModuleLoader;
 
 impl ModuleLoader for CustomModuleLoader {
-    fn load_module(&self, name: Name, scope: Scope) -> Result<Module, Error> {
-        let load_custom = scope.with_name(name, |name| name == "custom");
+    fn load_module(&self, name: Name, ctx: Context) -> Result<Module, Error> {
+        let load_custom = ctx.scope().with_name(name, |name| name == "custom");
 
         if load_custom {
-            Ok(load_mod(scope))
+            Ok(load_mod(ctx.scope()))
         } else {
             Err(From::from(CompileError::ModuleError(name)))
         }
     }
 }
 
-fn load_mod(scope: Scope) -> Module {
+fn load_mod(scope: &Scope) -> Module {
     ketos_fn!{ scope => "hello" => fn hello(what: &str) -> String }
 
-    Module::new("custom", scope)
+    Module::new("custom", scope.clone())
 }
 
 fn hello(what: &str) -> Result<String, Error> {

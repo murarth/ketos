@@ -3,7 +3,7 @@
 use rand::{thread_rng, Rng};
 
 use error::Error;
-use exec::ExecError;
+use exec::{Context, ExecError};
 use function::Arity::Exact;
 use module::{Module, ModuleBuilder};
 use scope::Scope;
@@ -18,12 +18,12 @@ pub fn load(scope: Scope) -> Module {
 }
 
 /// `random` returns a random float value in the range `[0.0, 1.0)`.
-fn fn_random(_scope: &Scope, _args: &mut [Value]) -> Result<Value, Error> {
+fn fn_random(_ctx: &Context, _args: &mut [Value]) -> Result<Value, Error> {
     Ok(thread_rng().next_f64().into())
 }
 
 /// `shuffle` shuffles the values of a list.
-fn fn_shuffle(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_shuffle(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let mut v = args[0].take();
 
     match v {

@@ -138,7 +138,7 @@ fn read_line(interp: &Interpreter, prompt: Prompt) -> Option<String> {
         Prompt::DocComment => "ketos;> ",
     };
 
-    readline::read_line(prompt, interp.get_scope())
+    readline::read_line(prompt, interp.scope())
 }
 
 fn run_repl(interp: &Interpreter) {

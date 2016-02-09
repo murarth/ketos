@@ -6,7 +6,7 @@ use std::rc::{Rc, Weak};
 use function::{Function, Lambda, SystemFn};
 use io::GlobalIo;
 use lexer::CodeMap;
-use module::ModuleRegistry;
+use module::{BuiltinModuleLoader, ModuleRegistry};
 use name::{get_standard_name, get_system_fn, is_system_operator,
     is_standard_value, NUM_STANDARD_VALUES,
     SYSTEM_OPERATORS_END, Name, NameMap, NameSetSlice, NameStore};
@@ -66,7 +66,7 @@ pub type Scope = Rc<GlobalScope>;
 pub type WeakScope = Weak<GlobalScope>;
 
 impl GlobalScope {
-    /// Creates a new global scope containing default values.
+    /// Creates a new global scope.
     pub fn new(name: Name,
             names: Rc<RefCell<NameStore>>,
             codemap: Rc<RefCell<CodeMap>>,
@@ -80,6 +80,19 @@ impl GlobalScope {
             modules: registry,
             io: io,
         }
+    }
+
+    /// Creates a new global scope with the given name and default environment.
+    pub fn default(name: &str) -> GlobalScope {
+        let mut names = NameStore::new();
+        let name = names.add(name);
+
+        let names = Rc::new(RefCell::new(names));
+        let codemap = Rc::new(RefCell::new(CodeMap::new()));
+        let modules = Rc::new(ModuleRegistry::new(Box::new(BuiltinModuleLoader)));
+        let io = Rc::new(GlobalIo::default());
+
+        GlobalScope::new(name, names, codemap, modules, io)
     }
 
     /// Creates a new global scope using the shared data from the given scope.
@@ -154,6 +167,21 @@ impl GlobalScope {
     /// Borrows a mutable reference to the contained `NameStore`.
     pub fn borrow_names_mut(&self) -> RefMut<NameStore> {
         self.name_store.borrow_mut()
+    }
+
+    /// Returns the number of contained constants.
+    pub fn num_constants(&self) -> usize {
+        self.namespace.borrow().constants.len()
+    }
+
+    /// Returns the number of contained macros.
+    pub fn num_macros(&self) -> usize {
+        self.namespace.borrow().macros.len()
+    }
+
+    /// Returns the number of contained values.
+    pub fn num_values(&self) -> usize {
+        self.namespace.borrow().values.len()
     }
 
     /// Returns a borrowed reference to the contained `CodeMap`.

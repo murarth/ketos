@@ -52,6 +52,12 @@ impl fmt::Display for FromStrRadixError {
 }
 
 impl Integer {
+    /// Returns the number of bits required to represent the `Integer`.
+    #[inline]
+    pub fn bits(&self) -> usize {
+        self.0.bits()
+    }
+
     /// Creates an `Integer` from a sign and a series of big-endian bytes.
     #[inline]
     pub fn from_bytes_be(sign: Sign, bytes: &[u8]) -> Integer {

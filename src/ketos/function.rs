@@ -1,7 +1,7 @@
 //! Contains implementations of core system functions.
 
 use std::borrow::Cow::{self, Borrowed, Owned};
-use std::cmp::{min, Ordering};
+use std::cmp::{max, min, Ordering};
 use std::f64;
 use std::fmt;
 use std::rc::Rc;
@@ -10,9 +10,10 @@ use num::{Float, Zero};
 
 use bytecode::Code;
 use error::Error;
-use exec::ExecError;
+use exec::{Context, ExecError};
 use integer::{Integer, Ratio};
 use name::{Name, NameMap, NUM_SYSTEM_FNS};
+use restrict::RestrictError;
 use scope::{Scope, WeakScope};
 use string_fmt::format_string;
 use value::{FromValueRef, Struct, StructDef, Value};
@@ -39,7 +40,7 @@ impl PartialEq for SystemFn {
 }
 
 /// `SystemFn` implemented by Rust function
-pub type FunctionImpl = fn(&Scope, &mut [Value]) -> Result<Value, Error>;
+pub type FunctionImpl = fn(&Context, &mut [Value]) -> Result<Value, Error>;
 
 macro_rules! sys_fn {
     ( $callback:path, $arity:expr ) => {
@@ -332,7 +333,7 @@ fn coerce_numbers(lhs: Value, rhs: &Value) -> Result<(Value, Cow<Value>), ExecEr
 /// `+` returns the sum of all arguments.
 ///
 /// Given no arguments, returns the additive identity, `0`.
-fn fn_add(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_add(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     if args.is_empty() {
         return Ok(Integer::zero().into());
     }
@@ -343,20 +344,32 @@ fn fn_add(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 
     for arg in &args[1..] {
         try!(expect_number(arg));
-        v = try!(add_number(v, arg));
+        v = try!(add_number(ctx, v, arg));
     }
 
     Ok(v)
 }
 
 /// Returns the result of adding two values together.
-pub fn add_number(lhs: Value, rhs: &Value) -> Result<Value, Error> {
+pub fn add_number(ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error> {
     let (lhs, rhs) = try!(coerce_numbers(lhs, rhs));
 
     match (lhs, &*rhs) {
         (Value::Float(a), &Value::Float(b)) => Ok((a + b).into()),
-        (Value::Integer(ref a), &Value::Integer(ref b)) => Ok((a + b).into()),
-        (Value::Ratio(ref a), &Value::Ratio(ref b)) => Ok((a + b).into()),
+        (Value::Integer(ref a), &Value::Integer(ref b)) => {
+            try!(check_bits(ctx, max(a.bits(), b.bits()) + 1));
+            Ok((a + b).into())
+        }
+        (Value::Ratio(ref a), &Value::Ratio(ref b)) => {
+            let nd = a.numer().bits() + b.denom().bits();
+            let dn = a.denom().bits() + b.numer().bits();
+            let dd = a.denom().bits() + b.denom().bits();
+
+            try!(check_bits(ctx, nd + dn));
+            try!(check_bits(ctx, dd));
+
+            Ok((a + b).into())
+        }
         (a, b) => Err(From::from(ExecError::TypeMismatch{
             lhs: a.type_name(),
             rhs: b.type_name(),
@@ -365,7 +378,7 @@ pub fn add_number(lhs: Value, rhs: &Value) -> Result<Value, Error> {
 }
 
 /// `-` returns the cumulative difference between successive arguments.
-fn fn_sub(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_sub(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let mut v = args[0].take();
 
     if args.len() == 1 {
@@ -375,7 +388,7 @@ fn fn_sub(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 
         for arg in &args[1..] {
             try!(expect_number(arg));
-            v = try!(sub_number(v, arg));
+            v = try!(sub_number(ctx, v, arg));
         }
 
         Ok(v)
@@ -393,13 +406,25 @@ pub fn neg_number(v: Value) -> Result<Value, Error> {
 }
 
 /// Returns the resulting of subtracting a value from another.
-pub fn sub_number(lhs: Value, rhs: &Value) -> Result<Value, Error> {
+pub fn sub_number(ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error> {
     let (lhs, rhs) = try!(coerce_numbers(lhs, rhs));
 
     match (lhs, &*rhs) {
         (Value::Float(a), &Value::Float(b)) => Ok((a - b).into()),
-        (Value::Integer(ref a), &Value::Integer(ref b)) => Ok((a - b).into()),
-        (Value::Ratio(ref a), &Value::Ratio(ref b)) => Ok((a - b).into()),
+        (Value::Integer(ref a), &Value::Integer(ref b)) => {
+            try!(check_bits(ctx, max(a.bits(), b.bits()) + 1));
+            Ok((a - b).into())
+        }
+        (Value::Ratio(ref a), &Value::Ratio(ref b)) => {
+            let nd = a.numer().bits() + b.denom().bits();
+            let dn = a.denom().bits() + b.numer().bits();
+            let dd = a.denom().bits() + b.denom().bits();
+
+            try!(check_bits(ctx, nd + dn));
+            try!(check_bits(ctx, dd));
+
+            Ok((a - b).into())
+        }
         (a, b) => Err(From::from(ExecError::TypeMismatch{
             lhs: a.type_name(),
             rhs: b.type_name(),
@@ -410,7 +435,7 @@ pub fn sub_number(lhs: Value, rhs: &Value) -> Result<Value, Error> {
 /// `*` returns the product of all arguments.
 ///
 /// Given no arguments, returns the multiplicative identity, `1`.
-fn fn_mul(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_mul(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     if args.is_empty() {
         return Ok(Integer::one().into());
     }
@@ -421,20 +446,31 @@ fn fn_mul(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 
     for arg in &args[1..] {
         try!(expect_number(arg));
-        v = try!(mul_number(v, arg));
+        v = try!(mul_number(ctx, v, arg));
     }
 
     Ok(v)
 }
 
 /// Returns the result of multiplying two values together.
-pub fn mul_number(lhs: Value, rhs: &Value) -> Result<Value, Error> {
+pub fn mul_number(ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error> {
     let (lhs, rhs) = try!(coerce_numbers(lhs, rhs));
 
     match (lhs, &*rhs) {
         (Value::Float(a), &Value::Float(b)) => Ok((a * b).into()),
-        (Value::Integer(ref a), &Value::Integer(ref b)) => Ok((a * b).into()),
-        (Value::Ratio(ref a), &Value::Ratio(ref b)) => Ok((a * b).into()),
+        (Value::Integer(ref a), &Value::Integer(ref b)) => {
+            try!(check_bits(ctx, a.bits() + b.bits()));
+            Ok((a * b).into())
+        }
+        (Value::Ratio(ref a), &Value::Ratio(ref b)) => {
+            let nn = a.numer().bits() + b.numer().bits();
+            let dd = a.denom().bits() + b.denom().bits();
+
+            try!(check_bits(ctx, nn));
+            try!(check_bits(ctx, dd));
+
+            Ok((a * b).into())
+        }
         (a, b) => Err(From::from(ExecError::TypeMismatch{
             lhs: a.type_name(),
             rhs: b.type_name(),
@@ -443,22 +479,71 @@ pub fn mul_number(lhs: Value, rhs: &Value) -> Result<Value, Error> {
 }
 
 /// `^` returns a base value raised to an exponent.
-fn fn_pow(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_pow(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let a = args[0].take();
     let b = args[1].take();
 
     try!(expect_number(&a));
     try!(expect_number(&b));
 
-    pow_number(a, b)
+    pow_number(ctx, a, b)
 }
 
-fn pow_number(lhs: Value, rhs: Value) -> Result<Value, Error> {
+// I'm not aware of any method to directly calculate the bit length of an
+// exponent without calculating the exponent, so we instead employ a test on
+// each multiplication step.
+fn try_pow(ctx: &Context, mut base: Integer, mut exp: u32) -> Result<Integer, Error> {
+    if ctx.restrict().max_integer_size == usize::max_value() {
+        return Ok(base.pow(exp as usize));
+    }
+
+    if exp == 0 {
+        return Ok(Integer::one().into());
+    }
+
+    while exp & 1 == 0 {
+        base = try!(try_mul(ctx, base.clone(), base));
+        exp >>= 1;
+    }
+
+    if exp == 1 {
+        return Ok(base.into());
+    }
+
+    let mut acc = base.clone();
+
+    while exp > 1 {
+        exp >>= 1;
+        base = try!(try_mul(ctx, base.clone(), base));
+
+        if exp & 1 == 1 {
+            acc = try!(try_mul(ctx, acc, base.clone()));
+        }
+    }
+
+    Ok(acc)
+}
+
+fn try_mul(ctx: &Context, lhs: Integer, rhs: Integer) -> Result<Integer, Error> {
+    try!(check_bits(ctx, lhs.bits() + rhs.bits()));
+
+    Ok(lhs * rhs)
+}
+
+fn check_bits(ctx: &Context, bits: usize) -> Result<(), RestrictError> {
+    if bits > ctx.restrict().max_integer_size {
+        Err(RestrictError::IntegerLimitExceeded)
+    } else {
+        Ok(())
+    }
+}
+
+fn pow_number(ctx: &Context, lhs: Value, rhs: Value) -> Result<Value, Error> {
     match (&lhs, &rhs) {
         (&Value::Ratio(ref a), &Value::Integer(ref b)) =>
-            return pow_ratio_integer(a, b),
+            return pow_ratio_integer(ctx, a, b),
         (&Value::Ratio(ref a), &Value::Ratio(ref b)) if b.is_integer() =>
-            return pow_ratio_integer(a, b.numer()),
+            return pow_ratio_integer(ctx, a, b.numer()),
         _ => ()
     }
 
@@ -474,8 +559,8 @@ fn pow_number(lhs: Value, rhs: Value) -> Result<Value, Error> {
                 let b = try!(b.to_f64().ok_or(ExecError::Overflow));
                 Ok(a.powf(b).into())
             } else {
-                let exp = try!(b.to_usize().ok_or(ExecError::Overflow));
-                Ok(a.clone().pow(exp).into())
+                let exp = try!(b.to_u32().ok_or(ExecError::Overflow));
+                try_pow(ctx, a.clone(), exp).map(|i| i.into())
             }
         }
         (Value::Ratio(ref a), &Value::Ratio(ref b)) => {
@@ -491,33 +576,34 @@ fn pow_number(lhs: Value, rhs: Value) -> Result<Value, Error> {
     }
 }
 
-fn pow_ratio_integer(lhs: &Ratio, rhs: &Integer) -> Result<Value, Error> {
+fn pow_ratio_integer(ctx: &Context, lhs: &Ratio, rhs: &Integer) -> Result<Value, Error> {
     if rhs.is_negative() {
         let lhs = try!(lhs.to_f64().ok_or(ExecError::Overflow));
         let rhs = try!(rhs.to_f64().ok_or(ExecError::Overflow));
 
         Ok(lhs.powf(rhs).into())
     } else {
-        let rhs = try!(rhs.to_usize().ok_or(ExecError::Overflow));
-        let a = lhs.numer().clone().pow(rhs);
-        let b = lhs.denom().clone().pow(rhs);
+        let rhs = try!(rhs.to_u32().ok_or(ExecError::Overflow));
+        let a = try!(try_pow(ctx, lhs.numer().clone(), rhs));
+        let b = try!(try_pow(ctx, lhs.denom().clone(), rhs));
 
         Ok(Ratio::new(a, b).into())
     }
 }
 
 /// `/` returns the cumulative quotient of successive arguments.
-fn fn_div(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_div(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let mut v = args[0].take();
 
     try!(expect_number(&v));
 
     if args.len() == 1 {
-        div_number(1.into(), &v)
+        // Call div instead of recip so that (/ 1) = 1
+        div_number(ctx, 1.into(), &v)
     } else {
         for arg in &args[1..] {
             try!(expect_number(arg));
-            v = try!(div_number(v, arg));
+            v = try!(div_number(ctx, v, arg));
         }
 
         Ok(v)
@@ -526,7 +612,7 @@ fn fn_div(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 
 /// `//` returns the cumulative quotient of successive arguments,
 /// rounded toward negative infinity.
-fn fn_floor_div(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_floor_div(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let mut v = args[0].take();
 
     try!(expect_number(&v));
@@ -536,7 +622,7 @@ fn fn_floor_div(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
     } else {
         for arg in &args[1..] {
             try!(expect_number(arg));
-            v = try!(floor_div_number_step(v, arg));
+            v = try!(floor_div_number_step(ctx, v, arg));
         }
 
         floor_number(v)
@@ -561,7 +647,7 @@ fn floor_recip_number(v: Value) -> Result<Value, Error> {
 }
 
 /// Returns the result of dividing two values.
-pub fn div_number(lhs: Value, rhs: &Value) -> Result<Value, Error> {
+pub fn div_number(ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error> {
     let (lhs, rhs) = try!(coerce_numbers(lhs, rhs));
 
     match (lhs, &*rhs) {
@@ -578,6 +664,13 @@ pub fn div_number(lhs: Value, rhs: &Value) -> Result<Value, Error> {
         }
         (Value::Ratio(ref a), &Value::Ratio(ref b)) => {
             try!(test_zero(b));
+
+            let nd = a.numer().bits() + b.denom().bits();
+            let dn = a.denom().bits() + b.numer().bits();
+
+            try!(check_bits(ctx, nd));
+            try!(check_bits(ctx, dn));
+
             Ok((a / b).into())
         }
         (a, b) => Err(From::from(ExecError::TypeMismatch{
@@ -589,7 +682,7 @@ pub fn div_number(lhs: Value, rhs: &Value) -> Result<Value, Error> {
 
 /// Returns the result of floor-dividing two values,
 /// without calling `floor` on the result.
-pub fn floor_div_number_step(lhs: Value, rhs: &Value) -> Result<Value, Error> {
+pub fn floor_div_number_step(ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error> {
     let (lhs, rhs) = try!(coerce_numbers(lhs, rhs));
 
     match (lhs, &*rhs) {
@@ -597,12 +690,12 @@ pub fn floor_div_number_step(lhs: Value, rhs: &Value) -> Result<Value, Error> {
             try!(test_zero(b));
             Ok((a / b).into())
         }
-        (lhs, rhs) => div_number(lhs, rhs)
+        (lhs, rhs) => div_number(ctx, lhs, rhs)
     }
 }
 
 /// `rem` returns the remainder of two arguments.
-fn fn_rem(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_rem(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let a = args[0].take();
     try!(expect_number(&a));
 
@@ -635,21 +728,24 @@ fn rem_number(lhs: Value, rhs: &Value) -> Result<Value, Error> {
 }
 
 /// `<<` returns an integer, bit shifted left by a given number.
-fn fn_shl(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_shl(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let a = &args[0];
     let b = &args[1];
 
-    shl_integer(a, b)
+    shl_integer(ctx, a, b)
 }
 
-fn shl_integer(lhs: &Value, rhs: &Value) -> Result<Value, Error> {
+fn shl_integer(ctx: &Context, lhs: &Value, rhs: &Value) -> Result<Value, Error> {
     try!(expect_integer(lhs));
     try!(expect_integer(rhs));
 
     match (lhs, rhs) {
         (&Value::Integer(ref a), &Value::Integer(ref b)) => {
             match b.to_u32() {
-                Some(n) => Ok((a << (n as usize)).into()),
+                Some(n) => {
+                    try!(check_bits(ctx, a.bits() + n as usize));
+                    Ok((a << (n as usize)).into())
+                }
                 None => Err(From::from(ExecError::Overflow)),
             }
         }
@@ -658,7 +754,7 @@ fn shl_integer(lhs: &Value, rhs: &Value) -> Result<Value, Error> {
 }
 
 /// `>>` returns an integer, bit shifted right by a given number.
-fn fn_shr(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_shr(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let a = &args[0];
     let b = &args[1];
 
@@ -684,7 +780,7 @@ fn shr_integer(lhs: &Value, rhs: &Value) -> Result<Value, Error> {
 ///
 /// Values of different types may not be compared. Attempts to do so will
 /// result in a `TypeMismatch` error.
-fn fn_eq(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_eq(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let mut r = true;
     let v = &args[0];
 
@@ -704,7 +800,7 @@ fn fn_eq(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 ///
 /// Values of different types may not be compared. Attempts to do so will
 /// result in a `TypeMismatch` error.
-fn fn_ne(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_ne(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let mut r = true;
 
     'outer: for (i, lhs) in args.iter().enumerate() {
@@ -725,7 +821,7 @@ fn fn_ne(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 ///
 /// Values of different types may not be compared. Attempts to do so will
 /// result in a `TypeMismatch` error.
-fn fn_lt(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_lt(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let mut r = true;
     let mut v = &args[0];
 
@@ -746,7 +842,7 @@ fn fn_lt(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 ///
 /// Values of different types may not be compared. Attempts to do so will
 /// result in a `TypeMismatch` error.
-fn fn_gt(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_gt(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let mut r = true;
     let mut v = &args[0];
 
@@ -768,7 +864,7 @@ fn fn_gt(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 ///
 /// Values of different types may not be compared. Attempts to do so will
 /// result in a `TypeMismatch` error.
-fn fn_le(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_le(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let mut r = true;
     let mut v = &args[0];
 
@@ -790,7 +886,7 @@ fn fn_le(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 ///
 /// Values of different types may not be compared. Attempts to do so will
 /// result in a `TypeMismatch` error.
-fn fn_ge(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_ge(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let mut r = true;
     let mut v = &args[0];
 
@@ -808,7 +904,7 @@ fn fn_ge(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 /// `zero` returns whether all given values are equal to zero.
-fn fn_zero(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_zero(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let mut r = true;
 
     for arg in args {
@@ -829,7 +925,7 @@ fn fn_zero(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 /// `xor` returns the exclusive-or of the given boolean values.
-fn fn_xor(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_xor(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let a = &args[0];
     let b = &args[1];
 
@@ -841,7 +937,7 @@ fn fn_xor(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 /// `not` returns the inverse of the given boolean value.
-fn fn_not(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_not(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0] {
         Value::Bool(a) => Ok((!a).into()),
         ref v => Err(From::from(ExecError::expected("bool", v)))
@@ -849,7 +945,7 @@ fn fn_not(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 /// `id` returns the unmodified value of the argument received.
-fn fn_id(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_id(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     Ok(args[0].take())
 }
 
@@ -862,21 +958,21 @@ fn fn_id(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 ///
 /// `is` also accepts `'number` as a type name, which matches `integer`, `float`,
 /// and `ratio` type values.
-fn fn_is(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_is(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let name = try!(get_name(&args[0]));
-    Ok(Value::Bool(value_is(scope, &args[1], name)))
+    Ok(Value::Bool(value_is(ctx.scope(), &args[1], name)))
 }
 
 /// `is-instance` returns whether a given struct value is an instance of
 /// the named struct definition.
-fn fn_is_instance(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_is_instance(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let def = try!(get_struct_def(&args[0]));
     let s = try!(get_struct(&args[1]));
     Ok((def == &s.def).into())
 }
 
 /// `null` returns whether the given value is unit, `()`.
-fn fn_null(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_null(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let is_null = match args[0] {
         Value::Unit => true,
         _ => false
@@ -915,8 +1011,8 @@ fn type_of(scope: &Scope, v: &Value) -> Name {
 }
 
 /// `type-of` returns a name representing the type of the given value.
-fn fn_type_of(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
-    Ok(Value::Name(type_of(scope, &args[0])))
+fn fn_type_of(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
+    Ok(Value::Name(type_of(ctx.scope(), &args[0])))
 }
 
 /// `.` accesses a field from a struct value.
@@ -924,7 +1020,7 @@ fn fn_type_of(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 /// ```lisp
 /// (. foo :bar)
 /// ```
-fn fn_dot(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_dot(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let s = try!(get_struct(&args[0]));
 
     let name = try!(get_keyword(&args[1]));
@@ -943,7 +1039,7 @@ fn fn_dot(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 /// ```lisp
 /// (.= foo :bar 1)
 /// ```
-fn fn_dot_eq(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_dot_eq(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let mut s = match args[0].take() {
         Value::Struct(s) => s,
         ref v => return Err(From::from(ExecError::expected("struct", v)))
@@ -972,7 +1068,7 @@ fn fn_dot_eq(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 
             match def.fields.get(name) {
                 Some(&ty) => {
-                    if !value_is(scope, &value, ty) {
+                    if !value_is(ctx.scope(), &value, ty) {
                         return Err(From::from(ExecError::expected_field(
                             def.name, name, ty, &value)));
                     }
@@ -996,7 +1092,7 @@ fn fn_dot_eq(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 /// ```lisp
 /// (new 'foo :a 1 :b 2)
 /// ```
-fn fn_new(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_new(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let def = try!(get_struct_def(&args[0])).clone();
 
     let mut fields = NameMap::new();
@@ -1016,7 +1112,7 @@ fn fn_new(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 
         match def.fields.get(fname) {
             Some(&ty) => {
-                if !value_is(scope, &value, ty) {
+                if !value_is(ctx.scope(), &value, ty) {
                     return Err(From::from(ExecError::expected_field(
                         def.name, fname, ty, &value)));
                 } else {
@@ -1043,16 +1139,17 @@ fn fn_new(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 /// `format` returns a formatted string.
-fn fn_format(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_format(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let fmt = try!(get_string(&args[0]));
 
-    let s = try!(format_string(&scope.borrow_names(), fmt, &args[1..]));
+    let s = try!(format_string(&ctx.scope().borrow_names(), fmt, &args[1..]));
     Ok(s.into())
 }
 
 /// `print` prints a formatted string to `stdout`.
-fn fn_print(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_print(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let fmt = try!(get_string(&args[0]));
+    let scope = ctx.scope();
 
     let s = try!(format_string(&scope.borrow_names(), fmt, &args[1..]));
 
@@ -1063,8 +1160,9 @@ fn fn_print(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 /// `println` prints a formatted string to `stdout`, followed by a newline.
-fn fn_println(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_println(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let fmt = try!(get_string(&args[0]));
+    let scope = ctx.scope();
 
     let mut s = try!(format_string(&scope.borrow_names(), fmt, &args[1..]));
     if !s.ends_with('\n') {
@@ -1082,7 +1180,7 @@ fn fn_println(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 /// ```lisp
 /// (append '(1 2 3) 4 5 6)
 /// ```
-fn fn_append(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_append(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let mut v = match args[0].take() {
         Value::Unit => Vec::new(),
         Value::List(li) => li.into_vec(),
@@ -1099,7 +1197,7 @@ fn fn_append(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 /// ```lisp
 /// (elt '(1 2 3) 0)
 /// ```
-fn fn_elt(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_elt(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let li = &args[0];
     let idx = &args[1];
 
@@ -1119,7 +1217,7 @@ fn fn_elt(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 /// (concat "foo" "bar")
 /// (concat "foo" #'/' "bar")
 /// ```
-fn fn_concat(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_concat(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0] {
         Value::Unit | Value::List(_) => concat_list(args),
         Value::Char(_) | Value::String(_) => concat_string(args),
@@ -1161,7 +1259,7 @@ fn concat_string(args: &[Value]) -> Result<Value, Error> {
 /// (join '(0) '(1 2 3) '(4 5 6))
 /// (join ":" "foo" "bar")
 /// ```
-fn fn_join(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_join(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let (first, rest) = args.split_first_mut().unwrap();
 
     match *first {
@@ -1226,7 +1324,7 @@ fn join_string(sep: &str, args: &[Value]) -> Result<Value, Error> {
 }
 
 /// `len` returns the length of the given list or string.
-fn fn_len(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_len(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let n = match args[0] {
         Value::Unit => 0,
         Value::List(ref li) => li.len(),
@@ -1238,7 +1336,7 @@ fn fn_len(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 /// `slice` returns a subsequence of a list or string.
-fn fn_slice(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_slice(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let begin = try!(usize::from_value_ref(&args[1]));
     let end = try!(usize::from_value_ref(&args[2]));
 
@@ -1297,7 +1395,7 @@ fn is_char_boundary(s: &str, n: usize) -> bool {
 }
 
 /// `first` returns the first element of the given list.
-fn fn_first(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_first(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0] {
         // There can't be an empty list, so this should never panic.
         Value::List(ref li) => Ok(li[0].clone()),
@@ -1306,7 +1404,7 @@ fn fn_first(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 /// `second` returns the second element of the given list.
-fn fn_second(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_second(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0] {
         Value::List(ref mut li) => li.get(1).cloned()
             .ok_or(From::from(ExecError::OutOfBounds(1))),
@@ -1315,7 +1413,7 @@ fn fn_second(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 /// `last` returns the last element of the given list.
-fn fn_last(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_last(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0] {
         Value::List(ref li) => Ok(li.last().cloned().unwrap()),
         ref v => Err(From::from(ExecError::expected("list", v)))
@@ -1323,7 +1421,7 @@ fn fn_last(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 /// `init` returns all but the last element of the given list.
-fn fn_init(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_init(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0].take() {
         Value::List(ref li) => {
             let len = li.len();
@@ -1334,7 +1432,7 @@ fn fn_init(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 /// `tail` returns all but the first element of the given list.
-fn fn_tail(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_tail(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0].take() {
         Value::List(ref li) => {
             Ok(li.slice(1..).into())
@@ -1350,13 +1448,13 @@ fn fn_tail(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 /// (list 1 2 3)
 /// (list (foo) (+ 1 2 3))
 /// ```
-fn fn_list(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_list(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     Ok(args.iter_mut().map(|v| v.take())
         .collect::<Vec<_>>().into())
 }
 
 /// `reverse` returns a list in reverse order.
-fn fn_reverse(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_reverse(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0].take() {
         Value::Unit => Ok(Value::Unit),
         Value::List(li) => {
@@ -1369,7 +1467,7 @@ fn fn_reverse(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 /// `abs` returns the absolute value of the given numerical value.
-fn fn_abs(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_abs(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0] {
         Value::Float(f) => Ok(f.abs().into()),
         Value::Integer(ref i) => Ok(i.abs().into()),
@@ -1379,7 +1477,7 @@ fn fn_abs(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 /// `ceil` returns a number value rounded toward positive infinity.
-fn fn_ceil(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_ceil(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0].take() {
         Value::Float(f) => Ok(f.ceil().into()),
         Value::Integer(i) => Ok(i.into()),
@@ -1389,7 +1487,7 @@ fn fn_ceil(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 /// `floor` returns a number value rounded toward negative infinity.
-fn fn_floor(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_floor(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     floor_number(args[0].take())
 }
 
@@ -1405,7 +1503,7 @@ pub fn floor_number(v: Value) -> Result<Value, Error> {
 
 /// `round` returns a number rounded to the nearest integer.
 /// Rounds half-way cases away from zero.
-fn fn_round(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_round(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0].take() {
         Value::Float(f) => Ok(f.round().into()),
         Value::Integer(i) => Ok(i.into()),
@@ -1415,7 +1513,7 @@ fn fn_round(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 /// `trunc` returns a number rounded toward zero.
-fn fn_trunc(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_trunc(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0].take() {
         Value::Float(f) => Ok(f.trunc().into()),
         Value::Integer(i) => Ok(i.into()),
@@ -1427,7 +1525,7 @@ fn fn_trunc(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 /// `int` truncates a float or ratio value and returns its whole portion as an integer.
 ///
 /// If the given value is infinite or `NaN`, an error will result.
-fn fn_int(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_int(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0].take() {
         Value::Float(f) => match f {
             f if f.is_infinite() || f.is_nan() => Err(From::from(ExecError::Overflow)),
@@ -1441,7 +1539,7 @@ fn fn_int(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 /// `float` returns the given value as a floating point value.
-fn fn_float(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_float(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0] {
         Value::Float(f) => Ok(f.into()),
         Value::Integer(ref i) => Ok(try!(i.to_f64().ok_or(ExecError::Overflow)).into()),
@@ -1452,7 +1550,7 @@ fn fn_float(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 
 /// `inf` returns whether all given arguments are equal to positive or negative infinity.
 /// Given no arguments, returns the value of positive infinity.
-fn fn_inf(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_inf(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     if args.is_empty() {
         Ok(f64::INFINITY.into())
     } else {
@@ -1471,7 +1569,7 @@ fn fn_inf(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 
 /// `nan` returns whether all given arguments are equal to `NaN`.
 /// Given no arguments, returns the value of `NaN`.
-fn fn_nan(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_nan(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     if args.is_empty() {
         Ok(f64::nan().into())
     } else {
@@ -1489,7 +1587,7 @@ fn fn_nan(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 /// `denom` returns the denominator of a ratio.
-fn fn_denom(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_denom(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0] {
         Value::Integer(_) => Ok(Integer::one().into()),
         Value::Ratio(ref r) => Ok(r.denom().clone().into()),
@@ -1498,7 +1596,7 @@ fn fn_denom(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 /// `fract` returns the fractional portion of a float or ratio.
-fn fn_fract(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_fract(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0] {
         Value::Float(f) => Ok(f.fract().into()),
         Value::Ratio(ref r) => Ok(r.fract().into()),
@@ -1507,7 +1605,7 @@ fn fn_fract(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 /// `numer` returns the numerator of a ratio.
-fn fn_numer(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_numer(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0].take() {
         i @ Value::Integer(_) => Ok(i),
         Value::Ratio(r) => Ok(r.numer().clone().into()),
@@ -1516,7 +1614,7 @@ fn fn_numer(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 /// `rat` returns the given numerical value as a ratio.
-fn fn_rat(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_rat(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     if args.len() == 1 {
         match args[0].take() {
             Value::Float(f) => Ratio::from_f64(f)
@@ -1543,7 +1641,7 @@ fn fn_rat(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 
 /// `recip` returns the reciprocal of the given numeric value.
 /// If the value is of type integer, the value returned will be a ratio.
-fn fn_recip(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_recip(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     recip_number(args[0].take())
 }
 
@@ -1563,13 +1661,13 @@ fn recip_number(v: Value) -> Result<Value, Error> {
 }
 
 /// `chars` returns a string transformed into a list of characters.
-fn fn_chars(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_chars(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let s = try!(get_string(&args[0]));
     Ok(s.chars().collect::<Vec<_>>().into())
 }
 
 /// `string` returns an argument converted into a string.
-fn fn_string(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_string(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0].take() {
         Value::Char(ch) => {
             let mut s = String::new();
@@ -1582,7 +1680,7 @@ fn fn_string(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 /// `max` returns the greatest value of given arguments.
-fn fn_max(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_max(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let mut v = args[0].take();
 
     for arg in &mut args[1..] {
@@ -1595,7 +1693,7 @@ fn fn_max(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 /// `min` returns the least value of given arguments.
-fn fn_min(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_min(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let mut v = args[0].take();
 
     for arg in &mut args[1..] {
@@ -1609,6 +1707,6 @@ fn fn_min(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 
 /// `panic` immediately interrupts execution upon evaluation.
 /// It accepts an optional parameter describing the reason for the panic.
-fn fn_panic(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_panic(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     Err(From::from(ExecError::Panic(args.get_mut(0).map(|v| v.take()))))
 }

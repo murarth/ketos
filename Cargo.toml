@@ -10,7 +10,7 @@ keywords = [ "scripting", "extension", "functional", "language", "lisp" ]
 license = "MIT/Apache-2.0"
 readme = "README.md"
 
-version = "0.0.7"
+version = "0.1.0"
 authors = ["Murarth <murarth@gmail.com>"]
 
 [[bin]]
@@ -26,7 +26,7 @@ path = "src/ketos/lib.rs"
 byteorder = "0.5.1"
 getopts = "0.2"
 libc = "0.2"
-num = "0.1.28"
+num = "0.1.32"
 rand = "0.3"
 
 [dev-dependencies]

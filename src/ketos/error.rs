@@ -7,6 +7,7 @@ use encode::{DecodeError, EncodeError};
 use exec::ExecError;
 use io::IoError;
 use parser::ParseError;
+use restrict::RestrictError;
 
 macro_rules! error_type {
     ( $( #[$meta:meta] )* pub enum $name:ident
@@ -50,5 +51,22 @@ error_type!{
         IoError(IoError),
         /// Error in scanning text or parsing syntax
         ParseError(ParseError),
+        /// Code execution breached configured restrictions
+        RestrictError(RestrictError),
+    }
+}
+
+impl Error {
+    /// Returns a string describing the nature of the error.
+    pub fn description(&self) -> &'static str {
+        match *self {
+            Error::CompileError(_) => "compile error",
+            Error::DecodeError(_) => "decode error",
+            Error::EncodeError(_) => "encode error",
+            Error::ExecError(_) => "execution error",
+            Error::IoError(_) => "I/O error",
+            Error::ParseError(_) => "parse error",
+            Error::RestrictError(_) => "restriction error",
+        }
     }
 }

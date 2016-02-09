@@ -4,30 +4,28 @@ use std::rc::Rc;
 
 use compile::compile;
 use error::Error;
-use exec::execute;
+use exec::{Context, execute};
 use lexer::Lexer;
 use parser::Parser;
-use scope::Scope;
 use value::Value;
 
-/// Parses, compiles, and executes the given code within a `Scope`.
-pub fn run_code_in_scope(scope: &Scope, input: &str) -> Result<Value, Error> {
-    let offset = scope.borrow_codemap_mut().add_source(input, None);
+/// Parses, compiles, and executes the given code within a context.
+pub fn run_code(ctx: &Context, input: &str) -> Result<Value, Error> {
+    let offset = ctx.scope().borrow_codemap_mut().add_source(input, None);
 
     let exprs = {
-        let mut ns = scope.borrow_names_mut();
-        let mut p = Parser::new(&mut ns, Lexer::new(input, offset));
+        let mut p = Parser::new(ctx, Lexer::new(input, offset));
 
         try!(p.parse_exprs())
     };
 
     let code: Vec<_> = try!(exprs.iter()
-        .map(|v| compile(scope, v)).collect());
+        .map(|v| compile(ctx, v)).collect());
 
     let mut r = Value::Unit;
 
     for c in code {
-        r = try!(execute(scope, Rc::new(c)));
+        r = try!(execute(ctx, Rc::new(c)));
     }
 
     Ok(r)
@@ -38,13 +36,13 @@ mod test {
     use interpreter::Interpreter;
     use value::Value;
 
-    use super::run_code_in_scope;
+    use super::run_code;
 
     #[test]
-    fn test_run_in_scope() {
+    fn test_run() {
         let interp = Interpreter::new();
 
-        run_code_in_scope(interp.get_scope(), "(define foo ())").unwrap();
+        run_code(interp.context(), "(define foo ())").unwrap();
 
         assert_matches!(interp.get_value("foo"), Some(Value::Unit));
     }

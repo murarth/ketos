@@ -10,7 +10,7 @@ use bytecode::Code;
 use compile::{compile, CompileError};
 use encode::{DecodeError, read_bytecode_file, write_bytecode_file};
 use error::Error;
-use exec::execute;
+use exec::{Context, execute};
 use function::{Arity, Function, FunctionImpl, Lambda, SystemFn};
 use io::{IoError, IoMode};
 use lexer::Lexer;
@@ -154,27 +154,27 @@ impl ModuleCode {
 
     /// Loads contained values into the given scope, which should be empty,
     /// and sequentially executes all contained code objects within the scope.
-    pub fn load_in_scope(self, scope: &Scope) -> Result<(), Error> {
+    pub fn load_in_context(self, ctx: &Context) -> Result<(), Error> {
         for (name, value) in self.constants {
-            scope.add_constant(name, value);
+            ctx.scope().add_constant(name, value);
         }
 
         for (name, code) in self.macros {
-            let mac = Lambda::new(code, scope);
-            scope.add_macro(name, mac);
+            let mac = Lambda::new(code, ctx.scope());
+            ctx.scope().add_macro(name, mac);
         }
 
-        try!(process_imports(scope, &self.imports));
+        try!(process_imports(ctx, &self.imports));
 
-        scope.set_exports(self.exports);
+        ctx.scope().set_exports(self.exports);
 
         let mdoc = self.module_doc;
-        scope.with_module_doc_mut(|d| *d = mdoc);
+        ctx.scope().with_module_doc_mut(|d| *d = mdoc);
         let docs = self.docs;
-        scope.with_docs_mut(|d| *d = docs.into_iter().collect());
+        ctx.scope().with_docs_mut(|d| *d = docs.into_iter().collect());
 
         for code in self.code {
-            try!(execute(&scope, code));
+            try!(execute(ctx, code));
         }
 
         Ok(())
@@ -204,7 +204,7 @@ impl ModuleRegistry {
 
     /// Returns a loaded module. If the module has not been loaded in this
     /// registry; the contained `ModuleLoader` instance will be used to load it.
-    pub fn load_module(&self, name: Name, scope: &Scope) -> Result<Module, Error> {
+    pub fn load_module(&self, name: Name, ctx: &Context) -> Result<Module, Error> {
         // It's not necessary to borrow_mut here, but it means that this
         // function has consistent behavior with respect to existing borrows.
         if let Some(m) = self.modules.borrow_mut().get(name).cloned() {
@@ -213,9 +213,10 @@ impl ModuleRegistry {
 
         // ... And the borrow_mut must be dropped before load_module is called.
 
-        let new_scope = GlobalScope::new_using(name, scope);
+        let new_scope = GlobalScope::new_using(name, ctx.scope());
+        let new_ctx = ctx.with_scope(new_scope);
 
-        let m = try!(self.loader.load_module(name, new_scope));
+        let m = try!(self.loader.load_module(name, new_ctx));
         self.modules.borrow_mut().insert(name, m.clone());
 
         Ok(m)
@@ -224,11 +225,11 @@ impl ModuleRegistry {
 
 /// Provides a method for loading modules into a running interpreter.
 pub trait ModuleLoader {
-    /// Loads the named module, supplying a `Scope` to use as its namespace.
+    /// Loads the named module, supplying a new execution context.
     ///
     /// If the loader cannot load the named module, an error value should be
     /// returned of `Err(Error::CompileError(CompileError::ModuleError(name)))`.
-    fn load_module(&self, name: Name, scope: Scope) -> Result<Module, Error>;
+    fn load_module(&self, name: Name, ctx: Context) -> Result<Module, Error>;
 
     /// Creates a `ChainModuleLoader` using this loader and another.
     ///
@@ -248,7 +249,7 @@ pub trait ModuleLoader {
 pub struct NullModuleLoader;
 
 impl ModuleLoader for NullModuleLoader {
-    fn load_module(&self, name: Name, _scope: Scope) -> Result<Module, Error> {
+    fn load_module(&self, name: Name, _ctx: Context) -> Result<Module, Error> {
         Err(From::from(CompileError::ModuleError(name)))
     }
 }
@@ -269,12 +270,12 @@ pub struct ChainModuleLoader<A, B> {
 
 impl<A, B> ModuleLoader for ChainModuleLoader<A, B>
         where A: ModuleLoader, B: ModuleLoader {
-    fn load_module(&self, name: Name, scope: Scope) -> Result<Module, Error> {
-        match self.first.load_module(name, scope.clone()) {
+    fn load_module(&self, name: Name, ctx: Context) -> Result<Module, Error> {
+        match self.first.load_module(name, ctx.clone()) {
             // Check that the names match so we know that this module lookup
             // failed and not another contained module being imported.
             Err(Error::CompileError(CompileError::ModuleError(mname)))
-                if mname == name => self.second.load_module(name, scope),
+                if mname == name => self.second.load_module(name, ctx),
             res => res
         }
     }
@@ -284,8 +285,8 @@ impl<A, B> ModuleLoader for ChainModuleLoader<A, B>
 pub struct BuiltinModuleLoader;
 
 impl ModuleLoader for BuiltinModuleLoader {
-    fn load_module(&self, name: Name, scope: Scope) -> Result<Module, Error> {
-        load_builtin_module(name, scope)
+    fn load_module(&self, name: Name, ctx: Context) -> Result<Module, Error> {
+        load_builtin_module(name, ctx.scope())
     }
 }
 
@@ -298,11 +299,11 @@ fn get_loader(name: &str) -> Option<fn(Scope) -> Module> {
     }
 }
 
-fn load_builtin_module(name: Name, scope: Scope) -> Result<Module, Error> {
+fn load_builtin_module(name: Name, scope: &Scope) -> Result<Module, Error> {
     let loader = scope.with_name(name, |name| get_loader(name));
 
     match loader {
-        Some(l) => Ok(l(scope)),
+        Some(l) => Ok(l(scope.clone())),
         None => Err(From::from(CompileError::ModuleError(name)))
     }
 }
@@ -375,8 +376,8 @@ impl FileModuleLoader {
 }
 
 impl ModuleLoader for FileModuleLoader {
-    fn load_module(&self, name: Name, scope: Scope) -> Result<Module, Error> {
-        let (src_fname, code_fname) = try!(scope.with_name(name, |name_str| {
+    fn load_module(&self, name: Name, ctx: Context) -> Result<Module, Error> {
+        let (src_fname, code_fname) = try!(ctx.scope().with_name(name, |name_str| {
             if name_str.chars().any(|c| c == '.' || c == '/' || c == '\\') {
                 Err(CompileError::InvalidModuleName(name))
             } else {
@@ -398,13 +399,13 @@ impl ModuleLoader for FileModuleLoader {
             match load {
                 ModuleFileResult::UseCode => {
                     return self.guard_import(name, &src_path, || {
-                        match read_bytecode_file(&code_path, &scope) {
+                        match read_bytecode_file(&code_path, &ctx) {
                             Ok(m) => {
-                                try!(m.load_in_scope(&scope));
+                                try!(m.load_in_context(&ctx));
 
                                 Ok(Module{
                                     name: name,
-                                    scope: scope,
+                                    scope: ctx.scope().clone(),
                                 })
                             }
                             Err(Error::DecodeError(DecodeError::IncorrectVersion(_)))
@@ -415,7 +416,7 @@ impl ModuleLoader for FileModuleLoader {
                                     None
                                 };
 
-                                load_module_from_file(scope, name,
+                                load_module_from_file(ctx, name,
                                     &src_path, code_path)
                             }
                             Err(e) => Err(e)
@@ -430,7 +431,7 @@ impl ModuleLoader for FileModuleLoader {
                     };
 
                     return self.guard_import(name, &src_path,
-                        || load_module_from_file(scope, name, &src_path, code_path))
+                        || load_module_from_file(ctx, name, &src_path, code_path))
                 }
                 ModuleFileResult::NotFound => ()
             }
@@ -486,7 +487,7 @@ fn is_younger_impl(ma: &Metadata, mb: &Metadata) -> bool {
     ma.last_write_time() > mb.last_write_time()
 }
 
-fn load_module_from_file(scope: Scope, name: Name,
+fn load_module_from_file(ctx: Context, name: Name,
         src_path: &Path, code_path: Option<&Path>) -> Result<Module, Error> {
     let mut file = try!(File::open(src_path)
         .map_err(|e| IoError::new(IoMode::Open, src_path, e)));
@@ -496,27 +497,26 @@ fn load_module_from_file(scope: Scope, name: Name,
         .map_err(|e| IoError::new(IoMode::Read, src_path, e)));
 
     let exprs = {
-        let mut names = scope.borrow_names_mut();
-        let offset = scope.borrow_codemap_mut().add_source(&buf,
+        let offset = ctx.scope().borrow_codemap_mut().add_source(&buf,
             Some(src_path.to_string_lossy().into_owned()));
 
-        try!(Parser::new(&mut names, Lexer::new(&buf, offset)).parse_exprs())
+        try!(Parser::new(&ctx, Lexer::new(&buf, offset)).parse_exprs())
     };
 
     let code = try!(exprs.iter()
-        .map(|e| compile(&scope, e).map(Rc::new)).collect::<Result<Vec<_>, _>>());
+        .map(|e| compile(&ctx, e).map(Rc::new)).collect::<Result<Vec<_>, _>>());
 
     for code in &code {
-        try!(execute(&scope, code.clone()));
+        try!(execute(&ctx, code.clone()));
     }
 
     if let Some(code_path) = code_path {
-        try!(check_exports(&scope, name));
+        try!(check_exports(ctx.scope(), name));
 
-        let mcode = ModuleCode::new(code, &scope);
+        let mcode = ModuleCode::new(code, ctx.scope());
 
         let r = {
-            let names = scope.borrow_names();
+            let names = ctx.scope().borrow_names();
             write_bytecode_file(code_path, &mcode, &names)
         };
 
@@ -527,47 +527,46 @@ fn load_module_from_file(scope: Scope, name: Name,
 
     Ok(Module{
         name: name,
-        scope: scope,
+        scope: ctx.scope().clone(),
     })
 }
 
-fn process_imports(scope: &Scope, imports: &[ImportSet]) -> Result<(), Error> {
-    let mods = scope.get_modules();
+fn process_imports(ctx: &Context, imports: &[ImportSet]) -> Result<(), Error> {
+    let mods = ctx.scope().get_modules();
 
     for imp in imports {
-        let m = try!(mods.load_module(imp.module_name, scope));
+        let m = try!(mods.load_module(imp.module_name, ctx));
 
         for &(src, dest) in &imp.names {
-            if !m.scope.is_exported(src) {
-                return Err(From::from(CompileError::PrivacyError{
-                    module: imp.module_name,
-                    name: src,
-                }));
-            }
-
+            let exported = m.scope.is_exported(src);
             let mut found = false;
 
             if let Some(v) = m.scope.get_constant(src) {
                 // Store the remote constant as a runtime value in local scope.
                 // The remote module may be changed without recompiling this
                 // module; therefore, the value is not truly constant.
-                scope.add_value(dest, v);
-                m.scope.with_doc(src, |d| scope.add_doc_string(dest, d.to_owned()));
+                ctx.scope().add_value(dest, v);
+                m.scope.with_doc(src, |d| ctx.scope().add_doc_string(dest, d.to_owned()));
                 found = true;
             }
 
             if let Some(v) = m.scope.get_macro(src) {
-                scope.add_macro(dest, v);
+                ctx.scope().add_macro(dest, v);
                 found = true;
             }
 
             if let Some(v) = m.scope.get_value(src) {
-                scope.add_value(dest, v);
-                m.scope.with_doc(src, |d| scope.add_doc_string(dest, d.to_owned()));
+                ctx.scope().add_value(dest, v);
+                m.scope.with_doc(src, |d| ctx.scope().add_doc_string(dest, d.to_owned()));
                 found = true;
             }
 
-            if !found {
+            if found && !exported {
+                return Err(From::from(CompileError::PrivacyError{
+                    module: imp.module_name,
+                    name: src,
+                }));
+            } else if !found {
                 return Err(From::from(CompileError::ImportError{
                     module: imp.module_name,
                     name: src,

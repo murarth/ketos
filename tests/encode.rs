@@ -4,14 +4,14 @@ extern crate ketos;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use ketos::{Error, Interpreter, Scope, Value, run_code_in_scope};
+use ketos::{Context, Error, Interpreter, Value, run_code};
 use ketos::encode::{read_bytecode, write_bytecode};
 use ketos::module::ModuleCode;
 
 // Runs `F` twice; first, after compiling and executing input;
 // then, after encoding and decoding and loading the resulting ModuleCode.
 fn run<F>(input: &str, mut f: F) -> Result<(), Error>
-        where F: FnMut(&Scope) {
+        where F: FnMut(&Context) {
     let interp = Interpreter::with_search_paths(vec![PathBuf::from("lib")]);
 
     let code: Vec<_> = try!(interp.compile_exprs(input))
@@ -21,24 +21,24 @@ fn run<F>(input: &str, mut f: F) -> Result<(), Error>
         try!(interp.execute_code(code.clone()));
     }
 
-    f(interp.get_scope());
+    f(interp.context());
 
     let mut buf = Vec::new();
     let path = Path::new("<buffer>");
 
     {
-        let mcode = ModuleCode::new(code, interp.get_scope());
-        let scope = interp.get_scope();
+        let mcode = ModuleCode::new(code, interp.scope());
+        let scope = interp.scope();
         let names = scope.borrow_names();
         try!(write_bytecode(&mut buf, path, &mcode, &names));
     }
 
     let sec_interp = Interpreter::with_search_paths(vec![PathBuf::from("lib")]);
-    let mcode = try!(read_bytecode(&mut &buf[..], path, sec_interp.get_scope()));
+    let mcode = try!(read_bytecode(&mut &buf[..], path, sec_interp.context()));
 
-    try!(mcode.load_in_scope(sec_interp.get_scope()));
+    try!(mcode.load_in_context(sec_interp.context()));
 
-    f(sec_interp.get_scope());
+    f(sec_interp.context());
 
     Ok(())
 }
@@ -48,10 +48,10 @@ fn test_encode() {
     run(r#"
         (const foo 1)
         (define bar 2)
-        "#, |scope| {
-            assert_matches!(scope.get_named_constant("foo"),
+        "#, |ctx| {
+            assert_matches!(ctx.scope().get_named_constant("foo"),
                 Some(Value::Integer(ref i)) if i.to_u32() == Some(1));
-            assert_matches!(scope.get_named_value("bar"),
+            assert_matches!(ctx.scope().get_named_value("bar"),
                 Some(Value::Integer(ref i)) if i.to_u32() == Some(2));
         }).unwrap();
 }
@@ -74,8 +74,8 @@ fn test_docs() {
         (struct struc
             "struc doc"
             ())
-        "#, |scope| {
-            run_code_in_scope(scope,
+        "#, |ctx| {
+            run_code(ctx,
                 r#"
                 (use code (documentation))
                 (use test (assert-eq))

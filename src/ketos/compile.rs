@@ -10,7 +10,7 @@ use bytecode::{code_flags, Code, CodeBlock,
 use const_fold::{is_one, is_negative_one,
     FoldOp, FoldAdd, FoldSub, FoldDiv, FoldMul, FoldFloorDiv};
 use error::Error;
-use exec::{ExecError, execute_lambda};
+use exec::{Context, ExecError, execute_lambda};
 use function::{Arity, Lambda};
 use function::Arity::*;
 use name::{get_system_fn, is_system_operator, standard_names,
@@ -164,8 +164,8 @@ impl NameDisplay for CompileError {
 }
 
 /// Compiles an expression into a code object.
-pub fn compile(scope: &Scope, value: &Value) -> Result<Code, Error> {
-    let mut compiler = Compiler::new(scope);
+pub fn compile(ctx: &Context, value: &Value) -> Result<Code, Error> {
+    let mut compiler = Compiler::new(ctx);
 
     compiler.compile(value)
         .map_err(|e| { set_traceback(compiler.take_trace()); e })
@@ -182,7 +182,7 @@ fn compile_lambda(compiler: &mut Compiler,
         let outer = compiler.outer.iter().cloned()
             .chain(Some(&*compiler)).collect::<Vec<_>>();
 
-        let mut sub = Compiler::with_outer(&compiler.scope, name, &outer);
+        let mut sub = Compiler::with_outer(&compiler.ctx, name, &outer);
 
         sub.compile_lambda(name, params, req_params, kw_params, rest, value)
             .map_err(|e| (sub.take_trace(), e))
@@ -196,8 +196,8 @@ fn compile_lambda(compiler: &mut Compiler,
 
 /// Compiles a single expression or function body
 struct Compiler<'a> {
-    /// Compile scope
-    scope: &'a Scope,
+    /// Compile context
+    ctx: Context,
     /// Const values referenced from bytecode
     consts: Vec<Value>,
     /// Blocks of bytecode
@@ -224,14 +224,14 @@ struct Compiler<'a> {
 }
 
 impl<'a> Compiler<'a> {
-    fn new(scope: &'a Scope) -> Compiler<'a> {
-        Compiler::with_outer(scope, None, &[])
+    fn new(ctx: &Context) -> Compiler<'a> {
+        Compiler::with_outer(ctx, None, &[])
     }
 
-    fn with_outer(scope: &'a Scope, name: Option<Name>,
+    fn with_outer(ctx: &Context, name: Option<Name>,
             outer: &'a [&'a Compiler<'a>]) -> Compiler<'a> {
         Compiler{
-            scope: scope,
+            ctx: ctx.clone(),
             consts: Vec::new(),
             blocks: vec![CodeBlock::new()],
             cur_block: 0,
@@ -244,6 +244,10 @@ impl<'a> Compiler<'a> {
             trace: Vec::new(),
             trace_expr: None,
         }
+    }
+
+    fn scope(&self) -> &Scope {
+        self.ctx.scope()
     }
 
     fn assemble_code(&mut self) -> Result<Box<[u8]>, CompileError> {
@@ -481,7 +485,7 @@ impl<'a> Compiler<'a> {
                             () // This is handled later
                         } else if self.is_macro(name) {
                             self.trace.push(TraceItem::CallMacro(
-                                self.scope.get_name(), name));
+                                self.ctx.scope().get_name(), name));
 
                             self.macro_recursion += 1;
                             let v = try!(self.expand_macro(name, &li[1..], &value));
@@ -498,14 +502,15 @@ impl<'a> Compiler<'a> {
                         }
 
                         self.trace.push(TraceItem::CallCode(
-                            self.scope.get_name(), name));
+                            self.ctx.scope().get_name(), name));
                     }
                     Value::List(_) => {
                         try!(self.compile_value(fn_v));
                         try!(self.push_instruction(Instruction::Push));
                         pushed_fn = true;
 
-                        self.trace.push(TraceItem::CallExpr(self.scope.get_name()));
+                        self.trace.push(
+                            TraceItem::CallExpr(self.ctx.scope().get_name()));
                     }
                     ref v => {
                         self.set_trace_expr(&value);
@@ -586,7 +591,7 @@ impl<'a> Compiler<'a> {
     }
 
     fn is_macro(&self, name: Name) -> bool {
-        self.scope.contains_macro(name)
+        self.scope().contains_macro(name)
     }
 
     fn expand_macro(&mut self, name: Name, args: &[Value], expr: &Value)
@@ -596,19 +601,19 @@ impl<'a> Compiler<'a> {
             return Err(From::from(CompileError::MacroRecursionExceeded));
         }
 
-        let lambda = self.scope.get_macro(name)
+        let lambda = self.scope().get_macro(name)
             .expect("macro not found in expand_macro");
 
-        execute_lambda(lambda, args.to_vec())
+        execute_lambda(&self.ctx, lambda, args.to_vec())
             .map_err(|e| { self.extend_global_trace(); e })
     }
 
     fn add_constant(&self, name: Name, value: Value) {
-        self.scope.add_constant(name, value);
+        self.scope().add_constant(name, value);
     }
 
     fn get_constant(&self, name: Name) -> Option<Value> {
-        self.scope.get_constant(name)
+        self.scope().get_constant(name)
     }
 
     fn eval_constant(&mut self, value: &Value) -> Result<ConstResult, Error> {
@@ -647,7 +652,7 @@ impl<'a> Compiler<'a> {
     fn eval_constant_function(&mut self, name: Name, args: &[Value])
             -> Result<ConstResult, Error> {
         self.trace.push(TraceItem::CallCode(
-            self.scope.get_name(), name));
+            self.ctx.scope().get_name(), name));
         let v = try!(self.eval_constant_function_inner(name, args));
         self.trace.pop();
         Ok(v)
@@ -853,7 +858,7 @@ impl<'a> Compiler<'a> {
         let n_args = args.len() as u32;
 
         self.trace.push(TraceItem::CallOperator(
-            self.scope.get_name(), name));
+            self.ctx.scope().get_name(), name));
 
         if !op.arity.accepts(n_args) {
             self.set_trace_expr(expr);
@@ -1005,8 +1010,8 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    // Returns true if a value found within a quasiquoted value does not
-    // contain any expressions to be evaluated.
+    /// Returns true if a value found within a quasiquoted value does not
+    /// contain any expressions to be evaluated.
     fn is_quasi_const(&mut self, value: &Value, depth: u32) -> Result<bool, Error> {
         match *value {
             Value::List(ref li) => {
@@ -1463,9 +1468,9 @@ fn fold_anticommutative<F: FoldOp>(compiler: &mut Compiler,
         match value {
             Some(lhs) => {
                 value = if first_const {
-                    Some(try!(F::fold(lhs, &rhs)))
+                    Some(try!(F::fold(&compiler.ctx, lhs, &rhs)))
                 } else {
-                    Some(try!(F::fold_inv(lhs, &rhs)))
+                    Some(try!(F::fold_inv(&compiler.ctx, lhs, &rhs)))
                 };
             }
             None => value = Some(rhs.into_owned())
@@ -1528,7 +1533,7 @@ fn fold_commutative<F: FoldOp>(compiler: &mut Compiler, name: Name, args: &[Valu
         }
 
         match value {
-            Some(lhs) => value = Some(try!(F::fold(lhs, &rhs))),
+            Some(lhs) => value = Some(try!(F::fold(&compiler.ctx, lhs, &rhs))),
             None => value = Some(rhs.into_owned())
         }
     }
@@ -1581,7 +1586,7 @@ fn eval_system_fn(compiler: &mut Compiler, name: Name, args: &[Value])
         }
     }
 
-    let v = try!((sys_fn.callback)(compiler.scope, &mut values));
+    let v = try!((sys_fn.callback)(&compiler.ctx, &mut values));
 
     Ok(ConstResult::Constant(v))
 }
@@ -1756,14 +1761,14 @@ fn op_define(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
         Value::Name(name) => {
             // Replace operator item with more specific item
             compiler.trace.pop();
-            compiler.trace.push(TraceItem::Define(compiler.scope.get_name(), name));
+            compiler.trace.push(TraceItem::Define(compiler.ctx.scope().get_name(), name));
 
             let (doc, body) = try!(extract_doc_string(args));
-            try!(test_define_name(compiler.scope, name));
+            try!(test_define_name(compiler.scope(), name));
             try!(compiler.compile_value(&body));
 
             if let Some(doc) = doc {
-                compiler.scope.add_doc_string(name, doc.to_owned());
+                compiler.scope().add_doc_string(name, doc.to_owned());
             }
 
             let c = compiler.add_const(Owned(Value::Name(name)));
@@ -1775,10 +1780,10 @@ fn op_define(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 
             // Replace operator item with more specific item
             compiler.trace.pop();
-            compiler.trace.push(TraceItem::Define(compiler.scope.get_name(), name));
+            compiler.trace.push(TraceItem::Define(compiler.ctx.scope().get_name(), name));
 
             let (doc, body) = try!(extract_doc_string(args));
-            try!(test_define_name(compiler.scope, name));
+            try!(test_define_name(compiler.scope(), name));
             let c = compiler.add_const(Owned(Value::Name(name)));
 
             let (lambda, captures) = try!(make_lambda(
@@ -1812,11 +1817,11 @@ fn op_macro(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     // Replace operator item with more specific item
     compiler.trace.pop();
     compiler.trace.push(TraceItem::DefineMacro(
-        compiler.scope.get_name(), name));
+        compiler.ctx.scope().get_name(), name));
 
     let (doc, body) = try!(extract_doc_string(args));
 
-    try!(test_define_name(compiler.scope, name));
+    try!(test_define_name(compiler.scope(), name));
 
     let (lambda, captures) = try!(make_lambda(compiler,
         Some(name), params, &body, doc));
@@ -1826,7 +1831,7 @@ fn op_macro(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
             "macro lambda cannot enclose values")));
     }
 
-    compiler.scope.add_macro(name, lambda);
+    compiler.scope().add_macro(name, lambda);
 
     let c = compiler.add_const(Owned(Value::Name(name)));
     try!(compiler.push_instruction(Instruction::Const(c)));
@@ -1845,11 +1850,11 @@ fn op_struct(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     // Replace operator item with more specific item
     compiler.trace.pop();
     compiler.trace.push(TraceItem::DefineStruct(
-        compiler.scope.get_name(), name));
+        compiler.ctx.scope().get_name(), name));
 
     let (doc, body) = try!(extract_doc_string(args));
 
-    try!(test_define_name(compiler.scope, name));
+    try!(test_define_name(compiler.scope(), name));
     let mut fields = NameMap::new();
 
     match *body {
@@ -1879,7 +1884,7 @@ fn op_struct(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 
     let def = Value::StructDef(Rc::new(StructDef::new(name, fields.into_slice())));
     if let Some(doc) = doc {
-        compiler.scope.add_doc_string(name, doc.to_owned());
+        compiler.scope().add_doc_string(name, doc.to_owned());
     }
 
     let name_c = compiler.add_const(Owned(Value::Name(name)));
@@ -2155,7 +2160,7 @@ fn op_cond(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 fn op_lambda(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     // Replace operator item with more specific item
     compiler.trace.pop();
-    compiler.trace.push(TraceItem::DefineLambda(compiler.scope.get_name()));
+    compiler.trace.push(TraceItem::DefineLambda(compiler.ctx.scope().get_name()));
 
     let (doc, body) = try!(extract_doc_string(args));
 
@@ -2182,7 +2187,7 @@ fn op_lambda(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 /// (export (foo bar baz))
 /// ```
 fn op_export(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
-    if compiler.scope.with_exports(|_| ()).is_some() {
+    if compiler.scope().with_exports(|_| ()).is_some() {
         return Err(From::from(CompileError::DuplicateExports));
     }
 
@@ -2202,7 +2207,7 @@ fn op_export(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
         names.insert(try!(get_name(compiler, v)));
     }
 
-    compiler.scope.set_exports(names.into_slice());
+    compiler.scope().set_exports(names.into_slice());
 
     try!(compiler.push_instruction(Instruction::Unit));
     Ok(())
@@ -2218,23 +2223,24 @@ fn op_use(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 
     // Replace operator item with more specific item
     compiler.trace.pop();
-    compiler.trace.push(TraceItem::UseModule(compiler.scope.get_name(), mod_name));
+    compiler.trace.push(TraceItem::UseModule(compiler.ctx.scope().get_name(), mod_name));
 
-    let mods = compiler.scope.get_modules();
-    let m = try!(mods.load_module(mod_name, compiler.scope)
+    let ctx = compiler.ctx.clone();
+    let mods = ctx.scope().get_modules();
+    let m = try!(mods.load_module(mod_name, &ctx)
         .map_err(|e| { compiler.extend_global_trace(); e }));
 
     let mut imp_set = ImportSet::new(mod_name);
 
     match args[1] {
         Value::Keyword(standard_names::ALL) => {
-            let names = compiler.scope.import_all(&m.scope);
+            let names = compiler.scope().import_all(&m.scope);
             imp_set.names.extend(names.iter().map(|&n| (n, n)));
         }
         Value::Unit => (),
         Value::List(ref li) => {
             try!(import_names(mod_name, &mut imp_set,
-                compiler.scope, &m.scope, li));
+                compiler.scope(), &m.scope, li));
         }
         ref v => {
             compiler.set_trace_expr(v);
@@ -2243,7 +2249,7 @@ fn op_use(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
         }
     }
 
-    compiler.scope.add_imports(imp_set);
+    compiler.scope().add_imports(imp_set);
 
     try!(compiler.push_instruction(Instruction::Unit));
     Ok(())
@@ -2273,11 +2279,11 @@ fn op_const(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     // Replace operator item with more specific item
     compiler.trace.pop();
     compiler.trace.push(TraceItem::DefineConst(
-        compiler.scope.get_name(), name));
+        compiler.ctx.scope().get_name(), name));
 
     let (doc, body) = try!(extract_doc_string(args));
 
-    try!(test_define_name(compiler.scope, name));
+    try!(test_define_name(compiler.scope(), name));
 
     if compiler.get_constant(name).is_some() {
         return Err(From::from(CompileError::ConstantExists(name)));
@@ -2297,7 +2303,7 @@ fn op_const(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 
     compiler.add_constant(name, value.into_owned());
     if let Some(doc) = doc {
-        compiler.scope.add_doc_string(name, doc.to_owned());
+        compiler.scope().add_doc_string(name, doc.to_owned());
     }
 
     try!(compiler.load_quoted_value(Owned(Value::Name(name))));
@@ -2313,7 +2319,9 @@ fn op_const(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 fn op_set_module_doc(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     let doc = try!(<&str>::from_value_ref(&args[0]));
 
-    compiler.scope.with_module_doc_mut(|d| {
+    let scope = compiler.scope().clone();
+
+    scope.with_module_doc_mut(|d| {
         if d.is_none() {
             *d = Some(doc.to_owned());
             try!(compiler.push_instruction(Instruction::Unit));
@@ -2493,7 +2501,14 @@ fn make_lambda(compiler: &mut Compiler, name: Option<Name>,
             kw_params.iter().any(|&(n, _)| n == name);
 
         if exists {
+            compiler.set_trace_expr(v);
             return Err(From::from(CompileError::DuplicateParameter(name)));
+        }
+
+        if default.is_some() && !(key || optional) {
+            compiler.set_trace_expr(v);
+            return Err(From::from(CompileError::SyntaxError(
+                "default value before `:optional` or `:key`")));
         }
 
         if key {
@@ -2525,5 +2540,5 @@ fn make_lambda(compiler: &mut Compiler, name: Option<Name>,
         code.doc = Some(doc.to_owned());
     }
 
-    Ok((Lambda::new(Rc::new(code), &compiler.scope), captures))
+    Ok((Lambda::new(Rc::new(code), compiler.scope()), captures))
 }

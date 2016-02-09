@@ -1,7 +1,7 @@
 //! Implements constant folding for arithmetic functions.
 
 use error::Error;
-use exec::ExecError;
+use exec::{Context, ExecError};
 use function::{add_number, div_number, floor_div_number_step,
     floor_number, sub_number, mul_number};
 use value::Value;
@@ -20,11 +20,11 @@ pub trait FoldOp {
     fn is_identity(_: &Value) -> bool { false }
 
     /// Folds the two constant values, returning the resulting value.
-    fn fold(lhs: Value, rhs: &Value) -> Result<Value, Error>;
+    fn fold(ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error>;
 
     /// Inverse fold operation; used for anticommutative operators.
-    fn fold_inv(lhs: Value, rhs: &Value) -> Result<Value, Error> {
-        Self::fold(lhs, rhs)
+    fn fold_inv(ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error> {
+        Self::fold(ctx, lhs, rhs)
     }
 
     /// Finalizes a constant value when all arguments have been constant
@@ -40,47 +40,47 @@ pub enum FoldFloorDiv {}
 
 impl FoldOp for FoldAdd {
     fn is_identity(v: &Value) -> bool { is_zero(v) }
-    fn fold(lhs: Value, rhs: &Value) -> Result<Value, Error> {
-        add_number(lhs, rhs)
+    fn fold(ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error> {
+        add_number(ctx, lhs, rhs)
     }
 }
 
 impl FoldOp for FoldSub {
     fn is_identity(v: &Value) -> bool { is_zero(v) }
-    fn fold(lhs: Value, rhs: &Value) -> Result<Value, Error> {
-        sub_number(lhs, rhs)
+    fn fold(ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error> {
+        sub_number(ctx, lhs, rhs)
     }
-    fn fold_inv(lhs: Value, rhs: &Value) -> Result<Value, Error> {
-        add_number(lhs, rhs)
+    fn fold_inv(ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error> {
+        add_number(ctx, lhs, rhs)
     }
 }
 
 impl FoldOp for FoldMul {
     fn is_identity(v: &Value) -> bool { is_one(v) }
-    fn fold(lhs: Value, rhs: &Value) -> Result<Value, Error> {
-        mul_number(lhs, rhs)
+    fn fold(ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error> {
+        mul_number(ctx, lhs, rhs)
     }
 }
 
 impl FoldOp for FoldDiv {
     fn is_identity(v: &Value) -> bool { is_one(v) }
-    fn fold(lhs: Value, rhs: &Value) -> Result<Value, Error> {
-        div_number(lhs, rhs)
+    fn fold(ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error> {
+        div_number(ctx, lhs, rhs)
     }
-    fn fold_inv(lhs: Value, rhs: &Value) -> Result<Value, Error> {
-        mul_number(lhs, rhs)
+    fn fold_inv(ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error> {
+        mul_number(ctx, lhs, rhs)
     }
 }
 
 impl FoldOp for FoldFloorDiv {
     fn is_identity(v: &Value) -> bool { is_one(v) }
 
-    fn fold(lhs: Value, rhs: &Value) -> Result<Value, Error> {
-        floor_div_number_step(lhs, rhs)
+    fn fold(ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error> {
+        floor_div_number_step(ctx, lhs, rhs)
     }
 
-    fn fold_inv(lhs: Value, rhs: &Value) -> Result<Value, Error> {
-        mul_number(lhs, rhs)
+    fn fold_inv(ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error> {
+        mul_number(ctx, lhs, rhs)
     }
 
     fn finish(value: Value) -> Result<Value, Error> {

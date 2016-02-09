@@ -5,7 +5,7 @@ use std::rc::Rc;
 use bytecode::{CodeReader, Instruction};
 use compile::compile;
 use error::Error;
-use exec::ExecError;
+use exec::{Context, ExecError};
 use function::{plural, Lambda};
 use function::Arity::*;
 use io::SharedWrite;
@@ -28,18 +28,19 @@ pub fn load(scope: Scope) -> Module {
 }
 
 /// `compile` compiles an expression into a code object.
-fn fn_compile(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
-    let code = try!(compile(scope, &args[0]));
-    Ok(Value::Lambda(Lambda::new(Rc::new(code), scope)))
+fn fn_compile(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
+    let code = try!(compile(ctx, &args[0]));
+    Ok(Value::Lambda(Lambda::new(Rc::new(code), ctx.scope())))
 }
 
 /// `disassemble` prints information about a `Lambda` code object.
-fn fn_disassemble(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_disassemble(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let l = match args[0] {
         Value::Lambda (ref l) => l,
         ref v => return Err(From::from(ExecError::expected("lambda", v)))
     };
 
+    let scope = ctx.scope();
     let code = &l.code;
     let out = &scope.get_io().stdout;
 
@@ -107,7 +108,7 @@ fn fn_disassemble(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 
     for (off, instr) in instrs {
         let is_label = jumps.binary_search(&off).is_ok();
-        try!(print_instruction(scope, l, off, instr, is_label));
+        try!(print_instruction(ctx, l, off, instr, is_label));
     }
 
     try!(out.flush());
@@ -133,11 +134,12 @@ fn get_instructions(code: &[u8]) -> Result<Vec<(u32, Instruction)>, ExecError> {
     Ok(res)
 }
 
-fn print_instruction(scope: &Scope, lambda: &Lambda,
+fn print_instruction(ctx: &Context, lambda: &Lambda,
         offset: u32, instr: Instruction, is_label: bool)
         -> Result<(), Error> {
     use bytecode::Instruction::*;
 
+    let scope = ctx.scope();
     let label_str = if is_label { ">>" } else { "  " };
     let code = &lambda.code;
     let out = &scope.get_io().stdout;
@@ -198,7 +200,7 @@ fn print_instruction(scope: &Scope, lambda: &Lambda,
 ///
 /// If the named value does not exist or does not have a docstring,
 /// `()` is returned.
-fn fn_documentation(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_documentation(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0] {
         Value::Lambda(ref l) => {
             Ok(l.code.doc.clone()
@@ -206,6 +208,7 @@ fn fn_documentation(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
                 .unwrap_or(Value::Unit))
         }
         Value::Name(name) => {
+            let scope = ctx.scope();
             Ok(scope
                 .with_doc(name, |d| d.into())
                 .or_else(|| scope.get_value(name)
@@ -228,7 +231,7 @@ fn value_doc(v: &Value) -> Option<String> {
 }
 
 /// `get-const` returns the specified const value from a `Lambda` object.
-fn fn_get_const(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_get_const(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0] {
         Value::Lambda(ref l) => {
             let n = try!(usize::from_value_ref(&args[1]));
@@ -243,7 +246,7 @@ fn fn_get_const(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 /// `get-value` returns the specified enclosed value from a `Lambda` object.
-fn fn_get_value(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_get_value(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0] {
         Value::Lambda(ref l) => {
             let n = try!(usize::from_value_ref(&args[1]));
@@ -263,9 +266,9 @@ fn fn_get_value(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 /// `()` is returned.
 ///
 /// When given no parameters, the documentation for the current scope is returned.
-fn fn_module_documentation(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_module_documentation(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     if args.len() == 0 {
-        return Ok(scope.with_module_doc(|d| d.into())
+        return Ok(ctx.scope().with_module_doc(|d| d.into())
             .unwrap_or(Value::Unit));
     }
 
@@ -274,7 +277,7 @@ fn fn_module_documentation(scope: &Scope, args: &mut [Value]) -> Result<Value, E
         ref v => return Err(From::from(ExecError::expected("name", v)))
     };
 
-    let m = scope.get_modules();
+    let m = ctx.scope().get_modules();
 
     Ok(m.get_module(name)
         .and_then(|m| m.scope.with_module_doc(|d| d.into()))

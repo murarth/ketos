@@ -23,9 +23,11 @@
 //! returns a value, which is available to the calling function through the
 //! value register.
 
+use std::cell::Cell;
 use std::fmt;
 use std::mem::replace;
 use std::rc::Rc;
+use std::time::Instant;
 use std::vec::Drain;
 
 use bytecode::{Code, CodeReader};
@@ -33,12 +35,86 @@ use error::Error;
 use function::{Arity, Function, Lambda, SystemFn};
 use integer::{Integer, Ratio};
 use lexer::{highlight_span, Span};
+use restrict::{RestrictConfig, RestrictError};
 use scope::{MasterScope, Scope};
 use string_fmt::FormatError;
 use name::{debug_names, display_names, get_standard_name, get_system_fn,
     Name, NameDisplay, NameStore};
 use trace::{Trace, TraceItem, set_traceback};
 use value::{FromValueRef, Value};
+
+/// Interval, in instructions run, between checking time limit
+const TIME_CHECK_INTERVAL: u32 = 100;
+
+/// Represents an execution context
+#[derive(Clone)]
+pub struct Context {
+    scope: Scope,
+    restrict: RestrictConfig,
+    // In limited circumstances, a Machine may be created during execution
+    // to execute a program within a program. Therefore, start time must be
+    // carried along with the context rather than attached to a particular
+    // Machine.
+    //
+    // These values are copied when a Context is cloned, but that doesn't
+    // create a problem because updates need not be carried back into
+    // prior existing Machines.
+    run_start: Cell<Option<Instant>>,
+    run_level: Cell<u32>,
+    memory_held: Cell<usize>,
+}
+
+impl Context {
+    /// Creates a new execution context.
+    pub fn new(scope: Scope, restrict: RestrictConfig) -> Context {
+        Context{
+            scope: scope,
+            restrict: restrict,
+            run_start: Cell::new(None),
+            run_level: Cell::new(0),
+            memory_held: Cell::new(0),
+        }
+    }
+
+    /// Returns a reference to the contained scope.
+    pub fn scope(&self) -> &Scope { &self.scope }
+
+    /// Creates a new execution context with the given scope.
+    pub fn with_scope(&self, scope: Scope) -> Context {
+        Context::new(scope, self.restrict.clone())
+    }
+
+    /// Returns a reference to the contained restriction configuration.
+    pub fn restrict(&self) -> &RestrictConfig { &self.restrict }
+
+    fn dec_run_level(&self) {
+        let n = self.run_level.get() - 1;
+        self.run_level.set(n);
+        if n == 0 {
+            self.run_start.set(None);
+        }
+    }
+
+    fn inc_run_level(&self) {
+        let n = self.run_level.get();
+        self.run_level.set(n + 1);
+        if n == 0 {
+            self.run_start.set(Some(Instant::now()));
+        }
+    }
+
+    fn start_time(&self) -> Instant {
+        self.run_start.get().expect("context missing start time")
+    }
+
+    fn set_memory<F>(&self, f: F) -> usize
+            where F: FnOnce(usize) -> usize {
+        let old = self.memory_held.get();
+        let new = f(old);
+        self.memory_held.set(new);
+        new
+    }
+}
 
 /// Represents an error generated while executing bytecode.
 #[derive(Debug)]
@@ -130,8 +206,6 @@ pub enum ExecError {
     Overflow,
     /// Code called `panic`
     Panic(Option<Value>),
-    /// Exceeded maximum stack size
-    StackOverflow,
     /// Struct definition not found
     StructDefError(Name),
     /// Operation performed on unexpected type
@@ -242,7 +316,6 @@ impl fmt::Display for ExecError {
             OutOfBounds(n) => write!(f, "index out of bounds: {}", n),
             Overflow => f.write_str("integer overflow"),
             Panic(_) => f.write_str("panic"),
-            StackOverflow => f.write_str("stack overflow"),
             TypeError{expected, found, ..} =>
                 write!(f, "type error: expected {}; found {}", expected, found),
             StructMismatch{..} => f.write_str("incorrect struct type"),
@@ -331,26 +404,26 @@ impl NameDisplay for ExecError {
 }
 
 /// Executes a code object and returns the value.
-pub fn execute(scope: &Scope, code: Rc<Code>) -> Result<Value, Error> {
-    let mut mach = Machine::new();
+pub fn execute(ctx: &Context, code: Rc<Code>) -> Result<Value, Error> {
+    let mut mach = Machine::new(ctx);
 
-    mach.execute(scope, code)
+    mach.execute(ctx.scope(), code)
         .map_err(|e| { set_traceback(mach.build_trace()); e })
 }
 
 /// Calls a function or lambda in the given scope with the given arguments.
-pub fn call_function(scope: &Scope, fun: Value, args: Vec<Value>) -> Result<Value, Error> {
+pub fn call_function(ctx: &Context, fun: Value, args: Vec<Value>) -> Result<Value, Error> {
     match fun {
-        Value::Function(fun) => execute_function(scope, fun, args)
+        Value::Function(fun) => execute_function(ctx, fun, args)
             .map_err(|e| { set_traceback(
                 Trace::single(TraceItem::CallSys(fun.name), None)); e }),
-        Value::Lambda(l) => execute_lambda(l, args),
+        Value::Lambda(l) => execute_lambda(ctx, l, args),
         ref v => Err(From::from(ExecError::expected("function", v)))
     }
 }
 
 /// Executes a `Function` in the given scope and returns the value.
-pub fn execute_function(scope: &Scope, fun: Function, mut args: Vec<Value>)
+pub fn execute_function(ctx: &Context, fun: Function, mut args: Vec<Value>)
         -> Result<Value, Error> {
     let n_args = args.len() as u32;
 
@@ -361,13 +434,13 @@ pub fn execute_function(scope: &Scope, fun: Function, mut args: Vec<Value>)
             found: n_args,
         }))
     } else {
-        (fun.sys_fn.callback)(scope, &mut args)
+        (fun.sys_fn.callback)(ctx, &mut args)
     }
 }
 
 /// Executes a `Lambda` in the given scope and returns the value.
-pub fn execute_lambda(lambda: Lambda, args: Vec<Value>) -> Result<Value, Error> {
-    let mut mach = Machine::new();
+pub fn execute_lambda(ctx: &Context, lambda: Lambda, args: Vec<Value>) -> Result<Value, Error> {
+    let mut mach = Machine::new(ctx);
 
     mach.execute_lambda(lambda, args)
         .map_err(|e| { set_traceback(mach.build_trace()); e })
@@ -379,6 +452,7 @@ struct StackFrame {
     /// Code scope
     scope: Scope,
     /// Closure values
+    // TODO: When Rc<[T]> is possible for non-static [T], change this.
     values: Option<Rc<Box<[Value]>>>,
     /// Instruction pointer
     iptr: u32,
@@ -389,6 +463,7 @@ struct StackFrame {
 }
 
 struct Machine {
+    context: Context,
     stack: Vec<Value>,
     call_stack: Vec<StackFrame>,
     value: Value,
@@ -396,11 +471,11 @@ struct Machine {
 }
 
 impl Machine {
-    fn new() -> Machine {
+    fn new(ctx: &Context) -> Machine {
         Machine{
-            // TODO: Configurable stack limits
-            stack: Vec::with_capacity(10240),
-            call_stack: Vec::with_capacity(1024),
+            context: ctx.clone(),
+            stack: Vec::with_capacity(ctx.restrict().value_stack_size),
+            call_stack: Vec::with_capacity(ctx.restrict().call_stack_size),
             value: Value::Unit,
             sys_fn_call: None,
         }
@@ -494,7 +569,13 @@ impl Machine {
     }
 
     fn start(&mut self, mut frame: StackFrame) -> Result<Value, Error> {
-        if let Err(e) = self.run(&mut frame) {
+        self.context.inc_run_level();
+
+        let res = self.run(&mut frame);
+
+        self.context.dec_run_level();
+
+        if let Err(e) = res {
             // Save the frame for stack traces
             self.call_stack.push(frame);
             return Err(e);
@@ -506,6 +587,8 @@ impl Machine {
     fn run(&mut self, frame: &mut StackFrame) -> Result<(), Error> {
         use bytecode::Instruction::*;
 
+        let mut n_instructions = 0;
+
         loop {
             let instr = {
                 let mut r = CodeReader::new(&frame.code.code, frame.iptr as usize);
@@ -513,6 +596,12 @@ impl Machine {
                 frame.iptr = r.get_offset() as u32;
                 instr
             };
+
+            n_instructions += 1;
+
+            if n_instructions % TIME_CHECK_INTERVAL == 0 {
+                try!(self.check_time());
+            }
 
             match instr {
                 Load(n) => try!(self.load(frame.sptr + n)),
@@ -622,6 +711,25 @@ impl Machine {
         Ok(())
     }
 
+    fn check_memory(&self, n: usize) -> Result<(), RestrictError> {
+        if n > self.context.restrict().memory_limit {
+            return Err(RestrictError::MemoryLimitExceeded);
+        }
+        Ok(())
+    }
+
+    fn check_time(&self) -> Result<(), RestrictError> {
+        if let Some(time_limit) = self.context.restrict().execution_time {
+            let start = self.context.start_time();
+
+            if start.elapsed() >= time_limit {
+                return Err(RestrictError::ExecutionTimeExceeded);
+            }
+        }
+
+        Ok(())
+    }
+
     fn get_sys_fn(&self, n: u32) -> Result<(Name, &'static SystemFn), ExecError> {
         get_standard_name(n).and_then(|n| get_system_fn(n).map(|f| (n, f)))
             .ok_or(ExecError::InvalidSystemFn(n))
@@ -664,7 +772,9 @@ impl Machine {
                 // Store the name for traceback if an error is generated
                 self.sys_fn_call = Some(name);
 
-                let v = try!((sys_fn.callback)(&frame.scope, &mut args));
+                let ctx = self.context.with_scope(frame.scope.clone());
+
+                let v = try!((sys_fn.callback)(&ctx, &mut args));
                 self.value = v;
 
                 self.sys_fn_call = None;
@@ -705,7 +815,8 @@ impl Machine {
                     try!(self.pop());
                 }
 
-                let v = try!(fv.call_value(&frame.scope, &mut args));
+                let ctx = self.context.with_scope(frame.scope.clone());
+                let v = try!(fv.call_value(&ctx, &mut args));
                 self.value = v;
 
                 Ok(())
@@ -720,7 +831,7 @@ impl Machine {
             .expect("Lambda scope has been destroyed");
 
         if self.stack.len() < n_args as usize {
-            return Err(From::from(ExecError::StackOverflow));
+            return Err(From::from(RestrictError::ValueStackExceeded));
         }
 
         let n_args = try!(self.setup_call(&lambda.code, n_args));
@@ -844,6 +955,10 @@ impl Machine {
         let start = frame.sptr as usize;
         let end = len - n_args as usize;
 
+        let n = self.stack[start..end].iter()
+            .map(|v| v.size()).fold(0, |a, b| a + b);
+        self.context.set_memory(|m| m.saturating_sub(n));
+
         let _ = self.stack.drain(start..end);
         frame.iptr = 0;
 
@@ -855,6 +970,10 @@ impl Machine {
     /// Cleans the stack when returning from a function.
     /// All values `stack[pos..]` are removed.
     fn clean_stack(&mut self, pos: usize) {
+        let n = self.stack[pos..].iter()
+            .map(|v| v.size()).fold(0, |a, b| a + b);
+        self.context.set_memory(|m| m.saturating_sub(n));
+
         let _ = self.stack.drain(pos..);
     }
 
@@ -871,9 +990,9 @@ impl Machine {
     }
 
     /// Saves the current call state to the call stack.
-    fn save_frame(&mut self, frame: StackFrame) -> Result<(), ExecError> {
+    fn save_frame(&mut self, frame: StackFrame) -> Result<(), Error> {
         if self.call_stack.len() == self.call_stack.capacity() {
-            return Err(ExecError::StackOverflow);
+            return Err(From::from(RestrictError::CallStackExceeded));
         }
 
         self.call_stack.push(frame);
@@ -964,17 +1083,23 @@ impl Machine {
             .ok_or(ExecError::NameError(name))
     }
 
-    fn get_def_push(&mut self, frame: &StackFrame, n: u32) -> Result<(), ExecError> {
+    fn get_def_push(&mut self, frame: &StackFrame, n: u32) -> Result<(), Error> {
         let name = try!(get_const_name(&frame.code, n));
         let v = try!(self.get_value(frame, name));
         self.push(v)
     }
 
-    fn set_def(&mut self, frame: &StackFrame, n: u32) -> Result<(), ExecError> {
+    fn set_def(&mut self, frame: &StackFrame, n: u32) -> Result<(), Error> {
         let name = try!(get_const_name(&frame.code, n));
 
         if !MasterScope::can_define(name) {
-            return Err(ExecError::CannotDefine(name));
+            return Err(From::from(ExecError::CannotDefine(name)));
+        }
+
+        if !frame.scope.contains_value(name) {
+            if frame.scope.num_values() >= self.context.restrict().namespace_size {
+                return Err(From::from(RestrictError::NamespaceSizeExceeded));
+            }
         }
 
         // Resulting value is the definition name
@@ -986,7 +1111,10 @@ impl Machine {
 
     /// Pop from the top of the stack and return the value.
     fn pop(&mut self) -> Result<Value, ExecError> {
-        self.stack.pop().ok_or(ExecError::InvalidStack(0))
+        let v = try!(self.stack.pop().ok_or(ExecError::InvalidStack(0)));
+        self.context.set_memory(|m| m.saturating_sub(v.size()));
+
+        Ok(v)
     }
 
     /// Push values onto the stack from an iterator.
@@ -995,39 +1123,51 @@ impl Machine {
     ///
     /// If `ExactSizeIterator::len` misrepresents the number of items in the
     /// iterator, the stack's capacity may be exceeded without causing an error.
-    fn push_iter<I>(&mut self, iter: I) -> Result<(), ExecError>
+    fn push_iter<I>(&mut self, iter: I) -> Result<(), Error>
             where I: IntoIterator<Item=Value>, I::IntoIter: ExactSizeIterator {
         let iter = iter.into_iter();
 
         if self.stack.len() + iter.len() > self.stack.capacity() {
-            return Err(ExecError::StackOverflow);
+            return Err(From::from(RestrictError::ValueStackExceeded));
         }
 
-        self.stack.extend(iter);
+        let mut size = 0;
+
+        self.stack.extend(iter
+            .inspect(|v| size += v.size()));
+
+        let total = self.context.set_memory(|m| m.saturating_add(size));
+
+        try!(self.check_memory(total));
+
         Ok(())
     }
 
-    fn push(&mut self, v: Value) -> Result<(), ExecError> {
+    fn push(&mut self, v: Value) -> Result<(), Error> {
         if self.stack.len() == self.stack.capacity() {
-            Err(ExecError::StackOverflow)
+            Err(From::from(RestrictError::ValueStackExceeded))
         } else {
+            let n = v.size();
+            let total = self.context.set_memory(|m| m.saturating_add(n));
+            try!(self.check_memory(total));
+
             self.stack.push(v);
             Ok(())
         }
     }
 
-    fn push_const(&mut self, code: &Code, n: u32) -> Result<(), ExecError> {
+    fn push_const(&mut self, code: &Code, n: u32) -> Result<(), Error> {
         self.push(try!(get_const(code, n)).clone())
     }
 
-    fn push_unbound(&mut self, n: u32) -> Result<(), ExecError> {
+    fn push_unbound(&mut self, n: u32) -> Result<(), Error> {
         for _ in 0..n {
             try!(self.push(Value::Unbound));
         }
         Ok(())
     }
 
-    fn push_value(&mut self) -> Result<(), ExecError> {
+    fn push_value(&mut self) -> Result<(), Error> {
         let v = self.value.take();
         self.push(v)
     }
@@ -1041,7 +1181,13 @@ impl Machine {
         let len = self.stack.len();
 
         if n as usize <= len {
-            Ok(self.stack.drain(len - n as usize..))
+            let start = len - n as usize;
+
+            let n = self.stack[start..].iter()
+                .map(|v| v.size()).fold(0, |a, b| a + b);
+            self.context.set_memory(|m| m.saturating_sub(n));
+
+            Ok(self.stack.drain(start..))
         } else {
             Err(ExecError::InvalidStack(len as u32))
         }
@@ -1071,12 +1217,12 @@ impl Machine {
             .ok_or(ExecError::InvalidStack(len as u32))
     }
 
-    fn load_push(&mut self, n: u32) -> Result<(), ExecError> {
+    fn load_push(&mut self, n: u32) -> Result<(), Error> {
         let v = try!(self.get_stack(n)).clone();
         self.push(v)
     }
 
-    fn load_c_push(&mut self, frame: &StackFrame, n: u32) -> Result<(), ExecError> {
+    fn load_c_push(&mut self, frame: &StackFrame, n: u32) -> Result<(), Error> {
         let v = try!(self.get_closure_value(frame, n)).clone();
         self.push(v)
     }
@@ -1294,37 +1440,37 @@ impl Machine {
         Ok(())
     }
 
-    fn first_push(&mut self) -> Result<(), ExecError> {
+    fn first_push(&mut self) -> Result<(), Error> {
         let v = match self.value {
             Value::List(ref li) => li[0].clone(),
-            ref v => return Err(ExecError::expected("list", v))
+            ref v => return Err(From::from(ExecError::expected("list", v)))
         };
 
         self.push(v)
     }
 
-    fn tail_push(&mut self) -> Result<(), ExecError> {
+    fn tail_push(&mut self) -> Result<(), Error> {
         let v = match self.value {
             Value::List(ref li) => li.slice(1..),
-            ref v => return Err(ExecError::expected("list", v))
+            ref v => return Err(From::from(ExecError::expected("list", v)))
         };
 
         self.push(v.into())
     }
 
-    fn init_push(&mut self) -> Result<(), ExecError> {
+    fn init_push(&mut self) -> Result<(), Error> {
         let v = match self.value {
             Value::List(ref li) => li.slice(..li.len() - 1),
-            ref v => return Err(ExecError::expected("list", v))
+            ref v => return Err(From::from(ExecError::expected("list", v)))
         };
 
         self.push(v.into())
     }
 
-    fn last_push(&mut self) -> Result<(), ExecError> {
+    fn last_push(&mut self) -> Result<(), Error> {
         let v = match self.value {
             Value::List(ref li) => li.last().cloned().unwrap(),
-            ref v => return Err(ExecError::expected("list", v))
+            ref v => return Err(From::from(ExecError::expected("list", v)))
         };
 
         self.push(v)
