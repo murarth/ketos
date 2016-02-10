@@ -81,6 +81,50 @@ ketos=> `(foo ,@(concat '(1 2) '(3 4)))
 (foo 1 2 3 4)
 ```
 
+## Execution
+
+Local bindings and values in Ketos are immutable -- they cannot be modified
+once assigned. Global bindings (those created with the
+[`define` operator](operators.md#define)) can be replaced with another call
+to `define`, but existing copies of the original value will remain unchanged.
+
+Because values are immutable, iterative computation cannot be done with loops,
+as it is typically done in imperative programming languages. Instead, these
+computations are accomplished with recursive functions.
+
+### Tail recursion
+
+The Ketos interpreter implements tail call optimization for recursive functions.
+This enables functions to perform a recursive tail calls without occupying more
+space on the call stack.
+
+Care must be taken to write functions in a tail recursive manner.  
+Consider this naive implementation of a factorial function:
+
+```lisp
+(define (factorial n)
+  (if (<= n 1)
+    1
+    (* n (factorial (- n 1)))))
+```
+
+This implementation cannot benefit from tail call optimization because the
+final result of the second branch is computed by the `*` function.
+
+The function can instead be written with an accumulator parameter -- which
+collects the computation in each step and passes it to itself on the next call.
+This function will take full advantage of tail call optimization:
+
+```lisp
+(define (factorial n)
+  (factorial-tail 1 n))
+
+(define (factorial-tail acc n)
+  (if (<= n 1)
+    acc
+    (factorial-tail (* n acc) (- n 1))))
+```
+
 ## Types
 
 ### Unit
