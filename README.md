@@ -1,6 +1,6 @@
 # Ketos
 
-Ketos is a Lisp-like functional programming language.
+Ketos is a Lisp dialect functional programming language.
 
 The primary goal of Ketos is to serve as a scripting and extension language for
 programs written in the [Rust programming language](https://www.rust-lang.org).

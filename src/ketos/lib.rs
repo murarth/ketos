@@ -1,4 +1,4 @@
-//! Ketos is a Lisp-like functional programming language, designed to be
+//! Ketos is a Lisp dialect functional programming language, designed to be
 //! a scripting and extension language for Rust programs.
 //!
 //! ```

@@ -1,6 +1,6 @@
 [package]
 name = "ketos"
-description = "Lisp-like scripting and extension language"
+description = "Lisp dialect scripting and extension language"
 
 documentation = "http://murarth.github.io/ketos/ketos/index.html"
 homepage = "https://github.com/murarth/ketos"

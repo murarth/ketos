@@ -1,10 +1,9 @@
 # Ketos
 
-Ketos is a Lisp-like functional programming language, implemented in Rust
+Ketos is a Lisp dialect functional programming language, implemented in Rust
 and mainly intended for extending and scripting for Rust programs.
 
-It's not exactly a Lisp dialect. Its types and semantics are, in some cases,
-closer to Rust than to Lisp.
+Its types and semantics are, in some cases, closer to Rust than to Lisp.
 
 ## Syntax
 
