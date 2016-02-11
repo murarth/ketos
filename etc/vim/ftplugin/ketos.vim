@@ -19,5 +19,7 @@ setl formatoptions+=croql
 setl iskeyword=33,36,37,38,42,43,45-57,60-63,65-90,94,95,97-122,124
 setl lisp
 setl lispwords+=define,macro
+setl shiftwidth=2
+setl tabstop=2
 
-let b:undo_ftplugin = 'setlocal comments< commentstring< define< formatoptions< iskeyword< lisp< lispwords<'
+let b:undo_ftplugin = 'setlocal comments< commentstring< define< formatoptions< iskeyword< lisp< lispwords< shiftwidth< tabstop<'
