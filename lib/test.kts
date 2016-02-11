@@ -1,4 +1,4 @@
-;; Provides a few helper macros for testing facilities.
+;;; Provides a few helper macros for testing facilities.
 
 (export (assert assert-eq assert-not run-tests))
 
@@ -35,8 +35,7 @@
         (lambda (def)
           (let ((name (first (second def))))
             `(run-test ',name ,name)))
-        test-defs
-     )))
+        test-defs)))
 
 ; We can't depend on the list module, so we duplicate this definition here.
 (define (map-into out fn li)
