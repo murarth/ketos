@@ -1,0 +1,123 @@
+;;; A collection of functions that operate on lists.
+
+(export (
+         drop drop-while take take-while zip zip-with
+         all any count each filter find foldl foldr index map))
+
+;; Drop the first `n` elements from `li`, returning the remaining elements.
+;; If the list is shorter than `n` elements, `()` is returned.
+(define (drop n li)
+  (let ((length (len li)))
+    (if (< n length)
+      (slice li n length))))
+
+;; Drop elements while a predicate is satisfied, returning the remaining elements.
+(define (drop-while fn li)
+  (cond
+    ((null li)        ())
+    ((fn (first li))  (drop-while fn (tail li)))
+    (else             li)))
+
+;; Take the first `n` elements from `li`.
+;; If the list is shorter than `n` elements, the whole list is returned.
+(define (take n li)
+  (slice li 0 (min n (len li))))
+
+;; Take elements of a list while a predicate is satisfied.
+(define (take-while fn li) (take-while-inner fn li li 0))
+
+(define (take-while-inner fn li orig idx)
+  (cond
+    ((null li)        orig)
+    ((fn (first li))  (take-while-inner fn (tail li) orig (+ idx 1)))
+    (else             (slice orig 0 idx))))
+
+;; Returns a list of lists containing corresponding elements from each input list.
+;; The result will be as long as the shortest list.
+(define (zip li :rest rest)
+  (zip-into () (concat (list li) rest)))
+
+;; Calls a function with each successive set of elements from the given lists.
+;; The resulting list will be as long as the shortest list.
+(define (zip-with fn li :rest rest)
+  (map (lambda (li) (apply fn li)) (zip-into () (concat (list li) rest))))
+
+(define (zip-into li inputs)
+  (if (any null inputs)
+    li
+    (zip-into
+      (append li (map first inputs))
+      (map tail inputs))))
+
+;; Returns whether all elements satisfy a predicate.
+(define (all fn li)
+  (or (null li)
+    (and (fn (first li)) (all fn (tail li)))))
+
+;; Returns whether any element satisfies a predicate.
+(define (any fn li)
+  (and (not (null li))
+    (or (fn (first li)) (any fn (tail li)))))
+
+;; Returns the number of elements satisfying a predicate.
+(define (count fn li) (count-inner fn li 0))
+
+(define (count-inner fn li n)
+  (if (null li)
+    n
+    (count-inner fn (tail li)
+                 (if (fn (first li)) (+ n 1) n))))
+
+;; Calls a function for each element, discarding the result.
+(define (each fn li)
+  (if (not (null li))
+    (do
+      (fn (first li))
+      (each fn (tail li)))))
+
+;; Returns a list containing all elements satisfying a predicate.
+(define (filter fn li) (filter-into fn li ()))
+
+(define (filter-into fn li out)
+  (if (null li)
+    out
+    (filter-into fn (tail li)
+                 (if (fn (first li))
+                   (append out (first li))
+                   out))))
+
+;; Returns the first element satisfying a predicate.
+(define (find fn li)
+  (cond
+    ((null li)        ())
+    ((fn (first li))  (first li))
+    (else             (find fn (tail li)))))
+
+;; Returns the given list, left-folded.
+(define (foldl fn ini li)
+  (if (null li)
+    ini
+    (foldl fn (fn ini (first li)) (tail li))))
+
+;; Returns the given list, right-folded.
+(define (foldr fn ini li)
+  (if (null li)
+    ini
+    (foldr fn (fn (last li) ini) (init li))))
+
+;; Returns the index of the first element satisfying a predicate, or `()`.
+(define (index fn li) (index-inner fn li 0))
+
+(define (index-inner fn li n)
+  (cond
+    ((null li)        ())
+    ((fn (first li))  n)
+    (else             (index-inner fn (tail li) (+ n 1)))))
+
+;; Returns each element mapped with `fn`.
+(define (map fn li) (map-into fn li ()))
+
+(define (map-into fn li out)
+  (if (null li)
+    out
+    (map-into fn (tail li) (append out (fn (first li))))))

@@ -1,0 +1,101 @@
+(use list :all)
+(use test () :macro :all)
+
+(run-tests
+
+  (define (test-drop)
+    (do
+      (assert-eq (drop 0 '(1 2 3)) '(1 2 3))
+      (assert-eq (drop 2 '(1 2 3)) '(3))
+      (assert-eq (drop 5 '(1 2 3)) '())))
+
+  (define (test-drop-while)
+    (do
+      (assert-eq (drop-while (lambda (a) (< a 3))  '(1 2 3 4 5)) '(3 4 5))
+      (assert-eq (drop-while (lambda (a) (< a 10)) '(1 2 3 4 5)) '())
+      (assert-eq (drop-while (lambda (a) (< a 0))  '(1 2 3 4 5)) '(1 2 3 4 5))))
+
+  (define (test-take)
+    (do
+      (assert-eq (take 0 '(1 2 3)) '())
+      (assert-eq (take 2 '(1 2 3)) '(1 2))
+      (assert-eq (take 5 '(1 2 3)) '(1 2 3))))
+
+  (define (test-take-while)
+    (do
+      (assert-eq (take-while (lambda (a) (< a 3))  '(1 2 3 4 5)) '(1 2))
+      (assert-eq (take-while (lambda (a) (< a 10)) '(1 2 3 4 5)) '(1 2 3 4 5))
+      (assert-eq (take-while (lambda (a) (< a 0))  '(1 2 3 4 5)) '())))
+
+  (define (test-zip)
+    (do
+      (assert-eq (zip '(1 2 3) '(4 5 6)) '((1 4) (2 5) (3 6)))
+      (assert-eq (zip '(1 2 3) '(4 5 6 7 8)) '((1 4) (2 5) (3 6)))
+      (assert-eq (zip '() '(4 5 6)) '())))
+
+  (define (test-zip-with)
+    (do
+      (assert-eq (zip-with + '(1 2 3) '(4 5 6)) '(5 7 9))
+      (assert-eq (zip-with + '(1 2 3) '(4 5 6 7 8)) '(5 7 9))
+      (assert-eq (zip-with + '() '(4 5 6)) '())))
+
+  (define (test-all)
+    (do
+      (assert     (all id '()))
+      (assert     (all id '(true true true)))
+      (assert-not (all id '(true true false)))))
+
+  (define (test-any)
+    (do
+      (assert-not (any id '()))
+      (assert     (any id '(false true false)))
+      (assert-not (any id '(false false false)))))
+
+  (define (test-count)
+    (do
+      (assert-eq (count (lambda (a) (< a 3))  '(1 2 3 4 5)) 2)
+      (assert-eq (count (lambda (a) (< a 10)) '(1 2 3 4 5)) 5)
+      (assert-eq (count (lambda (a) (< a 0))  '(1 2 3 4 5)) 0)))
+
+  (define (test-each)
+    (do
+      (define counter 0)
+
+      (each (lambda (a) (define counter (+ counter a)))
+            '(1 2 3 4 5))
+
+      (assert-eq counter 15)))
+
+  (define (test-filter)
+    (do
+      (assert-eq (filter (lambda (a) (not (zero a))) '(1 0 2 0 3)) '(1 2 3))
+      (assert-eq (filter (lambda (a) (> a 10)) '(1 2 3)) '())))
+
+  (define (test-find)
+    (do
+      (assert-eq (find zero '(1 2 3 0)) 0)
+      (assert-eq (find zero '(1 2 3)) ())))
+
+  (define (test-foldl)
+    (do
+      (assert-eq (foldl + 0 '()) 0)
+      (assert-eq (foldl + 0 '(1 2 3)) 6)
+      (assert-eq (foldl list () '(a b c)) '(((() a) b) c))))
+
+  (define (test-foldr)
+    (do
+      (assert-eq (foldr + 0 '()) 0)
+      (assert-eq (foldr + 0 '(1 2 3)) 6)
+      (assert-eq (foldr list () '(a b c)) '(a (b (c ()))))))
+
+  (define (test-index)
+    (do
+      (assert-eq (index zero '(1 2 3 0)) 3)
+      (assert-eq (index zero '(1 2 3)) ())))
+
+  (define (test-map)
+    (do
+      (assert-eq (map - '(1 2 3)) '(-1 -2 -3))
+      (assert-eq (map id ()) ())))
+
+  )
