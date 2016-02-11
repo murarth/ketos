@@ -54,6 +54,9 @@ fn test_integer() {
 
 #[test]
 fn test_quasiquote() {
+    assert_eq!(eval("`foo").unwrap(), "foo");
+    assert_eq!(eval("``foo").unwrap(), "`foo");
+    assert_eq!(eval("```foo").unwrap(), "``foo");
     assert_eq!(eval("`(foo ,(id 1))").unwrap(), "(foo 1)");
     assert_eq!(eval("``(foo ,(id ,(id 1)))").unwrap(), "`(foo ,(id 1))");
     assert_eq!(eval("```(foo ,(id ,(id ,(id 1))))").unwrap(),

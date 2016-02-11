@@ -487,10 +487,8 @@ impl<'a> Compiler<'a> {
             }
             Value::Comma(_, _) | Value::CommaAt(_, _) =>
                 return Err(From::from(CompileError::UnbalancedComma)),
-            ref v @ Value::Quasiquote(_, _) =>
-                // We pass the whole value at depth 0 to handle
-                // multiply-quasiquoted values properly
-                try!(self.compile_quasiquote(v, 0)),
+            Value::Quasiquote(ref v, n) =>
+                try!(self.compile_quasiquote(v, n)),
             _ => try!(self.load_const_value(value))
         }
 
@@ -527,14 +525,38 @@ impl<'a> Compiler<'a> {
         }
     }
 
+    /// Compiles the expression `Quasiquote(value, depth)`
     fn compile_quasiquote(&mut self, value: &Value, depth: u32) -> Result<(), Error> {
+        if try!(self.is_quasi_const(value, depth)) {
+            match depth {
+                1 => try!(self.load_quoted_value(Borrowed(value))),
+                _ => try!(self.load_quoted_value(Owned(
+                    value.clone().quasiquote(depth - 1))))
+            }
+        } else {
+            try!(self.compile_quasi_value(value, depth));
+            if depth != 1 {
+                try!(self.push_instruction(Instruction::Quasiquote(depth - 1)));
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Compiles a value found within a quasiquoted expression
+    fn compile_quasi_value(&mut self, value: &Value, depth: u32) -> Result<(), Error> {
+        if try!(self.is_quasi_const(value, depth)) {
+            try!(self.load_quoted_value(Borrowed(value)));
+            return Ok(());
+        }
+
         match *value {
             Value::Comma(ref v, n) if n == depth =>
                 self.compile_value(v),
             Value::Comma(_, n) if n > depth =>
                 Err(From::from(CompileError::UnbalancedComma)),
             Value::Comma(ref v, n) => {
-                try!(self.compile_quasiquote(v, depth - n));
+                try!(self.compile_quasi_value(v, depth - n));
                 try!(self.push_instruction(Instruction::Comma(n)));
                 Ok(())
             }
@@ -545,25 +567,36 @@ impl<'a> Compiler<'a> {
             Value::List(ref li) =>
                 self.compile_quasiquote_list(li, depth),
             Value::Quote(ref v, n) => {
-                try!(self.compile_quasiquote(v, depth));
+                try!(self.compile_quasi_value(v, depth));
                 try!(self.push_instruction(Instruction::Quote(n)));
                 Ok(())
             }
             Value::Quasiquote(ref v, n) => {
-                try!(self.compile_quasiquote(v, depth + n));
-                if depth == 0 {
-                    if n != 1 {
-                        try!(self.push_instruction(Instruction::Quasiquote(n - 1)));
+                if try!(self.is_quasi_const(v, n)) {
+                    match n {
+                        1 => try!(self.load_const_value(v)),
+                        _ => {
+                            let c = self.add_const(Owned(
+                                Value::Quasiquote(v.clone(), n - 1)));
+                            try!(self.push_instruction(Instruction::Const(c)));
+                        }
                     }
+
+                    Ok(())
                 } else {
-                    try!(self.push_instruction(Instruction::Quasiquote(n)));
+                    try!(self.compile_quasi_value(v, depth + n));
+                    if depth == 0 {
+                        if n != 1 {
+                            try!(self.push_instruction(Instruction::Quasiquote(n - 1)));
+                        }
+                    } else {
+                        try!(self.push_instruction(Instruction::Quasiquote(n)));
+                    }
+                    Ok(())
                 }
-                Ok(())
             }
-            _ => {
-                try!(self.load_quoted_value(Borrowed(value)));
-                Ok(())
-            }
+            // Handled by `if is_quasi_const { ... }` above
+            _ => unreachable!()
         }
     }
 
@@ -594,14 +627,14 @@ impl<'a> Compiler<'a> {
                     return Err(From::from(CompileError::UnbalancedComma)),
                 Value::CommaAt(ref v, n) => {
                     n_items += 1;
-                    try!(self.compile_quasiquote(v, depth - n));
+                    try!(self.compile_quasi_value(v, depth - n));
                     try!(self.push_instruction(
                         Instruction::CommaAt(depth - n)));
                     try!(self.push_instruction(Instruction::Push));
                 }
                 _ => {
                     n_items += 1;
-                    try!(self.compile_quasiquote(v, depth));
+                    try!(self.compile_quasi_value(v, depth));
                     try!(self.push_instruction(Instruction::Push));
                 }
             }
@@ -622,6 +655,35 @@ impl<'a> Compiler<'a> {
         }
 
         Ok(())
+    }
+
+    // Returns true if a value found within a quasiquoted value does not
+    // contain any expressions to be evaluated.
+    fn is_quasi_const(&self, value: &Value, depth: u32) -> Result<bool, Error> {
+        match *value {
+            Value::List(ref li) => {
+                for v in li.iter() {
+                    if !try!(self.is_quasi_const(v, depth)) {
+                        return Ok(false);
+                    }
+                }
+
+                Ok(true)
+            }
+            Value::Quasiquote(ref v, n) => self.is_quasi_const(v, depth + n),
+            Value::Quote(ref v, _) => self.is_quasi_const(v, depth),
+            Value::Comma(_, n) if n > depth =>
+                Err(From::from(CompileError::UnbalancedComma)),
+            Value::Comma(_, n) if n == depth => Ok(false),
+            Value::Comma(ref v, n) =>
+                self.is_quasi_const(v, depth - n),
+            Value::CommaAt(_, n) if n > depth =>
+                Err(From::from(CompileError::UnbalancedComma)),
+            Value::CommaAt(_, n) if n == depth => Ok(false),
+            Value::CommaAt(ref v, n) =>
+                self.is_quasi_const(v, depth - n),
+            _ => Ok(true)
+        }
     }
 
     fn inline_call(&mut self, name: Name, args: &[Value]) -> Result<bool, Error> {
