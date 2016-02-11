@@ -47,6 +47,34 @@ struct Namespace {
     values: NameMap<Value>,
     /// Exported names defined by an `export` declaration
     exports: Option<NameSetSlice>,
+    /// Names imported by a `use` declaration
+    imports: Vec<ImportSet>,
+}
+
+/// Represents a set of named macros and values imported from a module.
+///
+/// Each import consists of a pair of names: a source name and a destination name.
+/// These are, respectively, the name of the value as it resides within the
+/// remote module and the name to which it will be assigned in the local scope.
+#[derive(Clone)]
+pub struct ImportSet {
+    /// Name of module from which to import
+    pub module_name: Name,
+    /// Named macros which are imported
+    pub macros: Vec<(Name, Name)>,
+    /// Named values which are imported
+    pub values: Vec<(Name, Name)>,
+}
+
+impl ImportSet {
+    /// Convenience method to create an empty `ImportSet` for the named module.
+    pub fn new(module_name: Name) -> ImportSet {
+        ImportSet{
+            module_name: module_name,
+            macros: Vec::new(),
+            values: Vec::new(),
+        }
+    }
 }
 
 /// Shared scope object
@@ -87,6 +115,11 @@ impl GlobalScope {
     /// Adds a string representation to the contained `NameStore`.
     pub fn add_name(&self, name: &str) -> Name {
         self.name_store.borrow_mut().add(name)
+    }
+
+    /// Adds a set of imports to the given scope.
+    pub fn add_imports(&self, imports: ImportSet) {
+        self.namespace.borrow_mut().add_imports(imports);
     }
 
     /// Adds a value to the global scope.
@@ -168,16 +201,16 @@ impl GlobalScope {
         self.namespace.borrow().values.get(name).cloned()
     }
 
-    /// Clones all exported values from this scope into another scope.
-    pub fn import_all_macros(&self, other: &GlobalScope) {
-        self.namespace.borrow()
-            .import_all_macros(&mut other.namespace.borrow_mut())
+    /// Clones all exported values from a scope into this scope.
+    pub fn import_all_macros(&self, other: &GlobalScope) -> Vec<Name> {
+        self.namespace.borrow_mut()
+            .import_all_macros(&other.namespace.borrow())
     }
 
-    /// Clones all exported values from this scope into another scope.
-    pub fn import_all_values(&self, other: &GlobalScope) {
-        self.namespace.borrow()
-            .import_all_values(&mut other.namespace.borrow_mut())
+    /// Clones all exported values from a scope into this scope.
+    pub fn import_all_values(&self, other: &GlobalScope) -> Vec<Name> {
+        self.namespace.borrow_mut()
+            .import_all_values(&other.namespace.borrow())
     }
 
     /// Returns whether the given name has been exported in this scope.
@@ -205,6 +238,13 @@ impl GlobalScope {
         f(ns.exports.as_ref())
     }
 
+    /// Calls a closure with the set of imported values.
+    pub fn with_imports<F, R>(&self, f: F) -> R
+            where F: FnOnce(&[ImportSet]) -> R {
+        let ns = self.namespace.borrow();
+        f(&ns.imports)
+    }
+
     /// Calls a closure with the set of defined macros.
     pub fn with_macros<F, R>(&self, f: F) -> R
             where F: FnOnce(&NameMap<Lambda>) -> R {
@@ -226,25 +266,42 @@ impl Namespace {
             macros: NameMap::new(),
             values: NameMap::new(),
             exports: None,
+            imports: Vec::new(),
         }
     }
 
-    fn import_all_macros(&self, other: &mut Namespace) {
-        if let Some(ref exports) = self.exports {
-            for name in exports {
-                self.macros.get(name).cloned()
-                    .map(|m| other.macros.insert(name, m));
-            }
-        }
+    fn add_imports(&mut self, imports: ImportSet) {
+        self.imports.push(imports);
     }
 
-    fn import_all_values(&self, other: &mut Namespace) {
-        if let Some(ref exports) = self.exports {
+    fn import_all_macros(&mut self, other: &Namespace) -> Vec<Name> {
+        let mut names = Vec::new();
+
+        if let Some(ref exports) = other.exports {
             for name in exports {
-                self.values.get(name).cloned()
-                    .map(|v| other.values.insert(name, v));
+                if let Some(m) = other.macros.get(name).cloned() {
+                    names.push(name);
+                    self.macros.insert(name, m);
+                }
             }
         }
+
+        names
+    }
+
+    fn import_all_values(&mut self, other: &Namespace) -> Vec<Name> {
+        let mut names = Vec::new();
+
+        if let Some(ref exports) = other.exports {
+            for name in exports {
+                if let Some(v) = other.values.get(name).cloned() {
+                    names.push(name);
+                    self.values.insert(name, v);
+                }
+            }
+        }
+
+        names
     }
 }
 

@@ -17,7 +17,7 @@ use integer::{Integer, Ratio, Sign};
 use io::{IoError, IoMode};
 use name::{Name, NameMap, NameSet, NameSetSlice, NameStore,
     NameInputConversion, NameOutputConversion};
-use scope::Scope;
+use scope::{ImportSet, Scope};
 use value::{StructDef, Value};
 
 /// First four bytes written to a compiled bytecode file.
@@ -104,6 +104,8 @@ pub struct ModuleCode {
     pub code: Vec<Rc<Code>>,
     /// Exported names
     pub exports: NameSetSlice,
+    /// Imported names
+    pub imports: Vec<ImportSet>,
     /// Decoded macro objects
     pub macros: Vec<(Name, Rc<Code>)>,
 }
@@ -154,6 +156,34 @@ pub fn read_bytecode<R: Read>(r: &mut R, path: &Path,
         exports.insert(name);
     }
 
+    let n_imports = try!(dec.read_uint());
+    let mut imports = Vec::new();
+
+    for _ in 0..n_imports {
+        let mod_name = try!(dec.read_name(&names));
+        let mut imp = ImportSet::new(mod_name);
+
+        let n_macros = try!(dec.read_uint());
+
+        for _ in 0..n_macros {
+            let src = try!(dec.read_name(&names));
+            let dest = try!(dec.read_name(&names));
+
+            imp.macros.push((src, dest));
+        }
+
+        let n_values = try!(dec.read_uint());
+
+        for _ in 0..n_values {
+            let src = try!(dec.read_name(&names));
+            let dest = try!(dec.read_name(&names));
+
+            imp.values.push((src, dest));
+        }
+
+        imports.push(imp);
+    }
+
     let n_macros = try!(dec.read_uint());
     let mut macros = Vec::with_capacity(n_macros as usize);
 
@@ -173,6 +203,7 @@ pub fn read_bytecode<R: Read>(r: &mut R, path: &Path,
         code: exprs,
         macros: macros,
         exports: exports.into_slice(),
+        imports: imports,
     })
 }
 
@@ -189,6 +220,26 @@ pub fn write_bytecode<W: Write>(w: &mut W, path: &Path, module: &ModuleCode,
         name_store: &NameStore) -> Result<(), Error> {
     let mut names = NameOutputConversion::new(name_store);
     let mut body_enc = ValueEncoder::new();
+
+    try!(body_enc.write_len(module.imports.len()));
+
+    for imp in &module.imports {
+        try!(body_enc.write_name(imp.module_name, &mut names));
+
+        try!(body_enc.write_len(imp.macros.len()));
+
+        for &(src, dest) in &imp.macros {
+            try!(body_enc.write_name(src, &mut names));
+            try!(body_enc.write_name(dest, &mut names));
+        }
+
+        try!(body_enc.write_len(imp.values.len()));
+
+        for &(src, dest) in &imp.values {
+            try!(body_enc.write_name(src, &mut names));
+            try!(body_enc.write_name(dest, &mut names));
+        }
+    }
 
     try!(body_enc.write_len(module.macros.len()));
 

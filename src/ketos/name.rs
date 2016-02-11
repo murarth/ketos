@@ -500,7 +500,8 @@ impl<T> NameMap<T> {
 
 impl<T> FromIterator<(Name, T)> for NameMap<T> {
     fn from_iter<I>(iterator: I) -> Self where I: IntoIterator<Item=(Name, T)> {
-        let mut v = iterator.into_iter().collect();
+        let mut v = iterator.into_iter()
+            .collect::<Vec<_>>();
         v.sort_by(|a, b| a.0.cmp(&b.0));
         NameMap{values: v}
     }

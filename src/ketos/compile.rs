@@ -15,7 +15,7 @@ use function::Arity::*;
 use name::{get_system_fn, is_system_operator, standard_names,
     Name, NameDisplay, NameMap, NameSet, NameStore,
     NUM_SYSTEM_OPERATORS, SYSTEM_OPERATORS_BEGIN};
-use scope::{GlobalScope, MasterScope, Scope};
+use scope::{GlobalScope, ImportSet, MasterScope, Scope};
 use value::{StructDef, Value};
 
 const MAX_MACRO_RECURSION: u32 = 100;
@@ -1486,13 +1486,17 @@ fn op_use(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     let mods = compiler.scope.get_modules();
     let m = try!(mods.get_module(mod_name, compiler.scope));
 
+    let mut imp_set = ImportSet::new(mod_name);
+
     match args[1] {
         Value::Keyword(standard_names::ALL) => {
-            m.scope.import_all_values(compiler.scope);
+            let names = compiler.scope.import_all_values(&m.scope);
+            imp_set.values.extend(names.iter().map(|&n| (n, n)));
         }
         Value::Unit => (),
         Value::List(ref li) => {
-            try!(import_values(mod_name, compiler.scope, &m.scope, li));
+            try!(import_values(mod_name, &mut imp_set,
+                compiler.scope, &m.scope, li));
         }
         _ => return Err(From::from(CompileError::SyntaxError(
             "expected list of names or `:all`")))
@@ -1504,11 +1508,14 @@ fn op_use(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
         match *arg {
             Value::Keyword(standard_names::MACRO) => {
                 match iter.next() {
-                    Some(&Value::Keyword(standard_names::ALL)) =>
-                        m.scope.import_all_macros(compiler.scope),
+                    Some(&Value::Keyword(standard_names::ALL)) => {
+                        let names = compiler.scope.import_all_macros(&m.scope);
+                        imp_set.macros.extend(names.iter().map(|&n| (n, n)));
+                    }
                     Some(&Value::Unit) => (),
                     Some(&Value::List(ref li)) =>
-                        try!(import_macros(mod_name, compiler.scope, &m.scope, li)),
+                        try!(import_macros(mod_name, &mut imp_set,
+                            compiler.scope, &m.scope, li)),
                     _ => return Err(From::from(CompileError::SyntaxError(
                         "expected `:all` or list of names after keyword")))
                 }
@@ -1518,12 +1525,14 @@ fn op_use(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
         }
     }
 
+    compiler.scope.add_imports(imp_set);
+
     try!(compiler.push_instruction(Instruction::Unit));
     Ok(())
 }
 
-fn import_macros(mod_name: Name, a: &GlobalScope, b: &GlobalScope,
-        names: &[Value]) -> Result<(), CompileError> {
+fn import_macros(mod_name: Name, imps: &mut ImportSet,
+        a: &GlobalScope, b: &GlobalScope, names: &[Value]) -> Result<(), CompileError> {
     each_import(names, |src, dest| {
         match b.get_macro(src) {
             Some(v) => {
@@ -1535,6 +1544,7 @@ fn import_macros(mod_name: Name, a: &GlobalScope, b: &GlobalScope,
                 }
 
                 a.add_macro(dest, v);
+                imps.macros.push((src, dest));
             }
             None => return Err(CompileError::ImportError{
                 module: mod_name,
@@ -1546,8 +1556,8 @@ fn import_macros(mod_name: Name, a: &GlobalScope, b: &GlobalScope,
     })
 }
 
-fn import_values(mod_name: Name, a: &GlobalScope, b: &GlobalScope,
-        names: &[Value]) -> Result<(), CompileError> {
+fn import_values(mod_name: Name, imps: &mut ImportSet,
+        a: &GlobalScope, b: &GlobalScope, names: &[Value]) -> Result<(), CompileError> {
     each_import(names, |src, dest| {
         match b.get_value(src) {
             Some(v) => {
@@ -1559,6 +1569,7 @@ fn import_values(mod_name: Name, a: &GlobalScope, b: &GlobalScope,
                 }
 
                 a.add_value(dest, v);
+                imps.values.push((src, dest));
             }
             None => return Err(CompileError::ImportError{
                 module: mod_name,

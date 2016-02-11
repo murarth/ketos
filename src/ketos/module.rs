@@ -15,7 +15,7 @@ use io::{IoError, IoMode};
 use lexer::Lexer;
 use name::{Name, NameMap};
 use parser::Parser;
-use scope::{GlobalScope, Scope};
+use scope::{GlobalScope, ImportSet, Scope};
 use value::Value;
 
 use mod_code;
@@ -289,6 +289,7 @@ impl ModuleLoader for FileModuleLoader {
                                     let mac = Lambda::new(code.clone(), &new_scope);
                                     new_scope.add_macro(name, mac);
                                 }
+                                try!(process_imports(&new_scope, &m.imports));
                                 run_module_code(name, new_scope, m)
                             }
                             Err(Error::DecodeError(DecodeError::IncorrectVersion(_)))
@@ -385,6 +386,7 @@ fn load_module_from_file(scope: Scope, name: Name,
             |macros| macros.iter()
                 .map(|&(name, ref l)| (name, l.code.clone())).collect()),
         exports: scope.with_exports(|e| e.cloned().unwrap()),
+        imports: scope.with_imports(|i| i.to_vec()),
     };
 
     let r = {
@@ -400,6 +402,36 @@ fn load_module_from_file(scope: Scope, name: Name,
         name: name,
         scope: scope,
     })
+}
+
+fn process_imports(scope: &Scope, imports: &[ImportSet]) -> Result<(), Error> {
+    let mods = scope.get_modules();
+
+    for imp in imports {
+        let m = try!(mods.get_module(imp.module_name, scope));
+
+        for &(src, dest) in &imp.macros {
+            let mac = try!(m.scope.get_macro(src)
+                .ok_or(CompileError::ImportError{
+                    module: imp.module_name,
+                    name: src,
+                }));
+
+            scope.add_macro(dest, mac);
+        }
+
+        for &(src, dest) in &imp.values {
+            let v = try!(m.scope.get_value(src)
+                .ok_or(CompileError::ImportError{
+                    module: imp.module_name,
+                    name: src,
+                }));
+
+            scope.add_value(dest, v);
+        }
+    }
+
+    Ok(())
 }
 
 fn run_module_code(name: Name, scope: Scope, mcode: ModuleCode) -> Result<Module, Error> {
