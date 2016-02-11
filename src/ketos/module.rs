@@ -286,7 +286,7 @@ impl ModuleLoader for FileModuleLoader {
                         match read_bytecode_file(&code_path, &new_scope) {
                             Ok(m) => {
                                 for &(name, ref code) in &m.macros {
-                                    let mac = Lambda::new(code.clone(), scope);
+                                    let mac = Lambda::new(code.clone(), &new_scope);
                                     new_scope.add_macro(name, mac);
                                 }
                                 run_module_code(name, new_scope, m)
