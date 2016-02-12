@@ -672,6 +672,11 @@ fn test_if() {
     assert_eq!(eval("(if true 1 (panic))").unwrap(), "1");
     assert_eq!(eval("(if false (panic) 1)").unwrap(), "1");
 
+    assert_eq!(eval("(if (= 0 0) 'a 'b)").unwrap(), "a");
+    assert_eq!(eval("(if (/= 0 0) 'a 'b)").unwrap(), "b");
+    assert_eq!(eval("(if (= 1 0) 'a 'b)").unwrap(), "b");
+    assert_eq!(eval("(if (/= 1 0) 'a 'b)").unwrap(), "a");
+
     assert_matches!(eval("(if 0 () ())").unwrap_err(), Error::ExecError(
         ExecError::TypeError{
             expected: "bool",

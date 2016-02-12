@@ -1045,12 +1045,13 @@ impl Machine {
     }
 
     fn jump_if_not_eq_const(&mut self, frame: &mut StackFrame, label: u32, n: u32) -> Result<(), ExecError> {
-        let eq = try!(get_const(&frame.code, n).and_then(|v| self.value.is_equal(v)));
+        let eq = try!(get_const(&frame.code, n)
+            .and_then(|v| self.value.is_equal(v)));
 
         if !eq {
-            Ok(())
-        } else {
             self.jump(frame, label)
+        } else {
+            Ok(())
         }
     }
 
