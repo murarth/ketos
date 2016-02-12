@@ -5,6 +5,12 @@ and mainly intended for extending and scripting for Rust programs.
 
 Its types and semantics are, in some cases, closer to Rust than to Lisp.
 
+## Environment variables
+
+`KETOS_PATH` - A list of directories (separated by `:` on Unix systems; `;`
+on Windows systems) that are added to the interpreter search path list, used
+by the [`use` operator](operators.md#use).
+
 ## Syntax
 
 Ketos syntax, the element most heavily borrowed from Lisp, consists of lists and

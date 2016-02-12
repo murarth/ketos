@@ -2,6 +2,7 @@ extern crate getopts;
 extern crate ketos;
 extern crate libc;
 
+use std::env::{split_paths, var_os};
 use std::io::{stderr, Write};
 use std::path::{Path, PathBuf};
 
@@ -49,6 +50,12 @@ fn run() -> i32 {
 
     // Search current directory first
     let mut paths = vec![PathBuf::new()];
+
+    if let Some(p) = var_os("KETOS_PATH") {
+        for path in split_paths(&p) {
+            paths.push(path);
+        }
+    }
 
     for path in matches.opt_strs("I") {
         paths.push(PathBuf::from(path));
