@@ -7,7 +7,8 @@ use std::rc::Rc;
 
 use bytecode::{code_flags, Code, CodeBlock,
     Instruction, JumpInstruction, MAX_SHORT_OPERAND};
-use const_fold::{FoldOp, FoldAdd, FoldSub, FoldDiv, FoldMul, FoldFloorDiv};
+use const_fold::{is_one, is_negative_one,
+    FoldOp, FoldAdd, FoldSub, FoldDiv, FoldMul, FoldFloorDiv};
 use error::Error;
 use exec::{ExecError, execute_lambda};
 use function::{Arity, Lambda, neg_number};
@@ -929,6 +930,40 @@ impl<'a> Compiler<'a> {
     /// If specialized instructions cannot be generated, returns `Ok(false)`.
     fn specialize_call(&mut self, name: Name, args: &[Value]) -> Result<bool, Error> {
         match name {
+            standard_names::ADD if args.len() == 2 => {
+                let lhs = &args[0];
+                let rhs = &args[1];
+
+                if is_one(lhs) {
+                    try!(self.compile_value(rhs));
+                    try!(self.push_instruction(Instruction::Inc));
+                } else if is_one(rhs) {
+                    try!(self.compile_value(lhs));
+                    try!(self.push_instruction(Instruction::Inc));
+                } else if is_negative_one(lhs) {
+                    try!(self.compile_value(rhs));
+                    try!(self.push_instruction(Instruction::Dec));
+                } else if is_negative_one(rhs) {
+                    try!(self.compile_value(lhs));
+                    try!(self.push_instruction(Instruction::Dec));
+                } else {
+                    return Ok(false);
+                }
+            }
+            standard_names::SUB if args.len() == 2 => {
+                let lhs = &args[0];
+                let rhs = &args[1];
+
+                if is_one(rhs) {
+                    try!(self.compile_value(lhs));
+                    try!(self.push_instruction(Instruction::Dec));
+                } else if is_negative_one(rhs) {
+                    try!(self.compile_value(lhs));
+                    try!(self.push_instruction(Instruction::Inc));
+                } else {
+                    return Ok(false);
+                }
+            }
             standard_names::NULL if args.len() == 1 => {
                 try!(self.compile_value(&args[0]));
                 try!(self.push_instruction(Instruction::Null));

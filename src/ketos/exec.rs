@@ -31,7 +31,7 @@ use std::vec::Drain;
 use bytecode::{Code, CodeReader};
 use error::Error;
 use function::{Arity, Function, Lambda, SystemFn};
-use integer::Integer;
+use integer::{Integer, Ratio};
 use lexer::{highlight_span, Span};
 use scope::{MasterScope, Scope};
 use string_fmt::FormatError;
@@ -1111,16 +1111,20 @@ impl Machine {
 
     fn increment(&mut self) -> Result<(), ExecError> {
         match self.value {
+            Value::Float(ref mut f) => *f += 1.0,
             Value::Integer(ref mut i) => *i = i.clone() + Integer::one(),
-            ref v => return Err(ExecError::expected("integer", v))
+            Value::Ratio(ref mut r) => *r = r.clone() + Ratio::one(),
+            ref v => return Err(ExecError::expected("number", v))
         }
         Ok(())
     }
 
     fn decrement(&mut self) -> Result<(), ExecError> {
         match self.value {
+            Value::Float(ref mut f) => *f -= 1.0,
             Value::Integer(ref mut i) => *i = i.clone() - Integer::one(),
-            ref v => return Err(ExecError::expected("integer", v))
+            Value::Ratio(ref mut r) => *r = r.clone() - Ratio::one(),
+            ref v => return Err(ExecError::expected("number", v))
         }
         Ok(())
     }

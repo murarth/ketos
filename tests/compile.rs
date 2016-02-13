@@ -27,6 +27,66 @@ fn test_const() {
 }
 
 #[test]
+fn test_dec() {
+    assert_eq!(lambda("(define (foo a) (- a 1))").unwrap(), [
+        LOAD_0,
+        DEC,
+        RETURN,
+    ]);
+
+    assert_eq!(lambda("
+        (const n 1)
+        (define (foo a) (- a n))
+        ").unwrap(), [
+            LOAD_0,
+            DEC,
+            RETURN,
+        ]);
+
+    assert_eq!(lambda("(define (foo a) (+ a -1))").unwrap(), [
+        LOAD_0,
+        DEC,
+        RETURN,
+    ]);
+
+    assert_eq!(lambda("(define (foo a) (+ -1 a))").unwrap(), [
+        LOAD_0,
+        DEC,
+        RETURN,
+    ]);
+}
+
+#[test]
+fn test_inc() {
+    assert_eq!(lambda("(define (foo a) (+ a 1))").unwrap(), [
+        LOAD_0,
+        INC,
+        RETURN,
+    ]);
+
+    assert_eq!(lambda("
+        (const n 1)
+        (define (foo a) (+ a n))
+        ").unwrap(), [
+            LOAD_0,
+            INC,
+            RETURN,
+        ]);
+
+    assert_eq!(lambda("(define (foo a) (+ 1 a))").unwrap(), [
+        LOAD_0,
+        INC,
+        RETURN,
+    ]);
+
+    assert_eq!(lambda("(define (foo a) (- a -1))").unwrap(), [
+        LOAD_0,
+        INC,
+        RETURN,
+    ]);
+}
+
+#[test]
 fn test_if() {
     assert_eq!(lambda("(define (foo a b c) (if a b c))").unwrap(), [
         LOAD_0,

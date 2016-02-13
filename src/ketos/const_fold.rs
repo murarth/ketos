@@ -97,14 +97,21 @@ fn check_number(v: &Value) -> Result<(), ExecError> {
 // "identity" values. That is, `(+ foo 0.0)` may result in transforming `foo`
 // into a float value.
 
-fn is_zero(v: &Value) -> bool {
+pub fn is_zero(v: &Value) -> bool {
     match *v {
         Value::Integer(ref i) => i.is_zero(),
         _ => false
     }
 }
 
-fn is_one(v: &Value) -> bool {
+pub fn is_negative_one(v: &Value) -> bool {
+    match *v {
+        Value::Integer(ref i) => i.to_i32() == Some(-1),
+        _ => false
+    }
+}
+
+pub fn is_one(v: &Value) -> bool {
     match *v {
         Value::Integer(ref i) => i.is_one(),
         _ => false
