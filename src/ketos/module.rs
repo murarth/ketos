@@ -60,6 +60,13 @@ impl ModuleBuilder {
         }
     }
 
+    /// Adds a constant value to the module.
+    pub fn add_constant<T: Into<Value>>(self, name: &str, value: T) -> Self {
+        let name = self.scope.add_name(name);
+        self.scope.add_constant(name, value.into());
+        self
+    }
+
     /// Adds a function to the module.
     pub fn add_function(self, name: &str,
             callback: FunctionImpl, arity: Arity) -> Self {
@@ -87,10 +94,16 @@ impl ModuleBuilder {
 
     /// Consumes the builder and returns the new `Module`.
     pub fn finish(self) -> Module {
-        let exports = self.scope.with_values(
-            |v| v.iter().map(|&(name, _)| name).collect());
+        let mut exports = Vec::new();
 
-        self.scope.set_exports(exports);
+        self.scope.with_constants(
+            |v| exports.extend(v.iter().map(|&(name, _)| name)));
+        self.scope.with_macros(
+            |v| exports.extend(v.iter().map(|&(name, _)| name)));
+        self.scope.with_values(
+            |v| exports.extend(v.iter().map(|&(name, _)| name)));
+
+        self.scope.set_exports(exports.into_iter().collect());
 
         Module{
             name: self.name,
@@ -410,6 +423,16 @@ fn process_imports(scope: &Scope, imports: &[ImportSet]) -> Result<(), Error> {
     for imp in imports {
         let m = try!(mods.get_module(imp.module_name, scope));
 
+        for &(src, dest) in &imp.constants {
+            let v = try!(m.scope.get_constant(src)
+                .ok_or(CompileError::ImportError{
+                    module: imp.module_name,
+                    name: src,
+                }));
+
+            scope.add_constant(dest, v);
+        }
+
         for &(src, dest) in &imp.macros {
             let mac = try!(m.scope.get_macro(src)
                 .ok_or(CompileError::ImportError{
@@ -451,7 +474,7 @@ fn check_exports(scope: &Scope, mod_name: Name) -> Result<(), CompileError> {
     scope.with_exports(|exports| {
         if let Some(exports) = exports {
             for name in exports {
-                if !(scope.contains_value(name) || scope.contains_macro(name)) {
+                if !scope.contains_name(name) {
                     return Err(CompileError::ExportError{
                         module: mod_name,
                         name: name,

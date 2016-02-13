@@ -21,15 +21,17 @@ The `code` module offers facilities for inspecting compiled bytecode objects.
 
 ## `math`
 
-The `math` module contains extra functions operating on `float` values.
+The `math` module contains mathematical constants and functions.
 
 These functions are identical to their Rust counterparts and include:
 `acos`, `acosh`, `asin`, `asinh`, `atan`, `atanh`, `atan2`, `cos`, `cosh`, `ln`,
 `log`, `log2`, `log10`, `sin`, `sinh`, `sqrt`, `tan`, and `tanh`.
 
+Constants included are: `e` (Euler's number) and `pi`.
+
 ## `random`
 
 The `random` module provides access to random number generation functions.
 
-* `random` returns a random float value in the range `[0.0, 1.0]`.
+* `random` returns a random float value in the range `[0.0, 1.0)`.
 * `shuffle` returns a given list in random order.

@@ -163,6 +163,15 @@ pub fn read_bytecode<R: Read>(r: &mut R, path: &Path,
         let mod_name = try!(dec.read_name(&names));
         let mut imp = ImportSet::new(mod_name);
 
+        let n_consts = try!(dec.read_uint());
+
+        for _ in 0..n_consts {
+            let src = try!(dec.read_name(&names));
+            let dest = try!(dec.read_name(&names));
+
+            imp.constants.push((src, dest));
+        }
+
         let n_macros = try!(dec.read_uint());
 
         for _ in 0..n_macros {
@@ -225,6 +234,13 @@ pub fn write_bytecode<W: Write>(w: &mut W, path: &Path, module: &ModuleCode,
 
     for imp in &module.imports {
         try!(body_enc.write_name(imp.module_name, &mut names));
+
+        try!(body_enc.write_len(imp.constants.len()));
+
+        for &(src, dest) in &imp.constants {
+            try!(body_enc.write_name(src, &mut names));
+            try!(body_enc.write_name(dest, &mut names));
+        }
 
         try!(body_enc.write_len(imp.macros.len()));
 

@@ -56,8 +56,8 @@ pub static SYSTEM_FNS: [SystemFn; NUM_SYSTEM_FNS] = [
     sys_fn!(fn_sub,         Min(1)),
     sys_fn!(fn_mul,         Min(0)),
     sys_fn!(fn_pow,         Exact(2)),
-    sys_fn!(fn_div,         Min(2)),
-    sys_fn!(fn_floor_div,   Min(2)),
+    sys_fn!(fn_div,         Min(1)),
+    sys_fn!(fn_floor_div,   Min(1)),
     sys_fn!(fn_rem,         Exact(2)),
     sys_fn!(fn_shl,         Exact(2)),
     sys_fn!(fn_shr,         Exact(2)),
@@ -349,7 +349,8 @@ fn fn_add(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
     Ok(v)
 }
 
-fn add_number(lhs: Value, rhs: &Value) -> Result<Value, Error> {
+/// Returns the result of adding two values together.
+pub fn add_number(lhs: Value, rhs: &Value) -> Result<Value, Error> {
     let (lhs, rhs) = try!(coerce_numbers(lhs, rhs));
 
     match (lhs, &*rhs) {
@@ -381,7 +382,8 @@ fn fn_sub(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
     }
 }
 
-fn neg_number(v: Value) -> Result<Value, Error> {
+/// Returns the result of negating a value.
+pub fn neg_number(v: Value) -> Result<Value, Error> {
     match v {
         Value::Float(f) => Ok((-f).into()),
         Value::Integer(i) => Ok((-i).into()),
@@ -390,7 +392,8 @@ fn neg_number(v: Value) -> Result<Value, Error> {
     }
 }
 
-fn sub_number(lhs: Value, rhs: &Value) -> Result<Value, Error> {
+/// Returns the resulting of subtracting a value from another.
+pub fn sub_number(lhs: Value, rhs: &Value) -> Result<Value, Error> {
     let (lhs, rhs) = try!(coerce_numbers(lhs, rhs));
 
     match (lhs, &*rhs) {
@@ -424,7 +427,8 @@ fn fn_mul(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
     Ok(v)
 }
 
-fn mul_number(lhs: Value, rhs: &Value) -> Result<Value, Error> {
+/// Returns the result of multiplying two values together.
+pub fn mul_number(lhs: Value, rhs: &Value) -> Result<Value, Error> {
     let (lhs, rhs) = try!(coerce_numbers(lhs, rhs));
 
     match (lhs, &*rhs) {
@@ -516,7 +520,8 @@ fn fn_div(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
     Ok(v)
 }
 
-/// `//` returns the cumulative floor quotient of successive arguments.
+/// `//` returns the cumulative quotient of successive arguments,
+/// rounded toward negative infinity.
 fn fn_floor_div(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
     let mut v = args[0].take();
 
@@ -524,13 +529,14 @@ fn fn_floor_div(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 
     for arg in &args[1..] {
         try!(expect_number(arg));
-        v = try!(floor_div_number(v, arg));
+        v = try!(floor_div_number_step(v, arg));
     }
 
-    Ok(v)
+    floor_number(v)
 }
 
-fn div_number(lhs: Value, rhs: &Value) -> Result<Value, Error> {
+/// Returns the result of dividing two values.
+pub fn div_number(lhs: Value, rhs: &Value) -> Result<Value, Error> {
     let (lhs, rhs) = try!(coerce_numbers(lhs, rhs));
 
     match (lhs, &*rhs) {
@@ -556,7 +562,9 @@ fn div_number(lhs: Value, rhs: &Value) -> Result<Value, Error> {
     }
 }
 
-fn floor_div_number(lhs: Value, rhs: &Value) -> Result<Value, Error> {
+/// Returns the result of floor-dividing two values,
+/// without calling `floor` on the result.
+pub fn floor_div_number_step(lhs: Value, rhs: &Value) -> Result<Value, Error> {
     let (lhs, rhs) = try!(coerce_numbers(lhs, rhs));
 
     match (lhs, &*rhs) {
@@ -564,7 +572,7 @@ fn floor_div_number(lhs: Value, rhs: &Value) -> Result<Value, Error> {
             try!(test_zero(b));
             Ok((a / b).into())
         }
-        (lhs, rhs) => div_number(lhs, rhs).and_then(|v| floor_number(v))
+        (lhs, rhs) => div_number(lhs, rhs)
     }
 }
 
@@ -1371,7 +1379,8 @@ fn fn_floor(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
     floor_number(args[0].take())
 }
 
-fn floor_number(v: Value) -> Result<Value, Error> {
+/// Returns a value rounded toward negative infinity.
+pub fn floor_number(v: Value) -> Result<Value, Error> {
     match v {
         Value::Float(f) => Ok(f.floor().into()),
         Value::Integer(i) => Ok(i.into()),

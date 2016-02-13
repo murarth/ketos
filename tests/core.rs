@@ -44,6 +44,42 @@ fn run(s: &str) -> Result<Vec<String>, Error> {
 }
 
 #[test]
+fn test_const() {
+    assert_eq!(run("
+        (const foo 2)
+        (const bar (* foo 3))
+        (const baz (+ bar 1))
+        baz
+        ").unwrap(), ["foo", "bar", "baz", "7"]);
+
+    assert_eq!(run("
+        (const foo `(foo 1 2 3))
+        (const bar `(bar ,foo))
+        (const baz `(baz ,@foo))
+        foo
+        bar
+        baz
+        ").unwrap(),
+        ["foo", "bar", "baz",
+        "(foo 1 2 3)", "(bar (foo 1 2 3))", "(baz foo 1 2 3)"]);
+}
+
+#[test]
+fn test_const_error() {
+    assert_matches!(run("
+        (define (foo) ())
+        (const bar (foo))
+        ").unwrap_err(),
+        Error::CompileError(CompileError::NotConstant(_)));
+
+    assert_matches!(run("
+        (define foo 1)
+        (const bar foo)
+        ").unwrap_err(),
+        Error::CompileError(CompileError::NotConstant(_)));
+}
+
+#[test]
 fn test_integer() {
     assert_eq!(eval("123").unwrap(), "123");
     assert_eq!(eval("-123").unwrap(), "-123");

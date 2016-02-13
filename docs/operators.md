@@ -215,9 +215,10 @@ Exported names may be imported from another module using the `use` operator.
 
 ```
 (use { :all | ( [ name ... ] ) }
+  [ :const { :all | ( [ name ... ] ) } ]
   [ :macro { :all | ( [ name ... ] ) } ])
 ```
 
-The `use` operator loads a module and imports a series of values or macros
-from its global scope. `:all` may be used in place of a name list to import
-all public names from a module.
+The `use` operator loads a module and imports a series of named constants,
+macros, or values from its global scope. `:all` may be used in place of a name
+list to import all such public names from a module.

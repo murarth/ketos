@@ -191,32 +191,31 @@ standard_names!{
     "lambda" => LAMBDA = 74,
     "export" => EXPORT = 75,
     "use" => USE = 76,
-    // TODO: User-defined constants
-    //"const" => CONST = N,
+    "const" => CONST = 77,
 
     // Just plain names follow; these are used by system functions or operators
     // to delineate syntactical constructs or just as name values.
-    "all" => ALL = 77,
-    "else" => ELSE = 78,
-    "optional" => OPTIONAL = 79,
-    "key" => KEY = 80,
-    "rest" => REST = 81,
-    "unbound" => UNBOUND = 82,
-    "unit" => UNIT = 83,
-    "bool" => BOOL = 84,
-    "char" => CHAR = 85,
-    "integer" => INTEGER = 86,
-    "ratio" => RATIO = 87,
-    "struct-def" => STRUCT_DEF = 88,
-    "keyword" => KEYWORD = 89,
-    "object" => OBJECT = 90,
-    "name" => NAME = 91,
-    "number" => NUMBER = 92,
-    "function" => FUNCTION = 93,
+    "all" => ALL = 78,
+    "else" => ELSE = 79,
+    "optional" => OPTIONAL = 80,
+    "key" => KEY = 81,
+    "rest" => REST = 82,
+    "unbound" => UNBOUND = 83,
+    "unit" => UNIT = 84,
+    "bool" => BOOL = 85,
+    "char" => CHAR = 86,
+    "integer" => INTEGER = 87,
+    "ratio" => RATIO = 88,
+    "struct-def" => STRUCT_DEF = 89,
+    "keyword" => KEYWORD = 90,
+    "object" => OBJECT = 91,
+    "name" => NAME = 92,
+    "number" => NUMBER = 93,
+    "function" => FUNCTION = 94,
 }
 
 /// Number of standard names
-pub const NUM_STANDARD_NAMES: u32 = 94;
+pub const NUM_STANDARD_NAMES: u32 = 95;
 
 /// Number of names, starting at `0`, which refer to system functions.
 pub const NUM_SYSTEM_FNS: usize = 61;
@@ -227,7 +226,7 @@ pub const NUM_STANDARD_VALUES: u32 = 63;
 /// First standard name which refers to a system operator.
 pub const SYSTEM_OPERATORS_BEGIN: u32 = NUM_STANDARD_VALUES;
 /// One-past-the-end of standard names which refer to system operators.
-pub const SYSTEM_OPERATORS_END: u32 = 77;
+pub const SYSTEM_OPERATORS_END: u32 = 78;
 
 /// Number of system operators, beginning at `SYSTEM_OPERATORS_BEGIN`.
 pub const NUM_SYSTEM_OPERATORS: usize =

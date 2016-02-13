@@ -18,8 +18,8 @@ syn keyword ketosBool true false
 
 syn match ketosChar "#'\([^']\|\\\(x[0-7][0-9a-fA-F]\|u{[0-9a-fA-F]*}\)\)'"
 
-syn keyword ketosFunc * + - .  .= / // /= < << <= = > >= >> ^ abs
-syn keyword ketosFunc append ceil chars concat denom elt first float floor
+syn keyword ketosFunc * + - .  .= / // /= < << <= = > >= >> ^ abs append
+syn keyword ketosFunc ceil chars concat const denom elt first float floor
 syn keyword ketosFunc format fract id inf init int is is-instance join last len
 syn keyword ketosFunc list max min nan new not null numer panic print println
 syn keyword ketosFunc rat recip rem reverse round second slice string tail

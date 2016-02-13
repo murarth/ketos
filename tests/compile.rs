@@ -6,12 +6,24 @@ use ketos::name::standard_names;
 
 fn lambda(s: &str) -> Result<Vec<u8>, Error> {
     let interp = Interpreter::new();
-    let code = try!(interp.compile_single_expr(s, None));
+    let exprs = try!(interp.compile_exprs(s));
+    let code = exprs.last().unwrap();
 
     match code.consts[1] {
         Value::Lambda(ref l) => Ok(l.code.code.clone().into_vec()),
         ref v => panic!("expected lambda; got {}", v.type_name())
     }
+}
+
+#[test]
+fn test_const() {
+    assert_eq!(lambda("
+        (const foo (+ 1 2 3))
+        (define (bar) foo)
+        ").unwrap(), [
+            CONST_0,
+            RETURN,
+        ]);
 }
 
 #[test]

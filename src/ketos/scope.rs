@@ -43,6 +43,7 @@ impl GlobalIo {
 }
 
 struct Namespace {
+    constants: NameMap<Value>,
     macros: NameMap<Lambda>,
     values: NameMap<Value>,
     /// Exported names defined by an `export` declaration
@@ -60,6 +61,8 @@ struct Namespace {
 pub struct ImportSet {
     /// Name of module from which to import
     pub module_name: Name,
+    /// Named constants which are imported
+    pub constants: Vec<(Name, Name)>,
     /// Named macros which are imported
     pub macros: Vec<(Name, Name)>,
     /// Named values which are imported
@@ -71,6 +74,7 @@ impl ImportSet {
     pub fn new(module_name: Name) -> ImportSet {
         ImportSet{
             module_name: module_name,
+            constants: Vec::new(),
             macros: Vec::new(),
             values: Vec::new(),
         }
@@ -105,6 +109,11 @@ impl GlobalScope {
             scope.codemap.clone(),
             scope.modules.clone(),
             scope.io.clone()))
+    }
+
+    /// Add a named constant value to the scope.
+    pub fn add_constant(&self, name: Name, value: Value) {
+        self.namespace.borrow_mut().constants.insert(name, value);
     }
 
     /// Adds a macro function to the global scope.
@@ -166,6 +175,11 @@ impl GlobalScope {
         &self.codemap
     }
 
+    /// Returns a named constant value, if present.
+    pub fn get_constant(&self, name: Name) -> Option<Value> {
+        self.namespace.borrow().constants.get(name).cloned()
+    }
+
     /// Returns a borrowed reference to the contained `GlobalIo`.
     pub fn get_io(&self) -> &Rc<GlobalIo> {
         &self.io
@@ -179,6 +193,20 @@ impl GlobalScope {
     /// Returns a borrowed reference to the contained `NameStore`.
     pub fn get_names(&self) -> &Rc<RefCell<NameStore>> {
         &self.name_store
+    }
+
+    /// Returns whether the scope contains a given exportable name.
+    pub fn contains_name(&self, name: Name) -> bool {
+        let ns = self.namespace.borrow();
+
+        ns.constants.contains_key(name) ||
+            ns.macros.contains_key(name) ||
+            ns.values.contains_key(name)
+    }
+
+    /// Returns whether the scope contains a constant for the given name.
+    pub fn contains_constant(&self, name: Name) -> bool {
+        self.namespace.borrow().constants.contains_key(name)
     }
 
     /// Returns whether the scope contains a macro for the given name.
@@ -199,6 +227,12 @@ impl GlobalScope {
     /// Returns a `Value` for the given name, if present.
     pub fn get_value(&self, name: Name) -> Option<Value> {
         self.namespace.borrow().values.get(name).cloned()
+    }
+
+    /// Clones all constant values from a scope into this one.
+    pub fn import_all_constants(&self, other: &GlobalScope) -> Vec<Name> {
+        self.namespace.borrow_mut()
+            .import_all_constants(&other.namespace.borrow())
     }
 
     /// Clones all exported values from a scope into this scope.
@@ -245,6 +279,13 @@ impl GlobalScope {
         f(&ns.imports)
     }
 
+    /// Calls a closure with the set of defined constants.
+    pub fn with_constants<F, R>(&self, f: F) -> R
+            where F: FnOnce(&NameMap<Value>) -> R {
+        let ns = self.namespace.borrow();
+        f(&ns.constants)
+    }
+
     /// Calls a closure with the set of defined macros.
     pub fn with_macros<F, R>(&self, f: F) -> R
             where F: FnOnce(&NameMap<Lambda>) -> R {
@@ -263,6 +304,7 @@ impl GlobalScope {
 impl Namespace {
     fn new() -> Namespace {
         Namespace{
+            constants: NameMap::new(),
             macros: NameMap::new(),
             values: NameMap::new(),
             exports: None,
@@ -272,6 +314,21 @@ impl Namespace {
 
     fn add_imports(&mut self, imports: ImportSet) {
         self.imports.push(imports);
+    }
+
+    fn import_all_constants(&mut self, other: &Namespace) -> Vec<Name> {
+        let mut names = Vec::new();
+
+        if let Some(ref exports) = other.exports {
+            for name in exports {
+                if let Some(m) = other.constants.get(name).cloned() {
+                    names.push(name);
+                    self.constants.insert(name, m);
+                }
+            }
+        }
+
+        names
     }
 
     fn import_all_macros(&mut self, other: &Namespace) -> Vec<Name> {

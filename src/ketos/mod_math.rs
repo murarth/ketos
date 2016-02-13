@@ -1,5 +1,7 @@
 //! Implements builtin `math` module.
 
+use std::f64::consts;
+
 use error::Error;
 use exec::ExecError;
 use function::Arity::Exact;
@@ -10,6 +12,8 @@ use value::{FromValueRef, Value};
 /// Loads the `math` module into the given scope.
 pub fn load(scope: Scope) -> Module {
     ModuleBuilder::new("math", scope)
+        .add_constant("e",     consts::E)
+        .add_constant("pi",    consts::PI)
         .add_function("acos",  fn_acos,   Exact(1))
         .add_function("acosh", fn_acosh,  Exact(1))
         .add_function("asin",  fn_asin,   Exact(1))

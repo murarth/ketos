@@ -46,6 +46,7 @@ pub use value::{ForeignValue, FromValue, FromValueRef, Value};
 
 pub mod bytecode;
 pub mod compile;
+mod const_fold;
 pub mod encode;
 pub mod error;
 pub mod exec;

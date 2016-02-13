@@ -1,16 +1,16 @@
 //! Compiles expressions into bytecode objects.
 
 use std::borrow::Cow::{self, Borrowed, Owned};
-use std::f64;
 use std::fmt;
 use std::mem::replace;
 use std::rc::Rc;
 
 use bytecode::{code_flags, Code, CodeBlock,
     Instruction, JumpInstruction, MAX_SHORT_OPERAND};
+use const_fold::{FoldOp, FoldAdd, FoldSub, FoldDiv, FoldMul, FoldFloorDiv};
 use error::Error;
-use exec::execute_lambda;
-use function::{Arity, Lambda};
+use exec::{ExecError, execute_lambda};
+use function::{Arity, Lambda, neg_number};
 use function::Arity::*;
 use name::{get_system_fn, is_system_operator, standard_names,
     Name, NameDisplay, NameMap, NameSet, NameStore,
@@ -34,6 +34,8 @@ pub enum CompileError {
     },
     /// Attempt to define name of standard value or operator
     CannotDefine(Name),
+    /// Attempt to define name held by `const` value
+    ConstantExists(Name),
     /// Duplicate `exports` declaration
     DuplicateExports,
     /// Duplicate name in parameter list
@@ -73,6 +75,8 @@ pub enum CompileError {
     MissingExport,
     /// Failed to load a module
     ModuleError(Name),
+    /// `const` operator value is not constant
+    NotConstant(Name),
     /// Operand value overflow
     OperandOverflow(u32),
     /// Attempt to import value that is not exported
@@ -97,6 +101,8 @@ impl fmt::Display for CompileError {
                 write!(f, "expected {}; found {}", expected, found),
             CannotDefine(_) =>
                 f.write_str("cannot define name of standard value or operator"),
+            ConstantExists(_) =>
+                f.write_str("cannot define name occupied by a constant value"),
             DuplicateExports => f.write_str("duplicate `exports` declaration"),
             DuplicateParameter(_) => f.write_str("duplicate parameter"),
             ExportError{..} => f.write_str("export name not found in module"),
@@ -111,6 +117,7 @@ impl fmt::Display for CompileError {
             MacroRecursionExceeded => f.write_str("macro recursion exceeded"),
             MissingExport => f.write_str("missing `export` declaration"),
             ModuleError(_) => f.write_str("module not found"),
+            NotConstant(_) => f.write_str("value is not constant"),
             OperandOverflow(n) =>
                 write!(f, "operand overflow: {}", n),
             PrivacyError{..} => f.write_str("name is private"),
@@ -127,9 +134,11 @@ impl NameDisplay for CompileError {
         match *self {
             ArityError{name, ..} => write!(f, "`{}` {}", names.get(name), self),
             CannotDefine(name) |
+            ConstantExists(name) |
             DuplicateParameter(name) |
             InvalidModuleName(name) |
-            ModuleError(name) => write!(f, "{}: {}", self, names.get(name)),
+            ModuleError(name) |
+            NotConstant(name) => write!(f, "{}: {}", self, names.get(name)),
             ExportError{module, name} =>
                 write!(f, "cannot export name `{}`; not found in module `{}`",
                     names.get(name), names.get(module)),
@@ -405,6 +414,18 @@ impl<'a> Compiler<'a> {
     }
 
     fn compile_value(&mut self, value: &Value) -> Result<(), Error> {
+        let mut value = Borrowed(value);
+
+        match try!(self.eval_constant(&value)) {
+            ConstResult::IsConstant |
+            ConstResult::IsRuntime => (),
+            ConstResult::Partial(v) => value = Owned(v),
+            ConstResult::Constant(v) => {
+                try!(self.load_quoted_value(Owned(v)));
+                return Ok(());
+            }
+        }
+
         match *value {
             Value::Name(name) => {
                 let loaded = try!(self.load_local_name(name));
@@ -435,7 +456,7 @@ impl<'a> Compiler<'a> {
                             return Ok(());
                         } else if is_system_operator(name) {
                             return self.compile_operator(name, &li[1..]);
-                        } else if try!(self.inline_call(name, &li[1..])) {
+                        } else if try!(self.specialize_call(name, &li[1..])) {
                             return Ok(());
                         }
                     }
@@ -489,7 +510,7 @@ impl<'a> Compiler<'a> {
                 return Err(From::from(CompileError::UnbalancedComma)),
             Value::Quasiquote(ref v, n) =>
                 try!(self.compile_quasiquote(v, n)),
-            _ => try!(self.load_const_value(value))
+            _ => try!(self.load_const_value(&value))
         }
 
         Ok(())
@@ -508,6 +529,222 @@ impl<'a> Compiler<'a> {
             .expect("macro not found in expand_macro");
 
         execute_lambda(lambda, args.to_vec())
+    }
+
+    fn add_constant(&self, name: Name, value: Value) {
+        self.scope.add_constant(name, value);
+    }
+
+    fn get_constant(&self, name: Name) -> Option<Value> {
+        self.scope.get_constant(name)
+    }
+
+    fn eval_constant(&mut self, value: &Value) -> Result<ConstResult, Error> {
+        match *value {
+            Value::Name(name) => {
+                match self.get_constant(name) {
+                    Some(v) => Ok(ConstResult::Constant(v)),
+                    None => Ok(ConstResult::IsRuntime)
+                }
+            }
+            Value::List(ref li) => {
+                let name = match li[0] {
+                    Value::Name(name) => name,
+                    _ => return Ok(ConstResult::IsRuntime)
+                };
+
+                self.eval_constant_function(name, &li[1..])
+            }
+            Value::Quasiquote(ref v, n) => self.eval_constant_quasiquote(v, n),
+            Value::Comma(_, _) |
+            Value::CommaAt(_, _) => Err(From::from(CompileError::UnbalancedComma)),
+            Value::Quote(ref v, 1) => Ok(ConstResult::Constant((**v).clone())),
+            Value::Quote(ref v, n) =>
+                Ok(ConstResult::Constant((**v).clone().quote(n - 1))),
+            _ => Ok(ConstResult::IsConstant)
+        }
+    }
+
+    fn eval_constant_function(&mut self, name: Name, args: &[Value])
+            -> Result<ConstResult, Error> {
+        let n_args = args.len();
+
+        match name {
+            standard_names::IF if n_args >= 2 && n_args <= 3 => {
+                let mut cond = Borrowed(&args[0]);
+
+                match try!(self.eval_constant(&cond)) {
+                    ConstResult::IsRuntime | ConstResult::Partial(_) =>
+                        return Ok(ConstResult::IsRuntime),
+                    ConstResult::IsConstant => (),
+                    ConstResult::Constant(v) => {
+                        cond = Owned(v);
+                    }
+                }
+
+                let cond = match *cond {
+                    Value::Bool(v) => v,
+                    ref v => return Err(From::from(ExecError::expected("bool", v)))
+                };
+
+                if cond {
+                    self.eval_constant(&args[1])
+                } else {
+                    self.eval_constant(&args[2])
+                }
+            }
+            standard_names::ADD if args.is_empty() =>
+                Ok(ConstResult::Constant(0.into())),
+            standard_names::ADD => fold_symmetric::<FoldAdd>(self, name, args),
+            standard_names::SUB if args.len() == 1 => {
+                let v = &args[0];
+                match try!(self.eval_constant(v)) {
+                    ConstResult::IsRuntime => Ok(ConstResult::IsRuntime),
+                    ConstResult::Partial(v) => {
+                        return Ok(ConstResult::Partial(vec![
+                            Value::Name(name), v].into()));
+                    }
+                    ConstResult::IsConstant =>
+                        Ok(ConstResult::Constant(try!(neg_number(v.clone())))),
+                    ConstResult::Constant(v) =>
+                        Ok(ConstResult::Constant(try!(neg_number(v))))
+                }
+            }
+            standard_names::SUB if args.len() > 1 =>
+                fold_asymmetric::<FoldSub>(self, name, args),
+            standard_names::MUL if args.is_empty() =>
+                Ok(ConstResult::Constant(1.into())),
+            standard_names::MUL => fold_symmetric::<FoldMul>(self, name, args),
+            standard_names::DIV if args.len() >= 2 =>
+                fold_asymmetric::<FoldDiv>(self, name, args),
+            standard_names::FLOOR_DIV if args.len() >= 2 =>
+                fold_asymmetric::<FoldFloorDiv>(self, name, args),
+            _ if is_const_system_fn(name) =>
+                eval_system_fn(self, name, args),
+            _ => Ok(ConstResult::IsRuntime)
+        }
+    }
+
+    fn eval_constant_quasiquote(&mut self, value: &Value, depth: u32)
+            -> Result<ConstResult, Error> {
+        let v = match try!(self.eval_constant_quasi_value(value, depth)) {
+            ConstResult::IsConstant => value.clone(),
+            ConstResult::Constant(v) => v,
+            res => return Ok(res)
+        };
+
+        match depth {
+            1 => Ok(ConstResult::Constant(v)),
+            _ => Ok(ConstResult::Constant(v.quasiquote(depth - 1)))
+        }
+    }
+
+    /// Evaluates a quasiquote value into a constant expression.
+    fn eval_constant_quasi_value(&mut self, value: &Value, depth: u32)
+            -> Result<ConstResult, Error> {
+        match *value {
+            Value::List(ref li) =>
+                self.eval_constant_quasiquote_list(li, depth),
+            Value::Comma(_, n) if n > depth =>
+                Err(From::from(CompileError::UnbalancedComma)),
+            Value::Comma(ref v, n) if n == depth => self.eval_constant(v),
+            Value::Comma(ref v, n) => {
+                match try!(self.eval_constant_quasi_value(v, depth - n)) {
+                    ConstResult::Constant(v) =>
+                        Ok(ConstResult::Constant(v.comma(n))),
+                    res => Ok(res)
+                }
+            }
+            Value::CommaAt(_, _) =>
+                Err(From::from(CompileError::InvalidCommaAt)),
+            Value::Quote(ref v, n) => {
+                match try!(self.eval_constant_quasi_value(v, depth)) {
+                    ConstResult::Constant(v) =>
+                        Ok(ConstResult::Constant(v.quote(n))),
+                    res => Ok(res)
+                }
+            }
+            Value::Quasiquote(ref v, n) => {
+                match try!(self.eval_constant_quasi_value(v, depth + n)) {
+                    ConstResult::Constant(v) =>
+                        Ok(ConstResult::Constant(v.quasiquote(n))),
+                    res => Ok(res)
+                }
+            }
+            _ => Ok(ConstResult::IsConstant)
+        }
+    }
+
+    fn eval_constant_quasiquote_list(&mut self, li: &[Value], depth: u32)
+            -> Result<ConstResult, Error> {
+        let mut new_constant = false;
+        let mut values = Vec::new();
+
+        for (i, v) in li.iter().enumerate() {
+            match *v {
+                Value::CommaAt(_, n) if n > depth =>
+                    return Err(From::from(CompileError::InvalidCommaAt)),
+                Value::CommaAt(ref v, n) if n == depth => {
+                    let v = match try!(self.eval_constant(v)) {
+                        ConstResult::IsConstant => (**v).clone(),
+                        ConstResult::Constant(v) => v,
+                        res => return Ok(res)
+                    };
+
+                    if !new_constant {
+                        values.extend(li[..i].iter().cloned());
+                    }
+
+                    new_constant = true;
+
+                    match v {
+                        Value::Unit => (),
+                        Value::List(li) => values.extend(li.into_vec()),
+                        ref v => return Err(From::from(ExecError::expected("list", v)))
+                    }
+                }
+                Value::CommaAt(ref v, n) => {
+                    match try!(self.eval_constant_quasi_value(v, depth - n)) {
+                        ConstResult::IsConstant => {
+                            if new_constant {
+                                values.push((**v).clone());
+                            }
+                        }
+                        ConstResult::Constant(v) => {
+                            if !new_constant {
+                                values.extend(li[..i].iter().cloned());
+                            }
+                            new_constant = true;
+                            values.push(v);
+                        }
+                        res => return Ok(res)
+                    }
+                }
+                _ => {
+                    match try!(self.eval_constant_quasi_value(v, depth)) {
+                        ConstResult::IsConstant => {
+                            if new_constant {
+                                values.push(v.clone());
+                            }
+                        }
+                        ConstResult::Constant(v) => {
+                            if !new_constant {
+                                values.extend(li[..i].iter().cloned());
+                            }
+                            new_constant = true;
+                            values.push(v);
+                        }
+                        res => return Ok(res)
+                    }
+                }
+            }
+        }
+
+        if new_constant {
+            Ok(ConstResult::Constant(values.into()))
+        } else {
+            Ok(ConstResult::IsConstant)
+        }
     }
 
     fn compile_operator(&mut self, name: Name, args: &[Value]) -> Result<(), Error> {
@@ -686,7 +923,11 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    fn inline_call(&mut self, name: Name, args: &[Value]) -> Result<bool, Error> {
+    /// Attempt to compile a function call into a more efficient series of
+    /// instructions; e.g. `(eq a b)` into the `Eq` instruction.
+    ///
+    /// If specialized instructions cannot be generated, returns `Ok(false)`.
+    fn specialize_call(&mut self, name: Name, args: &[Value]) -> Result<bool, Error> {
         match name {
             standard_names::NULL if args.len() == 1 => {
                 try!(self.compile_value(&args[0]));
@@ -696,12 +937,24 @@ impl<'a> Compiler<'a> {
                 let lhs = &args[0];
                 let rhs = &args[1];
 
-                if is_constant(rhs) {
+                let lhs_const = match try!(self.eval_constant(lhs)) {
+                    ConstResult::IsConstant => Some(Borrowed(lhs)),
+                    ConstResult::Constant(v) => Some(Owned(v)),
+                    _ => None
+                };
+
+                let rhs_const = match try!(self.eval_constant(rhs)) {
+                    ConstResult::IsConstant => Some(Borrowed(rhs)),
+                    ConstResult::Constant(v) => Some(Owned(v)),
+                    _ => None
+                };
+
+                if let Some(rhs) = rhs_const {
                     try!(self.compile_value(lhs));
-                    let c = self.add_const_value(rhs);
+                    let c = self.add_const(rhs);
                     try!(self.push_instruction(Instruction::EqConst(c)));
-                } else if is_constant(lhs) {
-                    let c = self.add_const_value(lhs);
+                } else if let Some(lhs) = lhs_const {
+                    let c = self.add_const(lhs);
                     try!(self.compile_value(rhs));
                     try!(self.push_instruction(Instruction::EqConst(c)));
                 } else {
@@ -715,12 +968,24 @@ impl<'a> Compiler<'a> {
                 let lhs = &args[0];
                 let rhs = &args[1];
 
-                if is_constant(rhs) {
+                let lhs_const = match try!(self.eval_constant(lhs)) {
+                    ConstResult::IsConstant => Some(Borrowed(lhs)),
+                    ConstResult::Constant(v) => Some(Owned(v)),
+                    _ => None
+                };
+
+                let rhs_const = match try!(self.eval_constant(rhs)) {
+                    ConstResult::IsConstant => Some(Borrowed(rhs)),
+                    ConstResult::Constant(v) => Some(Owned(v)),
+                    _ => None
+                };
+
+                if let Some(rhs) = rhs_const {
                     try!(self.compile_value(lhs));
-                    let c = self.add_const_value(rhs);
+                    let c = self.add_const(rhs);
                     try!(self.push_instruction(Instruction::NotEqConst(c)));
-                } else if is_constant(lhs) {
-                    let c = self.add_const_value(lhs);
+                } else if let Some(lhs) = lhs_const {
+                    let c = self.add_const(lhs);
                     try!(self.compile_value(rhs));
                     try!(self.push_instruction(Instruction::NotEqConst(c)));
                 } else {
@@ -733,12 +998,6 @@ impl<'a> Compiler<'a> {
             standard_names::NOT if args.len() == 1 => {
                 try!(self.compile_value(&args[0]));
                 try!(self.push_instruction(Instruction::Not));
-            }
-            standard_names::INF if args.len() == 0 => {
-                try!(self.load_const_value(&f64::INFINITY.into()));
-            }
-            standard_names::NAN if args.len() == 0 => {
-                try!(self.load_const_value(&f64::NAN.into()));
             }
             standard_names::APPEND if args.len() == 2 => {
                 try!(self.compile_value(&args[0]));
@@ -791,15 +1050,6 @@ impl<'a> Compiler<'a> {
                 self.consts.push(value.into_owned());
                 n
             }
-        }
-    }
-
-    fn add_const_value(&mut self, value: &Value) -> u32 {
-        match *value {
-            Value::Quote(ref v, 1) => self.add_const(Borrowed(v)),
-            Value::Quote(ref v, n) =>
-                self.add_const(Owned(Value::Quote(v.clone(), n - 1))),
-            _ => self.add_const(Borrowed(value))
         }
     }
 
@@ -988,6 +1238,217 @@ impl<'a> Compiler<'a> {
     }
 }
 
+fn is_const_system_fn(name: Name) -> bool {
+    use name::standard_names::*;
+
+    match name {
+        REM | SHL | SHR |
+        EQ | NOT_EQ | LT | GT | LE | GE |
+        ZERO | MIN | MAX |
+        APPEND | ELT | CONCAT | JOIN | LEN | SLICE |
+        FIRST | SECOND | LAST | INIT | TAIL | LIST | REVERSE |
+        ABS | CEIL | FLOOR | ROUND | TRUNC | INT |
+        FLOAT | INF | NAN | DENOM | FRACT | NUMER | RAT | RECIP |
+        CHARS | STRING |
+        ID | IS | IS_INSTANCE | NULL | TYPE_OF |
+        XOR | NOT
+            => true,
+        _ => false
+    }
+}
+
+/// Fold constants for an asymmetric operation.
+/// There are two strategies for partial constant evaluation, depending on
+/// whether the first value is constant.
+///
+/// `(- foo 1 2 3)` -> `(- foo 6)`
+///
+/// `(- 1 foo 2 3)` -> `(- -4 foo)`
+fn fold_asymmetric<F: FoldOp>(compiler: &mut Compiler, name: Name, args: &[Value])
+        -> Result<ConstResult, Error> {
+    let mut args = args.iter();
+    let mut new_args = Vec::new();
+    let mut value = None;
+
+    let first = args.next().unwrap();
+
+    let first_const = match try!(compiler.eval_constant(first)) {
+        ConstResult::IsRuntime => {
+            new_args.push(first.clone());
+            false
+        }
+        ConstResult::Partial(v) => {
+            new_args.push(v);
+            false
+        }
+        ConstResult::IsConstant => {
+            try!(F::type_check(first));
+            value = Some(first.clone());
+            true
+        }
+        ConstResult::Constant(v) => {
+            try!(F::type_check(&v));
+            value = Some(v);
+            true
+        }
+    };
+
+    for v in args {
+        let mut rhs = Borrowed(v);
+
+        match try!(compiler.eval_constant(v)) {
+            ConstResult::IsRuntime => {
+                new_args.push(v.clone());
+                continue;
+            }
+            ConstResult::Partial(v) => {
+                new_args.push(v);
+                continue;
+            }
+            ConstResult::IsConstant => {
+                try!(F::type_check(v));
+            }
+            ConstResult::Constant(v) => {
+                try!(F::type_check(&v));
+                rhs = Owned(v);
+            }
+        }
+
+        match value {
+            Some(lhs) => {
+                value = if first_const {
+                    Some(try!(F::fold(lhs, &rhs)))
+                } else {
+                    Some(try!(F::fold_inv(lhs, &rhs)))
+                };
+            }
+            None => value = Some(rhs.into_owned())
+        }
+    }
+
+    match value {
+        None => Ok(ConstResult::IsRuntime),
+        Some(v) => {
+            let v = try!(F::finish(v));
+
+            if new_args.is_empty() {
+                Ok(ConstResult::Constant(v))
+            } else {
+                new_args.insert(0, Value::Name(name));
+                if !F::is_identity(&v) {
+                    if first_const {
+                        new_args.insert(1, v);
+                    } else {
+                        new_args.push(v);
+                    }
+                }
+                Ok(ConstResult::Partial(new_args.into()))
+            }
+        }
+    }
+}
+
+/// Fold constants for a symmetric operation.
+///
+/// e.g. `(+ 1 foo 2 3)` -> `(+ foo 6)`
+fn fold_symmetric<F: FoldOp>(compiler: &mut Compiler, name: Name, args: &[Value])
+        -> Result<ConstResult, Error> {
+    let mut new_args = Vec::new();
+    let mut value = None;
+
+    for v in args {
+        let mut rhs = Borrowed(v);
+
+        match try!(compiler.eval_constant(v)) {
+            ConstResult::IsRuntime => {
+                new_args.push(v.clone());
+                continue;
+            }
+            ConstResult::Partial(v) => {
+                new_args.push(v);
+                continue;
+            }
+            ConstResult::IsConstant => {
+                try!(F::type_check(v));
+            }
+            ConstResult::Constant(v) => {
+                try!(F::type_check(&v));
+                rhs = Owned(v);
+            }
+        }
+
+        match value {
+            Some(lhs) => value = Some(try!(F::fold(lhs, &rhs))),
+            None => value = Some(rhs.into_owned())
+        }
+    }
+
+    match value {
+        None => Ok(ConstResult::IsRuntime),
+        Some(v) => {
+            if new_args.is_empty() {
+                Ok(ConstResult::Constant(v))
+            } else {
+                new_args.insert(0, Value::Name(name));
+                if !F::is_identity(&v) {
+                    new_args.push(v);
+                }
+                Ok(ConstResult::Partial(new_args.into()))
+            }
+        }
+    }
+}
+
+/// Evaluates the named system function by calling it directly,
+/// if and only if all arguments are constant values.
+fn eval_system_fn(compiler: &mut Compiler, name: Name, args: &[Value])
+        -> Result<ConstResult, Error> {
+    let sys_fn = get_system_fn(name)
+        .expect("eval_system_fn got invalid name");
+
+    let n_args = args.len() as u32;
+
+    if !sys_fn.arity.accepts(n_args) {
+        return Err(From::from(CompileError::ArityError{
+            name: name,
+            expected: sys_fn.arity,
+            found: n_args,
+        }));
+    }
+
+    let mut values = Vec::new();
+
+    for v in args {
+        match try!(compiler.eval_constant(v)) {
+            ConstResult::IsRuntime |
+            ConstResult::Partial(_) => return Ok(ConstResult::IsRuntime),
+            ConstResult::IsConstant => {
+                values.push(v.clone());
+            }
+            ConstResult::Constant(v) => {
+                values.push(v);
+            }
+        }
+    }
+
+    let v = try!((sys_fn.callback)(compiler.scope, &mut values));
+
+    Ok(ConstResult::Constant(v))
+}
+
+/// Result of an attempt to evaluate a constant expression
+#[derive(Debug)]
+enum ConstResult {
+    /// Expression is already constant
+    IsConstant,
+    /// Expression could not be const-evaluated
+    IsRuntime,
+    /// Expression was partially const-evaluated
+    Partial(Value),
+    /// Expression is fully constant
+    Constant(Value),
+}
+
 fn block_returns<'a>(mut b: &'a CodeBlock, blocks: &'a [CodeBlock]) -> bool {
     loop {
         match (b.jump, b.next) {
@@ -1006,21 +1467,6 @@ fn block_returns<'a>(mut b: &'a CodeBlock, blocks: &'a [CodeBlock]) -> bool {
 fn estimate_size(blocks: &[CodeBlock]) -> usize {
     blocks.iter().map(|b| b.calculate_size(false))
         .fold(0, |a, b| a + b) + 1 // Plus one for final Return
-}
-
-fn is_constant(v: &Value) -> bool {
-    match *v {
-        Value::Unit |
-        Value::Bool(_) |
-        Value::Float(_) |
-        Value::Integer(_) |
-        Value::Ratio(_) |
-        Value::Keyword(_) |
-        Value::Char(_) |
-        Value::String(_) |
-        Value::Quote(_, _) => true,
-        _ => false
-    }
 }
 
 struct Operator {
@@ -1062,6 +1508,7 @@ static SYSTEM_OPERATORS: [Operator; NUM_SYSTEM_OPERATORS] = [
     sys_op!(op_lambda, Exact(2)),
     sys_op!(op_export, Exact(1)),
     sys_op!(op_use, Min(2)),
+    sys_op!(op_const, Exact(2)),
 ];
 
 /// `apply` calls a function or lambda with a series of arguments.
@@ -1150,7 +1597,7 @@ fn op_let(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 fn op_define(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     match args[0] {
         Value::Name(name) => {
-            try!(test_define_name(name));
+            try!(test_define_name(compiler.scope, name));
             try!(compiler.compile_value(&args[1]));
             let c = compiler.add_const(Owned(Value::Name(name)));
             try!(compiler.push_instruction(Instruction::SetDef(c)));
@@ -1158,7 +1605,7 @@ fn op_define(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
         }
         Value::List(ref li) => {
             let name = try!(get_name(&li[0]));
-            try!(test_define_name(name));
+            try!(test_define_name(compiler.scope, name));
             let c = compiler.add_const(Owned(Value::Name(name)));
 
             let (lambda, captures) = try!(make_lambda(
@@ -1183,7 +1630,7 @@ fn op_macro(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
         _ => return Err(From::from(CompileError::SyntaxError("expected list")))
     };
 
-    try!(test_define_name(name));
+    try!(test_define_name(compiler.scope, name));
 
     let (lambda, captures) = try!(make_lambda(compiler,
         Some(name), params, &args[1]));
@@ -1208,7 +1655,7 @@ fn op_macro(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 /// ```
 fn op_struct(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     let name = try!(get_name(&args[0]));
-    try!(test_define_name(name));
+    try!(test_define_name(compiler.scope, name));
     let mut fields = NameMap::new();
 
     match args[1] {
@@ -1568,6 +2015,20 @@ fn op_use(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 
     while let Some(arg) = iter.next() {
         match *arg {
+            Value::Keyword(standard_names::CONST) => {
+                match iter.next() {
+                    Some(&Value::Keyword(standard_names::ALL)) => {
+                        let names = compiler.scope.import_all_constants(&m.scope);
+                        imp_set.constants.extend(names.iter().map(|&n| (n, n)));
+                    }
+                    Some(&Value::Unit) => (),
+                    Some(&Value::List(ref li)) =>
+                        try!(import_constants(mod_name, &mut imp_set,
+                            compiler.scope, &m.scope, li)),
+                    _ => return Err(From::from(CompileError::SyntaxError(
+                        "expected `:all` or list of names after keyword")))
+                }
+            }
             Value::Keyword(standard_names::MACRO) => {
                 match iter.next() {
                     Some(&Value::Keyword(standard_names::ALL)) => {
@@ -1583,7 +2044,7 @@ fn op_use(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
                 }
             }
             _ => return Err(From::from(CompileError::SyntaxError(
-                "expected keyword `:macro`")))
+                "expected keyword `:const` or `:macro`")))
         }
     }
 
@@ -1591,6 +2052,64 @@ fn op_use(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 
     try!(compiler.push_instruction(Instruction::Unit));
     Ok(())
+}
+
+/// `const` declares a named constant value in global scope.
+/// The value must be a compile-time constant.
+///
+/// ```lisp
+/// (const foo 123)
+///
+/// (const bar (+ foo 1))
+/// ```
+fn op_const(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
+    let name = try!(get_name(&args[0]));
+
+    try!(test_define_name(compiler.scope, name));
+
+    if compiler.get_constant(name).is_some() {
+        return Err(From::from(CompileError::ConstantExists(name)));
+    }
+
+    let mut value = Borrowed(&args[1]);
+
+    match try!(compiler.eval_constant(&value)) {
+        ConstResult::IsConstant => (),
+        ConstResult::IsRuntime |
+        ConstResult::Partial(_) =>
+            return Err(From::from(CompileError::NotConstant(name))),
+        ConstResult::Constant(v) => value = Owned(v)
+    }
+
+    compiler.add_constant(name, value.into_owned());
+
+    try!(compiler.load_quoted_value(Owned(Value::Name(name))));
+    Ok(())
+}
+
+fn import_constants(mod_name: Name, imps: &mut ImportSet,
+        a: &GlobalScope, b: &GlobalScope, names: &[Value]) -> Result<(), CompileError> {
+    each_import(names, |src, dest| {
+        match b.get_constant(src) {
+            Some(v) => {
+                if !b.is_exported(src) {
+                    return Err(CompileError::PrivacyError{
+                        module: mod_name,
+                        name: src,
+                    });
+                }
+
+                a.add_constant(dest, v);
+                imps.constants.push((src, dest));
+            }
+            None => return Err(CompileError::ImportError{
+                module: mod_name,
+                name: src,
+            })
+        }
+
+        Ok(())
+    })
 }
 
 fn import_macros(mod_name: Name, imps: &mut ImportSet,
@@ -1672,11 +2191,13 @@ fn get_name(v: &Value) -> Result<Name, CompileError> {
     }
 }
 
-fn test_define_name(name: Name) -> Result<(), CompileError> {
-    if MasterScope::can_define(name) {
-        Ok(())
-    } else {
+fn test_define_name(scope: &Scope, name: Name) -> Result<(), CompileError> {
+    if !MasterScope::can_define(name) {
         Err(CompileError::CannotDefine(name))
+    } else if scope.contains_constant(name) {
+        Err(CompileError::ConstantExists(name))
+    } else {
+        Ok(())
     }
 }
 
