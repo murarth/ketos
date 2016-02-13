@@ -28,7 +28,7 @@ fn run() -> i32 {
     opts.optflag ("h", "help", "Print this help message and exit");
     opts.optflag ("i", "interactive", "Run interactively even with a file");
     opts.optmulti("I", "", "Add DIR to list of module search paths", "DIR");
-    opts.optflag ("", "no-rc", "Do not run ~/.ketosrc.kts on startup");
+    opts.optflag ("", "no-rc", "Do not run ~/.ketosrc.ket on startup");
     opts.optflag ("V", "version", "Print version and exit");
 
     let matches = match opts.parse(&args[1..]) {
@@ -80,7 +80,7 @@ fn run() -> i32 {
     if interactive {
         if !matches.opt_present("no-rc") {
             if let Some(p) = std::env::home_dir() {
-                let rc = p.join(".ketosrc.kts");
+                let rc = p.join(".ketosrc.ket");
                 if rc.is_file() {
                     // Ignore error in interactive mode
                     run_file(&interp, &rc);

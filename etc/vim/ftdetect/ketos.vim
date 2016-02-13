@@ -1,1 +1,1 @@
-autocmd BufRead,BufNewFile *.kts set filetype=ketos
+autocmd BufRead,BufNewFile *.ket set filetype=ketos

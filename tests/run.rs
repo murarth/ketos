@@ -11,7 +11,7 @@ fn run_file(path: &Path) -> Result<(), Error> {
     interp.run_file(path)
 }
 
-// Runs all the tests living in `lib/test-*.kts`
+// Runs all the tests living in `lib/test-*`
 #[test]
 fn test_run() {
     let dir = read_dir("lib").expect("failed to read dir");

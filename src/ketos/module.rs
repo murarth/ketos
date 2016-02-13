@@ -236,10 +236,10 @@ pub struct FileModuleLoader {
 }
 
 /// File extension for `ketos` source files.
-pub const FILE_EXTENSION: &'static str = "kts";
+pub const FILE_EXTENSION: &'static str = "ket";
 
 /// File extension for `ketos` compiled bytecode files.
-pub const COMPILED_FILE_EXTENSION: &'static str = "ktsc";
+pub const COMPILED_FILE_EXTENSION: &'static str = "ketc";
 
 impl FileModuleLoader {
     /// Creates a new `FileModuleLoader` that will search the current

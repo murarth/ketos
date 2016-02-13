@@ -34,7 +34,7 @@ Build optimized executable:
 
 ## Usage
 
-`ketos` can be run as an interpreter to execute Ketos code files (`.kts`)
+`ketos` can be run as an interpreter to execute Ketos code files (`.ket`)
 or run as an interactive read-eval-print loop.
 
 ## License
