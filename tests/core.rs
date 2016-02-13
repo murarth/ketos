@@ -150,7 +150,7 @@ fn test_struct() {
         (struct foo ((a number)))
         (new foo :a 1)
         (new foo :a 1.0)
-        ").unwrap(), ["foo", "foo { a: 1 }", "foo { a: 1 }"]);
+        ").unwrap(), ["foo", "foo { a: 1 }", "foo { a: 1.0 }"]);
 
     assert_eq!(run("
         (struct foo ())
@@ -459,7 +459,7 @@ fn test_add() {
     assert_eq!(eval("(+ 1 2 3 4)").unwrap(), "10");
     assert_eq!(eval("(+ (+ 1 2) (+ 3 4))").unwrap(), "10");
 
-    assert_eq!(eval("(+ 1.0 2.0)").unwrap(), "3");
+    assert_eq!(eval("(+ 1.0 2.0)").unwrap(), "3.0");
     assert_eq!(eval("(+ 1/3 1/2)").unwrap(), "5/6");
 
     assert_eq!(eval("(+ 1 1/2)").unwrap(), "3/2");
@@ -485,11 +485,8 @@ fn test_mul() {
     assert_eq!(eval("(* 1/2 1/2)").unwrap(), "1/4");
     assert_eq!(eval("(* 0.5 1/2)").unwrap(), "0.25");
 
-    assert_eq!(eval("(* 2 0.5)").unwrap(), "1");
-    assert_eq!(eval("(* 2 1/2)").unwrap(), "1");
-
-    assert_eq!(eval("(type-of (* 2 0.5))").unwrap(), "float");
-    assert_eq!(eval("(type-of (* 2 1/2))").unwrap(), "ratio");
+    assert_eq!(eval("(* 2 0.5)").unwrap(), "1.0");
+    assert_eq!(eval("(* 2 1/2)").unwrap(), "1/1");
 }
 
 #[test]
@@ -500,14 +497,8 @@ fn test_pow() {
 
     assert_eq!(eval("(^ 2/3 10)").unwrap(), "1024/59049");
     assert_eq!(eval("(^ 2/3 10/1)").unwrap(), "1024/59049");
-    assert_eq!(eval("(^ 2/3 0)").unwrap(), "1");
+    assert_eq!(eval("(^ 2/3 0)").unwrap(), "1/1");
     assert_eq!(eval("(^ 2/3 -1)").unwrap(), "1.5");
-
-    assert_eq!(eval("(type-of (^ 2/3 10))").unwrap(), "ratio");
-    assert_eq!(eval("(type-of (^ 2/3 10/1))").unwrap(), "ratio");
-    assert_eq!(eval("(type-of (^ 2/3 0))").unwrap(), "ratio");
-    assert_eq!(eval("(type-of (^ 2/3 1/2))").unwrap(), "float");
-    assert_eq!(eval("(type-of (^ 2/3 -1))").unwrap(), "float");
 }
 
 #[test]
@@ -894,22 +885,22 @@ fn test_abs() {
 #[test]
 fn test_ceil() {
     assert_eq!(eval("(ceil 1)").unwrap(), "1");
-    assert_eq!(eval("(ceil 1/2)").unwrap(), "1");
-    assert_eq!(eval("(ceil 1.3)").unwrap(), "2");
+    assert_eq!(eval("(ceil 1/2)").unwrap(), "1/1");
+    assert_eq!(eval("(ceil 1.3)").unwrap(), "2.0");
 }
 
 #[test]
 fn test_floor() {
     assert_eq!(eval("(floor 1)").unwrap(), "1");
-    assert_eq!(eval("(floor 1/2)").unwrap(), "0");
-    assert_eq!(eval("(floor -1.3)").unwrap(), "-2");
+    assert_eq!(eval("(floor 1/2)").unwrap(), "0/1");
+    assert_eq!(eval("(floor -1.3)").unwrap(), "-2.0");
 }
 
 #[test]
 fn test_trunc() {
     assert_eq!(eval("(trunc 1)").unwrap(), "1");
-    assert_eq!(eval("(trunc -1.3)").unwrap(), "-1");
-    assert_eq!(eval("(trunc 5/2)").unwrap(), "2");
+    assert_eq!(eval("(trunc -1.3)").unwrap(), "-1.0");
+    assert_eq!(eval("(trunc 5/2)").unwrap(), "2/1");
 }
 
 #[test]
@@ -921,17 +912,13 @@ fn test_int() {
         Error::ExecError(ExecError::Overflow));
     assert_matches!(eval("(int (nan))").unwrap_err(),
         Error::ExecError(ExecError::Overflow));
-    assert_eq!(eval("(type-of (int 123.45))").unwrap(), "integer");
-    assert_eq!(eval("(type-of (int 123/1))").unwrap(), "integer");
 }
 
 #[test]
 fn test_float() {
-    assert_eq!(eval("(float 123)").unwrap(), "123");
-    assert_eq!(eval("(float 123.0)").unwrap(), "123");
-    assert_eq!(eval("(float 123/1)").unwrap(), "123");
-    assert_eq!(eval("(type-of (float 123))").unwrap(), "float");
-    assert_eq!(eval("(type-of (float 123/1))").unwrap(), "float");
+    assert_eq!(eval("(float 123)").unwrap(), "123.0");
+    assert_eq!(eval("(float 123.0)").unwrap(), "123.0");
+    assert_eq!(eval("(float 123/1)").unwrap(), "123.0");
 }
 
 #[test]
@@ -978,7 +965,7 @@ fn test_ratio() {
 
     assert_eq!(eval("(rat 1.5)").unwrap(), "3/2");
     assert_eq!(eval("(rat 1/3)").unwrap(), "1/3");
-    assert_eq!(eval("(rat 3)").unwrap(), "3");
+    assert_eq!(eval("(rat 3)").unwrap(), "3/1");
     assert_eq!(eval("(rat 1 2)").unwrap(), "1/2");
     assert_matches!(eval("(rat (inf))").unwrap_err(),
         Error::ExecError(ExecError::Overflow));
@@ -1204,11 +1191,11 @@ fn test_use() {
         (use math (sqrt))
         (sqrt 4.0)
         ").unwrap(),
-        ["()", "2"]);
+        ["()", "2.0"]);
 
     assert_eq!(run("
         (use math :all)
         (sqrt 4.0)
         ").unwrap(),
-        ["()", "2"]);
+        ["()", "2.0"]);
 }

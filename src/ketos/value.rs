@@ -539,9 +539,17 @@ impl NameDebug for Value {
             Value::Unit => write!(f, "()"),
             Value::Unbound => write!(f, "<unbound>"),
             Value::Bool(b) => write!(f, "{:?}", b),
-            Value::Float(fl) => write!(f, "{:?}", fl),
+            Value::Float(fl) => if is_normal(fl) && fl.trunc() == fl {
+                write!(f, "{:?}.0", fl)
+            } else {
+                write!(f, "{}", fl)
+            },
             Value::Integer(ref i) => write!(f, "{}", i),
-            Value::Ratio(ref r) => write!(f, "{}", r),
+            Value::Ratio(ref r) => if r.is_integer() {
+                write!(f, "{}/1", r)
+            } else {
+                write!(f, "{}", r)
+            },
             Value::Char(ch) => write!(f, "#{:?}", ch),
             Value::String(ref s) => write!(f, "{:?}", s),
             Value::Name(name) => write!(f, "{}", names.get(name)),
@@ -635,13 +643,21 @@ impl NameDebug for Value {
 impl NameDisplay for Value {
     fn fmt(&self, names: &NameStore, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Value::Float(fl) => write!(f, "{}", fl),
+            Value::Float(fl) => if is_normal(fl) && fl.trunc() == fl {
+                write!(f, "{}.0", fl)
+            } else {
+                write!(f, "{}", fl)
+            },
             Value::Char(ch) => write!(f, "{}", ch),
             Value::String(ref s) => write!(f, "{}", s),
             Value::Foreign(ref v) => v.fmt_display(names, f),
             ref v => NameDebug::fmt(v, names, f),
         }
     }
+}
+
+fn is_normal(f: f64) -> bool {
+    !f.is_nan() && f.is_finite()
 }
 
 fn flip_ordering(ord: Ordering) -> Ordering {
