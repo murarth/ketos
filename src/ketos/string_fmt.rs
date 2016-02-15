@@ -275,12 +275,7 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
     }
 
     fn format_string(&mut self, buf: &mut String) -> Result<(), ExecError> {
-        loop {
-            let ch = match self.consume_char() {
-                Some(ch) => ch,
-                None => break
-            };
-
+        while let Some(ch) = self.consume_char() {
             match ch {
                 '~' => {
                     let dir = try!(self.parse_directive());
@@ -863,9 +858,8 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
                     if !found_end {
                         try!(self.format_string(buf));
 
-                        match self.close_dir.take() {
-                            Some(Directive{command: ']', ..}) => found_end = true,
-                            _ => ()
+                        if let Some(Directive{command: ']', ..}) = self.close_dir.take() {
+                             found_end = true;
                         }
                     }
                 }
@@ -1136,9 +1130,10 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
             self.arg_index = n.unwrap_or(0) as usize;
         } else {
             let n = n.unwrap_or(1) as usize;
-            match dir.colon {
-                false => self.goto_fwd_arg(n),
-                true => self.goto_back_arg(n),
+            if dir.colon {
+                self.goto_back_arg(n)
+            } else {
+                self.goto_fwd_arg(n)
             }
         }
 
@@ -1151,22 +1146,19 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
         let arg = try!(self.consume_arg(dir.span));
         let sub_fmt = try!(self.get_string(arg, dir.span));
 
-        match dir.at {
-            false => {
-                let arg = try!(self.consume_arg(dir.span));
-                let sub_args = try!(self.get_list(arg, dir.span));
+        if !dir.at {
+            let arg = try!(self.consume_arg(dir.span));
+            let sub_args = try!(self.get_list(arg, dir.span));
 
-                let mut sub_fmter = self.sub(sub_fmt, sub_args);
-                try!(sub_fmter.format_string(buf));
-                try!(sub_fmter.finish());
-            }
-            true => {
-                let mut sub_fmter = self.sub(sub_fmt, self.values);
-                sub_fmter.arg_index = self.arg_index;
-                try!(sub_fmter.format_string(buf));
-                self.arg_index = sub_fmter.arg_index;
-                try!(sub_fmter.finish());
-            }
+            let mut sub_fmter = self.sub(sub_fmt, sub_args);
+            try!(sub_fmter.format_string(buf));
+            try!(sub_fmter.finish());
+        } else {
+            let mut sub_fmter = self.sub(sub_fmt, self.values);
+            sub_fmter.arg_index = self.arg_index;
+            try!(sub_fmter.format_string(buf));
+            self.arg_index = sub_fmter.arg_index;
+            try!(sub_fmter.finish());
         }
 
         Ok(())
@@ -1527,8 +1519,7 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
                 None if r.is_negative() => Ok(-f64::INFINITY),
                 None => Ok(f64::INFINITY)
             },
-            ref v => return Err(self.error(span,
-                FormatError::expected("float", v)))
+            ref v => Err(self.error(span, FormatError::expected("float", v)))
         }
     }
 

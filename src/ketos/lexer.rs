@@ -384,7 +384,7 @@ fn consume_block_comment(start: usize, chars: &mut CharIndices) -> Result<usize,
 fn consume_line_comment(start: usize, chars: &mut CharIndices) -> usize {
     let mut last = start;
 
-    while let Some((ind, ch)) = chars.next() {
+    for (ind, ch) in chars {
         last = ind;
         if ch == '\n' {
             break;
@@ -411,12 +411,9 @@ fn parse_doc_comment(input: &str) -> (Token, usize) {
             }
             _ if begin_line => break,
             Some((_, '\r')) => {
-                match chars.next() {
-                    Some((ind, '\n')) => {
-                        end = ind + 1;
-                        begin_line = true;
-                    }
-                    _ => ()
+                if let Some((ind, '\n')) = chars.next() {
+                    end = ind + 1;
+                    begin_line = true;
                 }
             }
             Some((ind, '\n')) => {

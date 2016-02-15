@@ -840,6 +840,11 @@ impl CodeBlock {
         self.bytes.len()
     }
 
+    /// Returns whether any intruction was encoded.
+    pub fn is_empty(&self) -> bool {
+        self.bytes.is_empty()
+    }
+
     /// Returns encoded bytecode data.
     ///
     /// `flush` should be called first to ensure all instructions are encoded.

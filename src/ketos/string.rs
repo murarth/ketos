@@ -139,7 +139,7 @@ impl<'a> StringReader<'a> {
                         self.end_index = ind + 1;
                         Ok('\n')
                     }
-                    _ => return Err(ParseError::new(
+                    _ => Err(ParseError::new(
                         self.span_from(ind as BytePos, 1),
                         ParseErrorKind::InvalidChar('\r')))
                 }
@@ -253,7 +253,7 @@ impl<'a> StringReader<'a> {
     fn peek_char(&mut self) -> Result<char, ParseError> {
         match self.chars.clone().next() {
             Some((_, ch)) => Ok(ch),
-            None => return Err(ParseError::new(self.span_from(self.start, 1),
+            None => Err(ParseError::new(self.span_from(self.start, 1),
                 if self.ty == StringType::Char {
                     ParseErrorKind::UnterminatedChar
                 } else {

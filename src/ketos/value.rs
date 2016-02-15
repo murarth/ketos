@@ -946,7 +946,7 @@ impl<T: FromValue> FromValue for Vec<T> {
         match v {
             Value::Unit => Ok(Vec::new()),
             Value::List(li) => li.into_vec().into_iter()
-                .map(|v| T::from_value(v)).collect(),
+                .map(T::from_value).collect(),
             ref v => Err(ExecError::expected("list", v))
         }
     }

@@ -172,18 +172,18 @@ impl<'a, 'lex> Parser<'a, 'lex> {
                     }
                 }
                 Token::Float(f) => parse_float(f)
-                    .map(|f| Value::Float(f))
+                    .map(Value::Float)
                     .map_err(|kind| ParseError::new(sp, kind)),
                 Token::Integer(i, base) => parse_integer(i, base)
-                    .map(|i| Value::Integer(i))
+                    .map(Value::Integer)
                     .map_err(|kind| ParseError::new(sp, kind)),
                 Token::Ratio(r) => parse_ratio(r)
-                    .map(|r| Value::Ratio(r))
+                    .map(Value::Ratio)
                     .map_err(|_| ParseError::new(sp, ParseErrorKind::LiteralParseError)),
                 Token::Char(ch) => parse_char(ch)
-                    .map(|ch| Value::Char(ch)),
+                    .map(Value::Char),
                 Token::String(s) => parse_string(s)
-                    .map(|s| Value::String(s)),
+                    .map(Value::String),
                 Token::Name(name) => Ok(self.name_value(name)),
                 Token::Keyword(name) => Ok(Value::Keyword(self.add_name(name))),
                 Token::BackQuote => {
@@ -349,7 +349,7 @@ impl<'a, 'lex> Parser<'a, 'lex> {
 
     /// Returns the next token without consuming it
     fn peek_all(&mut self) -> Result<(Span, Token<'lex>), ParseError> {
-        if let Some(tok) = self.cur_token.clone() {
+        if let Some(tok) = self.cur_token {
             Ok(tok)
         } else {
             let tok = try!(self.lexer.next_token());

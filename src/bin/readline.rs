@@ -91,7 +91,7 @@ pub fn read_line(prompt: &str, gscope: &GlobalScope) -> Option<String> {
         None
     } else {
         let cs = unsafe { CStr::from_ptr(sp) };
-        Some(from_utf8(cs.to_bytes()).unwrap().to_string())
+        Some(from_utf8(cs.to_bytes()).unwrap().to_owned())
     }
 }
 

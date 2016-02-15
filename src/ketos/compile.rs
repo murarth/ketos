@@ -602,8 +602,7 @@ impl<'a> Compiler<'a> {
                 match try!(self.eval_constant(v)) {
                     ConstResult::IsRuntime => Ok(ConstResult::IsRuntime),
                     ConstResult::Partial(v) => {
-                        return Ok(ConstResult::Partial(vec![
-                            Value::Name(name), v].into()));
+                        Ok(ConstResult::Partial(vec![Value::Name(name), v].into()))
                     }
                     ConstResult::IsConstant =>
                         Ok(ConstResult::Constant(try!(neg_number(v.clone())))),
@@ -791,15 +790,13 @@ impl<'a> Compiler<'a> {
         match *value {
             Value::Comma(ref v, n) if n == depth =>
                 self.compile_value(v),
-            Value::Comma(_, n) if n > depth =>
+            Value::Comma(_, n) | Value::CommaAt(_, n) if n > depth =>
                 Err(From::from(CompileError::UnbalancedComma)),
             Value::Comma(ref v, n) => {
                 try!(self.compile_quasi_value(v, depth - n));
                 try!(self.push_instruction(Instruction::Comma(n)));
                 Ok(())
             }
-            Value::CommaAt(_, n) if n > depth =>
-                Err(From::from(CompileError::UnbalancedComma)),
             Value::CommaAt(_, n) if n == depth =>
                 Err(From::from(CompileError::InvalidCommaAt)),
             Value::List(ref li) =>
@@ -910,15 +907,13 @@ impl<'a> Compiler<'a> {
             }
             Value::Quasiquote(ref v, n) => self.is_quasi_const(v, depth + n),
             Value::Quote(ref v, _) => self.is_quasi_const(v, depth),
-            Value::Comma(_, n) if n > depth =>
+            Value::Comma(_, n)
+            | Value::CommaAt(_, n) if n > depth =>
                 Err(From::from(CompileError::UnbalancedComma)),
-            Value::Comma(_, n) if n == depth => Ok(false),
-            Value::Comma(ref v, n) =>
-                self.is_quasi_const(v, depth - n),
-            Value::CommaAt(_, n) if n > depth =>
-                Err(From::from(CompileError::UnbalancedComma)),
-            Value::CommaAt(_, n) if n == depth => Ok(false),
-            Value::CommaAt(ref v, n) =>
+            Value::Comma(_, n)
+            | Value::CommaAt(_, n) if n == depth => Ok(false),
+            Value::Comma(ref v, n)
+            | Value::CommaAt(ref v, n) =>
                 self.is_quasi_const(v, depth - n),
             _ => Ok(true)
         }
@@ -1119,12 +1114,9 @@ impl<'a> Compiler<'a> {
     /// Emits code to load a local value from the stack or closure values.
     /// Returns `Ok(true)` if a named value was found and loaded.
     fn load_local_name(&mut self, name: Name) -> Result<bool, CompileError> {
-        match self.stack.iter().rev().find(|&&(n, _)| n == name) {
-            Some(&(_, pos)) => {
-                try!(self.push_instruction(Instruction::Load(pos)));
-                return Ok(true);
-            }
-            None => ()
+        if let Some(&(_, pos)) = self.stack.iter().rev().find(|&&(n, _)| n == name) {
+            try!(self.push_instruction(Instruction::Load(pos)));
+            return Ok(true);
         }
 
         // self name is more local than enclosed values

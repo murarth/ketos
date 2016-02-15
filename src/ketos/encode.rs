@@ -576,12 +576,7 @@ fn validate_value(v: &Value) -> Result<(), DecodeError> {
 fn validate_value_inner(v: &Value, quasi: u32) -> Result<(), DecodeError> {
     match *v {
         Value::Quasiquote(ref v, n) => validate_value_inner(v, quasi + n),
-        Value::Comma(ref v, n) => if n >= quasi {
-            Err(DecodeError::UnbalancedComma)
-        } else {
-            validate_value_inner(v, quasi - n)
-        },
-        Value::CommaAt(ref v, n) => if n >= quasi {
+        Value::Comma(ref v, n) | Value::CommaAt(ref v, n) => if n >= quasi {
             Err(DecodeError::UnbalancedComma)
         } else {
             validate_value_inner(v, quasi - n)
@@ -694,7 +689,6 @@ impl ValueEncoder {
                 self.write_u8(n as u8);
                 try!(self.write_value(v, names));
             }
-            Value::Quasiquote(_, _) => return Err(EncodeError::Overflow),
             Value::Comma(ref v, 1) => {
                 self.write_u8(COMMA_ONE);
                 try!(self.write_value(v, names));
@@ -704,7 +698,6 @@ impl ValueEncoder {
                 self.write_u8(n as u8);
                 try!(self.write_value(v, names));
             }
-            Value::Comma(_, _) => return Err(EncodeError::Overflow),
             Value::CommaAt(ref v, 1) => {
                 self.write_u8(COMMA_AT_ONE);
                 try!(self.write_value(v, names));
@@ -714,7 +707,6 @@ impl ValueEncoder {
                 self.write_u8(n as u8);
                 try!(self.write_value(v, names));
             }
-            Value::CommaAt(_, _) => return Err(EncodeError::Overflow),
             Value::Quote(ref v, 1) => {
                 self.write_u8(QUOTE_ONE);
                 try!(self.write_value(v, names));
@@ -724,7 +716,12 @@ impl ValueEncoder {
                 self.write_u8(n as u8);
                 try!(self.write_value(v, names));
             }
-            Value::Quote(_, _) => return Err(EncodeError::Overflow),
+            Value::Comma(_, _)
+            | Value::CommaAt(_, _)
+            | Value::Quasiquote(_, _)
+            | Value::Quote(_, _) => {
+                return Err(EncodeError::Overflow);
+            }
             Value::List(ref li) => {
                 self.write_u8(LIST);
                 try!(self.write_len(li.len()));

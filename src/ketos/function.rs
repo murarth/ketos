@@ -253,14 +253,14 @@ fn get_string(v: &Value) -> Result<&str, ExecError> {
 fn get_struct(v: &Value) -> Result<&Struct, ExecError> {
     match *v {
         Value::Struct(ref s) => Ok(s),
-        ref v => return Err(ExecError::expected("struct", v))
+        ref v => Err(ExecError::expected("struct", v))
     }
 }
 
 fn get_struct_def(v: &Value) -> Result<&Rc<StructDef>, ExecError> {
     match *v {
         Value::StructDef(ref d) => Ok(d),
-        ref v => return Err(ExecError::expected("struct-def", v))
+        ref v => Err(ExecError::expected("struct-def", v))
     }
 }
 
@@ -304,9 +304,9 @@ fn value_is(scope: &Scope, a: &Value, ty: Name) -> bool {
 
 fn coerce_numbers(lhs: Value, rhs: &Value) -> Result<(Value, Cow<Value>), ExecError> {
     let (lhs, rhs) = match (lhs, rhs) {
-        (lhs @ Value::Float(_), rhs @ &Value::Float(_)) => (lhs, Borrowed(rhs)),
-        (lhs @ Value::Integer(_), rhs @ &Value::Integer(_)) => (lhs, Borrowed(rhs)),
-        (lhs @ Value::Ratio(_), rhs @ &Value::Ratio(_)) => (lhs, Borrowed(rhs)),
+        (lhs @ Value::Float(_), rhs @ &Value::Float(_))
+        | (lhs @ Value::Integer(_), rhs @ &Value::Integer(_))
+        | (lhs @ Value::Ratio(_), rhs @ &Value::Ratio(_)) => (lhs, Borrowed(rhs)),
 
         (Value::Float(lhs), &Value::Integer(ref i)) =>
             (lhs.into(), Owned(try!(i.to_f64().ok_or(ExecError::Overflow)).into())),
@@ -357,7 +357,7 @@ pub fn add_number(lhs: Value, rhs: &Value) -> Result<Value, Error> {
         (Value::Float(a), &Value::Float(b)) => Ok((a + b).into()),
         (Value::Integer(ref a), &Value::Integer(ref b)) => Ok((a + b).into()),
         (Value::Ratio(ref a), &Value::Ratio(ref b)) => Ok((a + b).into()),
-        (a, b) => return Err(From::from(ExecError::TypeMismatch{
+        (a, b) => Err(From::from(ExecError::TypeMismatch{
             lhs: a.type_name(),
             rhs: b.type_name(),
         })),
@@ -400,7 +400,7 @@ pub fn sub_number(lhs: Value, rhs: &Value) -> Result<Value, Error> {
         (Value::Float(a), &Value::Float(b)) => Ok((a - b).into()),
         (Value::Integer(ref a), &Value::Integer(ref b)) => Ok((a - b).into()),
         (Value::Ratio(ref a), &Value::Ratio(ref b)) => Ok((a - b).into()),
-        (a, b) => return Err(From::from(ExecError::TypeMismatch{
+        (a, b) => Err(From::from(ExecError::TypeMismatch{
             lhs: a.type_name(),
             rhs: b.type_name(),
         }))
@@ -555,7 +555,7 @@ pub fn div_number(lhs: Value, rhs: &Value) -> Result<Value, Error> {
             try!(test_zero(b));
             Ok((a / b).into())
         }
-        (a, b) => return Err(From::from(ExecError::TypeMismatch{
+        (a, b) => Err(From::from(ExecError::TypeMismatch{
             lhs: a.type_name(),
             rhs: b.type_name(),
         }))
@@ -681,11 +681,8 @@ fn fn_eq(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 /// result in a `TypeMismatch` error.
 fn fn_ne(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
     let mut r = true;
-    let n = args.len() - 1;
 
-    'outer: for i in 0..n {
-        let lhs = &args[i];
-
+    'outer: for (i, lhs) in args.iter().enumerate() {
         for rhs in &args[i + 1..] {
             let eq = try!(lhs.is_equal(rhs));
 
