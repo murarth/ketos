@@ -371,6 +371,11 @@ impl<'a> NameOutputConversion<'a> {
     pub fn len(&self) -> usize {
         self.names.len()
     }
+
+    /// Returns whether any name was collected.
+    pub fn is_empty(&self) -> bool {
+        self.names.is_empty()
+    }
 }
 
 /// Maps interned `Name` values to their `String` representations

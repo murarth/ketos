@@ -35,9 +35,11 @@ impl GlobalIo {
             stdout: stdout,
         }
     }
+}
 
+impl Default for GlobalIo {
     /// Creates a `GlobalIo` instance using standard output writer.
-    pub fn default() -> GlobalIo {
+    fn default() -> GlobalIo {
         GlobalIo::new(Rc::new(io::stdout()))
     }
 }
