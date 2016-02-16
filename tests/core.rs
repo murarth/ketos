@@ -1,23 +1,8 @@
+#[macro_use] extern crate assert_matches;
+
 extern crate ketos;
 
 use ketos::{CompileError, Error, ExecError, Interpreter, FromValue, Value};
-
-macro_rules! assert_matches {
-    ( $e:expr, $pat:pat ) => {
-        match $e {
-            $pat => (),
-            e => panic!("assertion failed: `{:?}` does not match `{}`",
-                e, stringify!($pat))
-        }
-    };
-    ( $e:expr, $pat:pat if $cond:expr ) => {
-        match $e {
-            $pat if $cond => (),
-            e => panic!("assertion failed: `{:?}` does not match `{} if {}`",
-                e, stringify!($pat), stringify!($cond))
-        }
-    }
-}
 
 fn eval(s: &str) -> Result<String, Error> {
     let interp = Interpreter::new();

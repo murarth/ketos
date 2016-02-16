@@ -160,6 +160,22 @@ pub enum ExecError {
     UnrecognizedOpCode(u8),
 }
 
+/// Returns a `Panic` error with the given value.
+///
+/// This is equivalent to `(panic value)`.
+pub fn panic<T, E>(value: T) -> E
+        where T: Into<Value>, E: From<ExecError> {
+    From::from(ExecError::Panic(Some(value.into())))
+}
+
+/// Returns a `Panic` error with no value.
+///
+/// This is equivalent to `(panic)`.
+pub fn panic_none<E>() -> E
+        where E: From<ExecError> {
+    From::from(ExecError::Panic(None))
+}
+
 impl ExecError {
     /// Convenience function to return a `TypeError` value when `expected`
     /// type is expected, but some other type of value is found.
@@ -1239,5 +1255,25 @@ fn get_const_name(code: &Code, n: u32) -> Result<Name, ExecError> {
     match *try!(get_const(code, n)) {
         Value::Name(name) => Ok(name),
         ref v => Err(ExecError::expected("name", v))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::{ExecError, panic, panic_none};
+    use error::Error;
+    use value::Value;
+
+    #[test]
+    fn test_panic_fn() {
+        assert_matches!(panic_none(), ExecError::Panic(None));
+        assert_matches!(panic_none(), Error::ExecError(ExecError::Panic(None)));
+
+        assert_matches!(panic("foo"),
+            ExecError::Panic(Some(Value::String(ref s)))
+                if s == "foo");
+        assert_matches!(panic("foo"),
+            Error::ExecError(ExecError::Panic(Some(Value::String(ref s))))
+                if s == "foo");
     }
 }

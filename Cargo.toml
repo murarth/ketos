@@ -28,3 +28,6 @@ getopts = "0.2"
 libc = "0.2"
 num = "0.1.28"
 rand = "0.3"
+
+[dev-dependencies]
+assert_matches = "1.0"

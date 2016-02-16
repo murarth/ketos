@@ -30,10 +30,13 @@ extern crate byteorder;
 extern crate num;
 extern crate rand;
 
+#[cfg(test)]
+#[macro_use] extern crate assert_matches;
+
 pub use compile::CompileError;
 pub use encode::{DecodeError, EncodeError};
 pub use error::Error;
-pub use exec::ExecError;
+pub use exec::{ExecError, panic, panic_none};
 pub use function::Arity;
 pub use interpreter::Interpreter;
 pub use integer::{Integer, Ratio};
