@@ -2,6 +2,7 @@
 
 use std::ops;
 use std::rc::Rc;
+use std::slice::Iter;
 
 /// Represents a reference-counted view into a `Vec`.
 /// Subslices may be created which will share the underlying data buffer.
@@ -157,6 +158,15 @@ impl<'a, T: Clone> Extend<&'a T> for RcVec<T> where T: Copy + 'a {
     }
 }
 
+impl<'a, T> IntoIterator for &'a RcVec<T> {
+    type Item = &'a T;
+    type IntoIter = Iter<'a, T>;
+
+    fn into_iter(self) -> Iter<'a, T> {
+        self.iter()
+    }
+}
+
 macro_rules! impl_eq {
     ( $lhs:ty, $rhs:ty ) => {
         impl<'a, A, B> PartialEq<$rhs> for $lhs where A: PartialEq<B> {
@@ -205,7 +215,7 @@ mod test {
     use super::RcVec;
 
     #[test]
-    fn test_rcvec() {
+    fn test_rc_vec() {
         let a = RcVec::new(vec![1, 2, 3]);
         let mut b = a.slice(1..3);
         let mut c = a.clone();

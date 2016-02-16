@@ -839,7 +839,7 @@ impl<'a> Compiler<'a> {
         let mut n_items = 0;
         let mut n_lists = 0;
 
-        for v in li.iter() {
+        for v in li {
             if n_items == 0 && n_lists == 1 {
                 try!(self.push_instruction(Instruction::Push));
             }
@@ -897,7 +897,7 @@ impl<'a> Compiler<'a> {
     fn is_quasi_const(&self, value: &Value, depth: u32) -> Result<bool, Error> {
         match *value {
             Value::List(ref li) => {
-                for v in li.iter() {
+                for v in li {
                     if !try!(self.is_quasi_const(v, depth)) {
                         return Ok(false);
                     }
@@ -1584,7 +1584,7 @@ fn op_let(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
         Value::Unit => (),
         Value::List(ref li) => {
             n_vars = li.len() as u32;
-            for v in li.iter() {
+            for v in li {
                 match *v {
                     Value::List(ref li) if li.len() == 2 => {
                         let name = try!(get_name(&li[0]));
@@ -1688,7 +1688,7 @@ fn op_struct(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     match args[1] {
         Value::Unit => (),
         Value::List(ref li) => {
-            for v in li.iter() {
+            for v in li {
                 match *v {
                     Value::List(ref li) if li.len() == 2 => {
                         let fname = try!(get_name(&li[0]));
@@ -1836,7 +1836,7 @@ fn op_case(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 
         match *pat {
             Value::List(ref li) => {
-                for v in li.iter() {
+                for v in li {
                     match *v {
                         Value::Unit => compiler.current_block().jump_to(
                             JumpInstruction::JumpIfNull, code_begin),

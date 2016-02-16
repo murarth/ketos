@@ -1013,7 +1013,7 @@ fn fn_new(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
         }
     }
 
-    for &(fname, _) in def.fields.iter() {
+    for &(fname, _) in &def.fields {
         if !fields.contains_key(fname) {
             return Err(From::from(ExecError::MissingField{
                 struct_name: def.name,

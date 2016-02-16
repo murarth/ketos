@@ -726,7 +726,7 @@ impl ValueEncoder {
                 self.write_u8(LIST);
                 try!(self.write_len(li.len()));
 
-                for v in li.iter() {
+                for v in li {
                     try!(self.write_value(v, names));
                 }
             }
