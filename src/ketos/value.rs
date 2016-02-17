@@ -770,7 +770,8 @@ macro_rules! integer_from_ref {
 macro_rules! foreign_type_conversions {
     ( $ty:ty => $name:expr ) => {
         impl<'a> $crate::value::FromValueRef<'a> for &'a $ty {
-            fn from_value_ref(v: &'a $crate::value::Value) -> Result<&'a $ty, ExecError> {
+            fn from_value_ref(v: &'a $crate::value::Value)
+                    -> Result<&'a $ty, $crate::exec::ExecError> {
                 match *v {
                     $crate::value::Value::Foreign(ref v) => {
                         if let Some(v) = v.downcast_ref::<$ty>() {
@@ -780,7 +781,7 @@ macro_rules! foreign_type_conversions {
                     _ => ()
                 }
 
-                Err(ExecError::expected($name, v))
+                Err($crate::exec::ExecError::expected($name, v))
             }
         }
 
