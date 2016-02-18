@@ -1,7 +1,7 @@
 ;;; A collection of functions that operate on lists.
 
 (export (
-         drop drop-while take take-while zip zip-with
+         drop drop-while range repeat take take-while zip zip-with
          all any count each filter find foldl foldr index map))
 
 ;; Drop the first `n` elements from `li`, returning the remaining elements.
@@ -17,6 +17,36 @@
     ((null li)        ())
     ((fn (first li))  (drop-while fn (tail li)))
     (else             li)))
+
+;; Returns a list representing the range [`start`, `end`).
+;;
+;; If `start` is omitted, the range begins at `0`.
+;;
+;; `step` if given, is the interval between values. It must be non-zero.
+(define (range a :optional b (step 1))
+  (cond
+    ((null b)   (range 0 a))
+    ((> step 0) (range-pos a b step ()))
+    ((< step 0) (range-neg a b step ()))
+    (else       (panic "`range` got 0 step"))))
+
+(define (range-pos start end step out)
+  (if (>= start end)
+    out
+    (range-pos (+ start step) end step (append out start))))
+
+(define (range-neg start end step out)
+  (if (<= start end)
+    out
+    (range-neg (+ start step) end step (append out start))))
+
+;; Returns a list containing `n` instances of `elem`.
+(define (repeat n elem) (repeat-into (int n) elem ()))
+
+(define (repeat-into n elem out)
+  (if (<= n 0)
+    out
+    (repeat-into (- n 1) elem (append out elem))))
 
 ;; Take the first `n` elements from `li`.
 ;; If the list is shorter than `n` elements, the whole list is returned.
