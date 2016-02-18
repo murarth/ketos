@@ -446,6 +446,19 @@ impl ForeignValue {
             None
         }
     }
+
+    /// Returns a mutable reference to the contained value,
+    /// if it is of the given type.
+    pub fn downcast_mut<T: Any>(&mut self) -> Option<&mut T> {
+        if self.is::<T>() {
+            unsafe {
+                let obj: TraitObject = transmute(self);
+                Some(&mut *(obj.data as *mut T))
+            }
+        } else {
+            None
+        }
+    }
 }
 
 /// Represents a foreign value that contains a callable function or closure
@@ -1083,5 +1096,42 @@ impl StructDef {
             name: name,
             fields: fields,
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::cmp::Ordering;
+
+    use exec::ExecError;
+    use super::ForeignValue;
+
+    #[derive(Debug)]
+    struct Dummy {
+        a: i32,
+    }
+
+    impl ForeignValue for Dummy {
+        fn compare_to(&self, _rhs: &ForeignValue) -> Result<Ordering, ExecError> {
+            panic!()
+        }
+        fn is_equal_to(&self, _rhs: &ForeignValue) -> Result<bool, ExecError> {
+            panic!()
+        }
+        fn type_name(&self) -> &'static str { panic!() }
+    }
+
+    #[test]
+    fn test_foreign_value() {
+        let mut a: Box<ForeignValue> = Box::new(Dummy{a: 0});
+
+        {
+            let mut r = a.downcast_mut::<Dummy>().unwrap();
+            r.a = 123;
+        }
+
+        let r = a.downcast_ref::<Dummy>().unwrap();
+
+        assert_eq!(r.a, 123);
     }
 }
