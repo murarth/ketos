@@ -77,9 +77,6 @@ impl Value {
     }
 
     /// Compares two values; returns an error if the values cannot be compared.
-    ///
-    /// If a true, `Ord`-like comparison cannot be made,
-    /// `ExecError::CannotCompare(..)` should be returned.
     pub fn compare(&self, rhs: &Value) -> Result<Ordering, ExecError> {
         let ord = match (self, rhs) {
             (&Value::Unit, &Value::Unit) => Ordering::Equal,
@@ -354,6 +351,9 @@ struct TraitObject {
 /// Represents a type of value defined outside the core interpreter.
 pub trait ForeignValue: AnyValue + fmt::Debug {
     /// Performs ordered comparison between two values of a foreign type.
+    ///
+    /// If a true, `Ord`-like comparison cannot be made,
+    /// `ExecError::CannotCompare(..)` should be returned.
     ///
     /// The default implementation unconditionally returns an error.
     fn compare_to(&self, rhs: &ForeignValue) -> Result<Ordering, ExecError>;
