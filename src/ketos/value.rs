@@ -357,7 +357,9 @@ pub trait ForeignValue: AnyValue + fmt::Debug {
     /// `ExecError::CannotCompare(..)` should be returned.
     ///
     /// The default implementation unconditionally returns an error.
-    fn compare_to(&self, rhs: &ForeignValue) -> Result<Ordering, ExecError>;
+    fn compare_to(&self, _rhs: &ForeignValue) -> Result<Ordering, ExecError> {
+        Err(ExecError::CannotCompare(self.type_name()))
+    }
 
     /// Performs ordered comparison between two values.
     ///
@@ -1102,8 +1104,6 @@ impl StructDef {
 
 #[cfg(test)]
 mod test {
-    use std::cmp::Ordering;
-
     use exec::ExecError;
     use super::ForeignValue;
 
@@ -1113,9 +1113,6 @@ mod test {
     }
 
     impl ForeignValue for Dummy {
-        fn compare_to(&self, _rhs: &ForeignValue) -> Result<Ordering, ExecError> {
-            panic!()
-        }
         fn is_equal_to(&self, _rhs: &ForeignValue) -> Result<bool, ExecError> {
             panic!()
         }
