@@ -343,6 +343,7 @@ impl<T: Any> AnyValue for T {
 }
 
 /// Duplicate definition of `std::raw::TraitObject`, which is unstable.
+#[repr(C)]
 struct TraitObject {
     pub data: *mut (),
     pub vtable: *mut (),
