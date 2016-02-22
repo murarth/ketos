@@ -488,6 +488,10 @@ fn test_pow() {
 
 #[test]
 fn test_div() {
+    assert_eq!(eval("(/ 10)").unwrap(), "1/10");
+    assert_eq!(eval("(/ 10.0)").unwrap(), "0.1");
+    assert_eq!(eval("(/ 1/10)").unwrap(), "10/1");
+
     assert_eq!(eval("(/ 10 2)").unwrap(), "5");
     assert_eq!(eval("(/ 12 2 2)").unwrap(), "3");
 

@@ -27,6 +27,45 @@ fn test_const() {
 }
 
 #[test]
+fn test_const_fold() {
+    assert_eq!(lambda("(define (foo a) (+ a 0))").unwrap(), [
+        LOAD_PUSH_0,
+        CALL_SYS_ARGS, standard_names::ADD.get() as u8, 1,
+        RETURN,
+    ]);
+
+    assert_eq!(lambda("(define (foo a) (+ 0 a))").unwrap(), [
+        LOAD_PUSH_0,
+        CALL_SYS_ARGS, standard_names::ADD.get() as u8, 1,
+        RETURN,
+    ]);
+
+    assert_eq!(lambda("(define (foo a) (- a 0))").unwrap(), [
+        LOAD_PUSH_0,
+        CALL_SYS_ARGS, standard_names::ADD.get() as u8, 1,
+        RETURN,
+    ]);
+
+    assert_eq!(lambda("(define (foo a) (- 0 a))").unwrap(), [
+        LOAD_PUSH_0,
+        CALL_SYS_ARGS, standard_names::SUB.get() as u8, 1,
+        RETURN,
+    ]);
+
+    assert_eq!(lambda("(define (foo a) (// 1 a))").unwrap(), [
+        LOAD_PUSH_0,
+        CALL_SYS_ARGS, standard_names::FLOOR_DIV.get() as u8, 1,
+        RETURN,
+    ]);
+
+    assert_eq!(lambda("(define (foo a) (// a 1))").unwrap(), [
+        LOAD_PUSH_0,
+        CALL_SYS, standard_names::FLOOR.get() as u8,
+        RETURN,
+    ]);
+}
+
+#[test]
 fn test_dec() {
     assert_eq!(lambda("(define (foo a) (- a 1))").unwrap(), [
         LOAD_0,

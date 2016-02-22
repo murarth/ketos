@@ -11,7 +11,7 @@ use const_fold::{is_one, is_negative_one,
     FoldOp, FoldAdd, FoldSub, FoldDiv, FoldMul, FoldFloorDiv};
 use error::Error;
 use exec::{ExecError, execute_lambda};
-use function::{Arity, Lambda, neg_number};
+use function::{Arity, Lambda};
 use function::Arity::*;
 use name::{get_system_fn, is_system_operator, standard_names,
     Name, NameDisplay, NameMap, NameSet, NameStore,
@@ -597,28 +597,15 @@ impl<'a> Compiler<'a> {
             standard_names::ADD if args.is_empty() =>
                 Ok(ConstResult::Constant(0.into())),
             standard_names::ADD => fold_symmetric::<FoldAdd>(self, name, args),
-            standard_names::SUB if args.len() == 1 => {
-                let v = &args[0];
-                match try!(self.eval_constant(v)) {
-                    ConstResult::IsRuntime => Ok(ConstResult::IsRuntime),
-                    ConstResult::Partial(v) => {
-                        Ok(ConstResult::Partial(vec![Value::Name(name), v].into()))
-                    }
-                    ConstResult::IsConstant =>
-                        Ok(ConstResult::Constant(try!(neg_number(v.clone())))),
-                    ConstResult::Constant(v) =>
-                        Ok(ConstResult::Constant(try!(neg_number(v))))
-                }
-            }
-            standard_names::SUB if args.len() > 1 =>
-                fold_asymmetric::<FoldSub>(self, name, args),
+            standard_names::SUB if args.len() >= 2 =>
+                fold_asymmetric::<FoldSub>(self, name, standard_names::ADD, args),
             standard_names::MUL if args.is_empty() =>
                 Ok(ConstResult::Constant(1.into())),
             standard_names::MUL => fold_symmetric::<FoldMul>(self, name, args),
             standard_names::DIV if args.len() >= 2 =>
-                fold_asymmetric::<FoldDiv>(self, name, args),
+                fold_asymmetric::<FoldDiv>(self, name, standard_names::MUL, args),
             standard_names::FLOOR_DIV if args.len() >= 2 =>
-                fold_asymmetric::<FoldFloorDiv>(self, name, args),
+                fold_asymmetric::<FoldFloorDiv>(self, name, standard_names::FLOOR, args),
             _ if is_const_system_fn(name) =>
                 eval_system_fn(self, name, args),
             _ => Ok(ConstResult::IsRuntime)
@@ -1269,6 +1256,7 @@ fn is_const_system_fn(name: Name) -> bool {
     use name::standard_names::*;
 
     match name {
+        ADD | SUB | MUL | POW | DIV | FLOOR_DIV |
         REM | SHL | SHR |
         EQ | NOT_EQ | LT | GT | LE | GE |
         ZERO | MIN | MAX |
@@ -1291,7 +1279,10 @@ fn is_const_system_fn(name: Name) -> bool {
 /// `(- foo 1 2 3)` -> `(- foo 6)`
 ///
 /// `(- 1 foo 2 3)` -> `(- -4 foo)`
-fn fold_asymmetric<F: FoldOp>(compiler: &mut Compiler, name: Name, args: &[Value])
+///
+/// `solo_name` is used in the case of `(foo value identity)`.
+fn fold_asymmetric<F: FoldOp>(compiler: &mut Compiler,
+        name: Name, solo_name: Name, args: &[Value])
         -> Result<ConstResult, Error> {
     let mut args = args.iter();
     let mut new_args = Vec::new();
@@ -1356,13 +1347,17 @@ fn fold_asymmetric<F: FoldOp>(compiler: &mut Compiler, name: Name, args: &[Value
     match value {
         None => Ok(ConstResult::IsRuntime),
         Some(v) => {
-            let v = try!(F::finish(v));
-
             if new_args.is_empty() {
-                Ok(ConstResult::Constant(v))
+                Ok(ConstResult::Constant(try!(F::finish(v))))
             } else {
-                new_args.insert(0, Value::Name(name));
-                if !F::is_identity(&v) {
+                if F::is_identity(&v) {
+                    if first_const {
+                        new_args.insert(0, Value::Name(name));
+                    } else {
+                        new_args.insert(0, Value::Name(solo_name));
+                    }
+                } else {
+                    new_args.insert(0, Value::Name(name));
                     if first_const {
                         new_args.insert(1, v);
                     } else {
@@ -1414,7 +1409,7 @@ fn fold_symmetric<F: FoldOp>(compiler: &mut Compiler, name: Name, args: &[Value]
         None => Ok(ConstResult::IsRuntime),
         Some(v) => {
             if new_args.is_empty() {
-                Ok(ConstResult::Constant(v))
+                Ok(ConstResult::Constant(try!(F::finish(v))))
             } else {
                 new_args.insert(0, Value::Name(name));
                 if !F::is_identity(&v) {

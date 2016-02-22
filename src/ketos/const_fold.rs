@@ -27,6 +27,8 @@ pub trait FoldOp {
         Self::fold(lhs, rhs)
     }
 
+    /// Finalizes a constant value when all arguments have been constant
+    /// expressions.
     fn finish(value: Value) -> Result<Value, Error> { Ok(value) }
 }
 

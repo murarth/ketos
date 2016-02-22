@@ -512,12 +512,16 @@ fn fn_div(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 
     try!(expect_number(&v));
 
-    for arg in &args[1..] {
-        try!(expect_number(arg));
-        v = try!(div_number(v, arg));
-    }
+    if args.len() == 1 {
+        recip_number(v)
+    } else {
+        for arg in &args[1..] {
+            try!(expect_number(arg));
+            v = try!(div_number(v, arg));
+        }
 
-    Ok(v)
+        Ok(v)
+    }
 }
 
 /// `//` returns the cumulative quotient of successive arguments,
@@ -527,12 +531,33 @@ fn fn_floor_div(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 
     try!(expect_number(&v));
 
-    for arg in &args[1..] {
-        try!(expect_number(arg));
-        v = try!(floor_div_number_step(v, arg));
-    }
+    if args.len() == 1 {
+        floor_recip_number(v)
+    } else {
+        for arg in &args[1..] {
+            try!(expect_number(arg));
+            v = try!(floor_div_number_step(v, arg));
+        }
 
-    floor_number(v)
+        floor_number(v)
+    }
+}
+
+fn floor_recip_number(v: Value) -> Result<Value, Error> {
+    match v {
+        Value::Integer(ref i) => {
+            try!(test_zero(i));
+            Ok((Integer::one() / i).into())
+        }
+        Value::Float(f) => {
+            Ok(f.recip().floor().into())
+        }
+        Value::Ratio(ref r) => {
+            try!(test_zero(r));
+            Ok(r.recip().floor().into())
+        }
+        ref v => Err(From::from(ExecError::expected("number", v)))
+    }
 }
 
 /// Returns the result of dividing two values.
@@ -1527,7 +1552,11 @@ fn fn_rat(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 /// `recip` returns the reciprocal of the given numeric value.
 /// If the value is of type integer, the value returned will be a ratio.
 fn fn_recip(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
-    match args[0].take() {
+    recip_number(args[0].take())
+}
+
+fn recip_number(v: Value) -> Result<Value, Error> {
+    match v {
         Value::Float(f) => Ok(f.recip().into()),
         Value::Integer(a) => {
             try!(test_zero(&a));

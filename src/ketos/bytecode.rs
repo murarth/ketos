@@ -27,7 +27,7 @@ use value::Value;
 /// change to the bytecode format. The version represents a `ketos` version
 /// number, e.g. `0x01_02_03_00` corresponds to version `1.2.3`.
 /// (The least significant 8 bits don't mean anything yet.)
-pub const BYTECODE_VERSION: u32 = 0x00_00_03_00;
+pub const BYTECODE_VERSION: u32 = 0x00_00_04_00;
 
 /// Maximum value of a short-encoded operand.
 pub const MAX_SHORT_OPERAND: u32 = 0x7f;
