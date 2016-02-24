@@ -22,7 +22,7 @@ pub trait FoldOp {
     /// Folds the two constant values, returning the resulting value.
     fn fold(lhs: Value, rhs: &Value) -> Result<Value, Error>;
 
-    /// Inverse fold operation; used for asymmetric operators.
+    /// Inverse fold operation; used for anticommutative operators.
     fn fold_inv(lhs: Value, rhs: &Value) -> Result<Value, Error> {
         Self::fold(lhs, rhs)
     }

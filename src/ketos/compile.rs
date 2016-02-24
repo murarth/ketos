@@ -596,16 +596,16 @@ impl<'a> Compiler<'a> {
             }
             standard_names::ADD if args.is_empty() =>
                 Ok(ConstResult::Constant(0.into())),
-            standard_names::ADD => fold_symmetric::<FoldAdd>(self, name, args),
+            standard_names::ADD => fold_commutative::<FoldAdd>(self, name, args),
             standard_names::SUB if args.len() >= 2 =>
-                fold_asymmetric::<FoldSub>(self, name, standard_names::ADD, args),
+                fold_anticommutative::<FoldSub>(self, name, standard_names::ADD, args),
             standard_names::MUL if args.is_empty() =>
                 Ok(ConstResult::Constant(1.into())),
-            standard_names::MUL => fold_symmetric::<FoldMul>(self, name, args),
+            standard_names::MUL => fold_commutative::<FoldMul>(self, name, args),
             standard_names::DIV if args.len() >= 2 =>
-                fold_asymmetric::<FoldDiv>(self, name, standard_names::MUL, args),
+                fold_anticommutative::<FoldDiv>(self, name, standard_names::MUL, args),
             standard_names::FLOOR_DIV if args.len() >= 2 =>
-                fold_asymmetric::<FoldFloorDiv>(self, name, standard_names::FLOOR, args),
+                fold_anticommutative::<FoldFloorDiv>(self, name, standard_names::FLOOR, args),
             _ if is_const_system_fn(name) =>
                 eval_system_fn(self, name, args),
             _ => Ok(ConstResult::IsRuntime)
@@ -1272,7 +1272,7 @@ fn is_const_system_fn(name: Name) -> bool {
     }
 }
 
-/// Fold constants for an asymmetric operation.
+/// Fold constants for an anticommutative operation.
 /// There are two strategies for partial constant evaluation, depending on
 /// whether the first value is constant.
 ///
@@ -1281,7 +1281,7 @@ fn is_const_system_fn(name: Name) -> bool {
 /// `(- 1 foo 2 3)` -> `(- -4 foo)`
 ///
 /// `solo_name` is used in the case of `(foo value identity)`.
-fn fold_asymmetric<F: FoldOp>(compiler: &mut Compiler,
+fn fold_anticommutative<F: FoldOp>(compiler: &mut Compiler,
         name: Name, solo_name: Name, args: &[Value])
         -> Result<ConstResult, Error> {
     let mut args = args.iter();
@@ -1370,10 +1370,10 @@ fn fold_asymmetric<F: FoldOp>(compiler: &mut Compiler,
     }
 }
 
-/// Fold constants for a symmetric operation.
+/// Fold constants for a commutative operation.
 ///
 /// e.g. `(+ 1 foo 2 3)` -> `(+ foo 6)`
-fn fold_symmetric<F: FoldOp>(compiler: &mut Compiler, name: Name, args: &[Value])
+fn fold_commutative<F: FoldOp>(compiler: &mut Compiler, name: Name, args: &[Value])
         -> Result<ConstResult, Error> {
     let mut new_args = Vec::new();
     let mut value = None;
