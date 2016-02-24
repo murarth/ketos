@@ -513,7 +513,7 @@ fn fn_div(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
     try!(expect_number(&v));
 
     if args.len() == 1 {
-        recip_number(v)
+        div_number(1.into(), &v)
     } else {
         for arg in &args[1..] {
             try!(expect_number(arg));
