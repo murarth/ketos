@@ -358,6 +358,14 @@ impl Machine {
     }
 
     fn execute(&mut self, scope: &Scope, code: Rc<Code>) -> Result<Value, Error> {
+        if code.req_params != 0 {
+            return Err(From::from(ExecError::ArityError{
+                name: code.name,
+                expected: code.arity(),
+                found: 0,
+            }));
+        }
+
         self.run(StackFrame{
             code: code,
             scope: scope.clone(),
