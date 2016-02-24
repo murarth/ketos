@@ -117,9 +117,14 @@ impl Interpreter {
         debug_names(&self.scope.borrow_names(), value).to_string()
     }
 
-    /// Executes a code object taking no parameters.
+    /// Executes a bare `Code` object taking no parameters.
     pub fn execute(&self, code: Code) -> Result<Value, Error> {
-        let v = try!(execute(&self.scope, Rc::new(code)));
+        self.execute_code(Rc::new(code))
+    }
+
+    /// Executes a `Rc<Code>` object taking no parameters.
+    pub fn execute_code(&self, code: Rc<Code>) -> Result<Value, Error> {
+        let v = try!(execute(&self.scope, code));
         Ok(v)
     }
 

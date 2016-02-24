@@ -33,6 +33,7 @@ extern crate rand;
 #[cfg(test)]
 #[macro_use] extern crate assert_matches;
 
+pub use bytecode::Code;
 pub use compile::CompileError;
 pub use encode::{DecodeError, EncodeError};
 pub use error::Error;
