@@ -1,3 +1,5 @@
+#[macro_use] extern crate assert_matches;
+
 #[macro_use] extern crate ketos;
 
 use std::cmp::Ordering;
@@ -79,6 +81,10 @@ fn get_value(a: &MyType) -> Result<i32, Error> {
     Ok(a.a)
 }
 
+fn add_pairs(a: (i32, i32), b: (i32, i32)) -> Result<(i32, i32), Error> {
+    Ok((a.0 + b.0, a.1 + b.1))
+}
+
 fn hello(s: &str) -> Result<String, Error> {
     Ok(format!("Hello, {}!", s))
 }
@@ -90,9 +96,14 @@ fn test_foreign_fn() {
 
     ketos_fn!{ scope => "new-my-type" => fn new_my_type(a: i32) -> MyType }
     ketos_fn!{ scope => "get-value" => fn get_value(a: &MyType) -> i32 }
+    ketos_fn!{ scope => "add-pairs" => fn add_pairs(a: (i32, i32), b: (i32, i32)) -> (i32, i32) }
     ketos_fn!{ scope => "hello" => fn hello(s: &str) -> String }
 
     assert_eq!(eval(&interp, "(new-my-type 1)").unwrap(), "MyType { a: 1 }");
     assert_eq!(eval(&interp, "(get-value (new-my-type 2))").unwrap(), "2");
+    assert_eq!(eval(&interp, "(add-pairs '(1 2) '(3 4))").unwrap(), "(4 6)");
     assert_eq!(eval(&interp, r#"(hello "world")"#).unwrap(), r#""Hello, world!""#);
+
+    assert_matches!(eval(&interp, "(add-pairs '(1 2 0) '(3 4))").unwrap_err(),
+        Error::ExecError(ExecError::TypeError{..}));
 }

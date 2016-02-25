@@ -1051,6 +1051,65 @@ from_integer!{ u32 from_u32 }
 from_integer!{ u64 from_u64 }
 from_integer!{ usize from_usize }
 
+macro_rules! conv_tuple {
+    ( $n:expr => $( $name:ident )+ ) => {
+        impl<$( $name: Into<Value> ),+> From<( $( $name ),+ ,)> for Value {
+            #[allow(non_snake_case)]
+            fn from(v: ( $( $name , )+ )) -> Value {
+                let ( $( $name , )+ ) = v;
+
+                vec![$( $name.into() ),+].into()
+            }
+        }
+
+        impl<$( $name: FromValue ),+> FromValue for ( $( $name , )+ ) {
+            fn from_value(v: Value) -> Result<( $( $name , )+ ), ExecError> {
+                match v {
+                    Value::List(ref li) if li.len() == $n => (),
+                    ref v => return Err(ExecError::expected(
+                        concat!("list of ", stringify!($n), " elements"), v))
+                }
+
+                let mut iter = match v {
+                    Value::List(li) => li.into_vec().into_iter(),
+                    _ => unreachable!()
+                };
+
+                Ok((
+                    $( try!($name::from_value(iter.next().unwrap())) , )+
+                ))
+            }
+        }
+
+        impl<'a, $( $name: FromValueRef<'a> ),+> FromValueRef<'a> for ( $( $name , )+ ) {
+            fn from_value_ref(v: &'a Value) -> Result<( $( $name , )+ ), ExecError> {
+                let mut iter = match *v {
+                    Value::List(ref li) if li.len() == $n => li.iter(),
+                    _ => return Err(ExecError::expected(
+                        concat!("list of ", stringify!($n), " elements"), v))
+                };
+
+                Ok((
+                    $( try!($name::from_value_ref(iter.next().unwrap())) , )+
+                ))
+            }
+        }
+    }
+}
+
+conv_tuple!{  1 => A }
+conv_tuple!{  2 => A B }
+conv_tuple!{  3 => A B C }
+conv_tuple!{  4 => A B C D }
+conv_tuple!{  5 => A B C D E }
+conv_tuple!{  6 => A B C D E F }
+conv_tuple!{  7 => A B C D E F G }
+conv_tuple!{  8 => A B C D E F G H }
+conv_tuple!{  9 => A B C D E F G H I }
+conv_tuple!{ 10 => A B C D E F G H I J }
+conv_tuple!{ 11 => A B C D E F G H I J K }
+conv_tuple!{ 12 => A B C D E F G H I J K L }
+
 /// Represents a structure value containing named fields
 #[derive(Clone, Debug)]
 pub struct Struct {
