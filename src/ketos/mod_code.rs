@@ -8,6 +8,7 @@ use error::Error;
 use exec::ExecError;
 use function::{plural, Lambda};
 use function::Arity::Exact;
+use io::SharedWrite;
 use module::{Module, ModuleBuilder};
 use name::{debug_names, get_standard_name};
 use scope::Scope;
@@ -37,52 +38,53 @@ fn fn_disassemble(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
     };
 
     let code = &l.code;
+    let out = &scope.get_io().stdout;
 
-    println!("{} positional argument{} total",
-        code.n_params, plural(code.n_params));
-    println!("{} positional argument{} required",
-        code.req_params, plural(code.req_params));
+    try!(writeln!(out, "{} positional argument{} total",
+        code.n_params, plural(code.n_params)));
+    try!(writeln!(out, "{} positional argument{} required",
+        code.req_params, plural(code.req_params)));
 
     if code.kw_params.is_empty() {
-        println!("0 keyword arguments");
+        try!(writeln!(out, "0 keyword arguments"));
     } else {
         let names = scope.borrow_names();
 
-        println!("{} keyword argument{}: {}",
+        try!(writeln!(out, "{} keyword argument{}: {}",
             code.kw_params.len(), plural(code.kw_params.len() as u32),
             code.kw_params.iter().map(|&n| names.get(n))
-                .collect::<Vec<_>>().join(" "));
+                .collect::<Vec<_>>().join(" ")));
     }
 
     if code.has_rest_params() {
-        println!("Has rest parameter");
+        try!(writeln!(out, "Has rest parameter"));
     } else {
-        println!("No rest parameter");
+        try!(writeln!(out, "No rest parameter"));
     }
 
     if code.consts.is_empty() {
-        println!("0 const values");
+        try!(writeln!(out, "0 const values"));
     } else {
-        println!("{} const value{}:",
-            code.consts.len(), plural(code.consts.len() as u32));
+        try!(writeln!(out, "{} const value{}:",
+            code.consts.len(), plural(code.consts.len() as u32)));
 
         let names = scope.borrow_names();
 
         for (i, v) in code.consts.iter().enumerate() {
-            println!("  {} = {}", i, debug_names(&names, v));
+            try!(writeln!(out, "  {} = {}", i, debug_names(&names, v)));
         }
     }
 
     if let Some(ref v) = l.values {
-        println!("{} enclosed value{}:", v.len(), plural(v.len() as u32));
+        try!(writeln!(out, "{} enclosed value{}:", v.len(), plural(v.len() as u32)));
 
         let names = scope.borrow_names();
 
         for (i, v) in v.iter().enumerate() {
-            println!("  {} = {}", i, debug_names(&names, v));
+            try!(writeln!(out, "  {} = {}", i, debug_names(&names, v)));
         }
     } else {
-        println!("0 enclosed values");
+        try!(writeln!(out, "0 enclosed values"));
     }
 
     let instrs = try!(get_instructions(&code.code));
@@ -98,13 +100,14 @@ fn fn_disassemble(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
         }
     }
 
-    println!("{} bytecode instruction{}:", instrs.len(), plural(instrs.len() as u32));
+    try!(writeln!(out, "{} bytecode instruction{}:", instrs.len(), plural(instrs.len() as u32)));
 
     for (off, instr) in instrs {
         let is_label = jumps.binary_search(&off).is_ok();
-        print_instruction(scope, l, off, instr, is_label);
+        try!(print_instruction(scope, l, off, instr, is_label));
     }
 
+    try!(out.flush());
     Ok(().into())
 }
 
@@ -128,11 +131,13 @@ fn get_instructions(code: &[u8]) -> Result<Vec<(u32, Instruction)>, ExecError> {
 }
 
 fn print_instruction(scope: &Scope, lambda: &Lambda,
-        offset: u32, instr: Instruction, is_label: bool) {
+        offset: u32, instr: Instruction, is_label: bool)
+        -> Result<(), Error> {
     use bytecode::Instruction::*;
 
     let label_str = if is_label { ">>" } else { "  " };
     let code = &lambda.code;
+    let out = &scope.get_io().stdout;
 
     let extra = {
         let names = scope.borrow_names();
@@ -178,10 +183,12 @@ fn print_instruction(scope: &Scope, lambda: &Lambda,
             // fmt::Debug does not honor "<n" formatting,
             // so we make this string first and format again.
             let instr = format!("{:?}", instr);
-            println!("  {} {:>4}  {:<30} ; {}", label_str, offset, instr, s);
+            try!(writeln!(out, "  {} {:>4}  {:<30} ; {}", label_str, offset, instr, s));
         }
-        None => println!("  {} {:>4}  {:?}", label_str, offset, instr)
+        None => try!(writeln!(out, "  {} {:>4}  {:?}", label_str, offset, instr))
     }
+
+    Ok(())
 }
 
 /// `get-const` returns the specified const value from a `Lambda` object.
