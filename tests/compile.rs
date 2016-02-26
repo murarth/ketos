@@ -27,6 +27,21 @@ fn test_const() {
 }
 
 #[test]
+fn test_const_if() {
+    assert_eq!(lambda("(define (foo a) (if true (+ a) (- a)))").unwrap(), [
+        LOAD_PUSH_0,
+        CALL_SYS_ARGS, standard_names::ADD.get() as u8, 1,
+        RETURN,
+    ]);
+
+    assert_eq!(lambda("(define (foo a) (if false (+ a) (- a)))").unwrap(), [
+        LOAD_PUSH_0,
+        CALL_SYS_ARGS, standard_names::SUB.get() as u8, 1,
+        RETURN,
+    ]);
+}
+
+#[test]
 fn test_const_fold() {
     assert_eq!(lambda("(define (foo a) (+ a 0))").unwrap(), [
         LOAD_PUSH_0,

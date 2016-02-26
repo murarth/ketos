@@ -47,6 +47,14 @@ fn test_const() {
         ").unwrap(),
         ["foo", "bar", "baz",
         "(foo 1 2 3)", "(bar (foo 1 2 3))", "(baz foo 1 2 3)"]);
+
+    assert_eq!(run("
+        (const a 123)
+        (const b 456)
+        (const c (if (< a b) a b))
+        c
+        ").unwrap(),
+        ["a", "b", "c", "123"]);
 }
 
 #[test]

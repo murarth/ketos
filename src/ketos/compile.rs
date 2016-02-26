@@ -589,9 +589,23 @@ impl<'a> Compiler<'a> {
                 };
 
                 if cond {
-                    self.eval_constant(&args[1])
+                    match try!(self.eval_constant(&args[1])) {
+                        ConstResult::IsConstant =>
+                            Ok(ConstResult::Constant(args[1].clone())),
+                        ConstResult::IsRuntime =>
+                            Ok(ConstResult::Partial(args[1].clone())),
+                        r => Ok(r)
+                    }
+                } else if n_args == 2 {
+                    Ok(ConstResult::Constant(().into()))
                 } else {
-                    self.eval_constant(&args[2])
+                    match try!(self.eval_constant(&args[2])) {
+                        ConstResult::IsConstant =>
+                            Ok(ConstResult::Constant(args[2].clone())),
+                        ConstResult::IsRuntime =>
+                            Ok(ConstResult::Partial(args[2].clone())),
+                        r => Ok(r)
+                    }
                 }
             }
             standard_names::ADD if args.is_empty() =>
