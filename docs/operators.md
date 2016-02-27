@@ -17,6 +17,26 @@ concatenated to positional arguments.
 (apply + 1 2 3 '(4 5 6))
 ```
 
+## `const`
+
+```
+(const name expression)
+```
+
+The `const` operator defines a compile-time constant value in the global scope.
+Any code referencing the constant by name will use the constant value directly,
+without performing a name lookup operation at runtime.
+
+The expression must be a compile-time constant, which will not vary from one
+execution of the program to the next. Most system functions can be executed
+at compile time if all of the arguments are constant expressions.
+
+```lisp
+(const one 1)
+(const two 2)
+(const three (+ one two))
+```
+
 ## `do`
 
 ```
