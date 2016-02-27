@@ -1,20 +1,21 @@
 //! Example module construction
 
-extern crate ketos;
+#[macro_use] extern crate ketos;
 
 use ketos::{
-    Arity,
+    CompileError,
     Error,
     Interpreter,
-    BuiltinModuleLoader, Module, ModuleBuilder, ModuleLoader,
+    BuiltinModuleLoader, Module, ModuleLoader,
     Name,
-    GlobalScope, Scope,
-    FromValue, FromValueRef, Value
+    Scope,
+    FromValue,
 };
 
 fn main() {
     // Create an interpreter using our custom loader
-    let interp = Interpreter::with_loader(Box::new(CustomModuleLoader));
+    let interp = Interpreter::with_loader(
+        Box::new(CustomModuleLoader.chain(BuiltinModuleLoader)));
 
     // Import our custom module and run the imported function
     let v = interp.run_code(r#"
@@ -33,25 +34,23 @@ fn main() {
 struct CustomModuleLoader;
 
 impl ModuleLoader for CustomModuleLoader {
-    fn load_module(&self, name: Name, scope: &Scope) -> Result<Module, Error> {
+    fn load_module(&self, name: Name, scope: Scope) -> Result<Module, Error> {
         let load_custom = scope.with_name(name, |name| name == "custom");
 
         if load_custom {
-            Ok(load_mod(GlobalScope::new_using(scope)))
+            Ok(load_mod(scope))
         } else {
-            BuiltinModuleLoader.load_module(name, scope)
+            Err(From::from(CompileError::ModuleError(name)))
         }
     }
 }
 
 fn load_mod(scope: Scope) -> Module {
-    ModuleBuilder::new("custom", scope)
-        .add_function("hello", fn_hello, Arity::Exact(1))
-        .finish()
+    ketos_fn!{ scope => "hello" => fn hello(what: &str) -> String }
+
+    Module::new("custom", scope)
 }
 
-fn fn_hello(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
-    let a: &str = try!(FromValueRef::from_value_ref(&args[0]));
-
-    Ok(format!("Hello, {}!", a).into())
+fn hello(what: &str) -> Result<String, Error> {
+    Ok(format!("Hello, {}!", what))
 }

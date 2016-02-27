@@ -52,14 +52,10 @@ fn run() -> i32 {
     let mut paths = vec![PathBuf::new()];
 
     if let Some(p) = var_os("KETOS_PATH") {
-        for path in split_paths(&p) {
-            paths.push(path);
-        }
+        paths.extend(split_paths(&p));
     }
 
-    for path in matches.opt_strs("I") {
-        paths.push(PathBuf::from(path));
-    }
+    paths.extend(matches.opt_strs("I").into_iter().map(PathBuf::from));
 
     let interp = Interpreter::with_search_paths(paths);
 

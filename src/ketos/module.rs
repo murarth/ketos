@@ -139,21 +139,29 @@ impl ModuleRegistry {
 
         // ... And the borrow_mut must be dropped before load_module is called.
 
-        let m = try!(self.loader.load_module(name, scope));
+        let new_scope = GlobalScope::new_using(scope);
+
+        let m = try!(self.loader.load_module(name, new_scope));
         self.modules.borrow_mut().insert(name, m.clone());
 
         Ok(m)
     }
 }
 
-/// Loads modules into separate namespaces
+/// Provides a method for loading modules into a running interpreter.
 pub trait ModuleLoader {
-    /// Loads the named module.
-    /// A new `Scope` should be created for the new module.
-    fn load_module(&self, name: Name, scope: &Scope) -> Result<Module, Error>;
+    /// Loads the named module, supplying a `Scope` to use as its namespace.
+    ///
+    /// If the loader cannot load the named module, an error value should be
+    /// returned of `Err(Error::CompileError(CompileError::ModuleError(name)))`.
+    fn load_module(&self, name: Name, scope: Scope) -> Result<Module, Error>;
 
     /// Creates a `ChainModuleLoader` using this loader and another.
-    fn chain<T>(self, second: T) -> ChainModuleLoader<Self, T>
+    ///
+    /// The `ChainModuleLoader` will attempt to load a module first from `self`,
+    /// falling back on the supplied `ModuleLoader` if it unable to find a
+    /// module.
+    fn chain<T: ModuleLoader>(self, second: T) -> ChainModuleLoader<Self, T>
             where Self: Sized {
         ChainModuleLoader{
             first: self,
@@ -166,7 +174,7 @@ pub trait ModuleLoader {
 pub struct NullModuleLoader;
 
 impl ModuleLoader for NullModuleLoader {
-    fn load_module(&self, name: Name, _scope: &Scope) -> Result<Module, Error> {
+    fn load_module(&self, name: Name, _scope: Scope) -> Result<Module, Error> {
         Err(From::from(CompileError::ModuleError(name)))
     }
 }
@@ -187,8 +195,8 @@ pub struct ChainModuleLoader<A, B> {
 
 impl<A, B> ModuleLoader for ChainModuleLoader<A, B>
         where A: ModuleLoader, B: ModuleLoader {
-    fn load_module(&self, name: Name, scope: &Scope) -> Result<Module, Error> {
-        match self.first.load_module(name, scope) {
+    fn load_module(&self, name: Name, scope: Scope) -> Result<Module, Error> {
+        match self.first.load_module(name, scope.clone()) {
             // Check that the names match so we know that this module lookup
             // failed and not another contained module being imported.
             Err(Error::CompileError(CompileError::ModuleError(mname)))
@@ -202,8 +210,8 @@ impl<A, B> ModuleLoader for ChainModuleLoader<A, B>
 pub struct BuiltinModuleLoader;
 
 impl ModuleLoader for BuiltinModuleLoader {
-    fn load_module(&self, name: Name, scope: &Scope) -> Result<Module, Error> {
-        load_builtin_module(name, GlobalScope::new_using(scope))
+    fn load_module(&self, name: Name, scope: Scope) -> Result<Module, Error> {
+        load_builtin_module(name, scope)
     }
 }
 
@@ -225,14 +233,16 @@ fn load_builtin_module(name: Name, scope: Scope) -> Result<Module, Error> {
     }
 }
 
-/// Loads modules from a file.
-///
-/// If a module file is not found, it falls back to loading built-in modules.
+/// Loads modules from source files and compiled bytecode files.
 pub struct FileModuleLoader {
     /// Tracks import chains to prevent infinite recursion
     chain: RefCell<Vec<PathBuf>>,
     /// Directories to search for files
     paths: Vec<PathBuf>,
+    /// Whether to read bytecode files
+    read_bytecode: bool,
+    /// Whether to write out bytecode files
+    write_bytecode: bool,
 }
 
 /// File extension for `ketos` source files.
@@ -254,12 +264,26 @@ impl FileModuleLoader {
         FileModuleLoader{
             chain: RefCell::new(Vec::new()),
             paths: paths,
+            read_bytecode: true,
+            write_bytecode: true,
         }
     }
 
     /// Adds a directory to search for module files.
     pub fn add_search_path(&mut self, path: PathBuf) {
         self.paths.push(path);
+    }
+
+    /// Sets whether the `FileModuleLoader` will search for compiled bytecode
+    /// files when loading modules. The default is `true`.
+    pub fn set_read_bytecode(&mut self, set: bool) {
+        self.read_bytecode = set;
+    }
+
+    /// Sets whether the `FileModuleLoader` will write compiled bytecode
+    /// files after loading a module from source. The default is `true`.
+    pub fn set_write_bytecode(&mut self, set: bool) {
+        self.write_bytecode = set;
     }
 
     fn guard_import<F, T>(&self, name: Name, path: &Path, f: F) -> Result<T, Error>
@@ -277,7 +301,7 @@ impl FileModuleLoader {
 }
 
 impl ModuleLoader for FileModuleLoader {
-    fn load_module(&self, name: Name, scope: &Scope) -> Result<Module, Error> {
+    fn load_module(&self, name: Name, scope: Scope) -> Result<Module, Error> {
         let (src_fname, code_fname) = try!(scope.with_name(name, |name_str| {
             if name_str.chars().any(|c| c == '.' || c == '/' || c == '\\') {
                 Err(CompileError::InvalidModuleName(name))
@@ -291,41 +315,54 @@ impl ModuleLoader for FileModuleLoader {
             let src_path = base.join(&src_fname);
             let code_path = base.join(&code_fname);
 
-            match try!(find_module_file(&code_path, &src_path)) {
-                ModuleFileResult::UseCode => {
-                    let new_scope = GlobalScope::new_using(scope);
+            let load = if self.read_bytecode {
+                try!(find_module_file(&src_path, &code_path))
+            } else {
+                find_source_file(&src_path)
+            };
 
+            match load {
+                ModuleFileResult::UseCode => {
                     return self.guard_import(name, &src_path, || {
-                        match read_bytecode_file(&code_path, &new_scope) {
+                        match read_bytecode_file(&code_path, &scope) {
                             Ok(m) => {
                                 for &(name, ref code) in &m.macros {
-                                    let mac = Lambda::new(code.clone(), &new_scope);
-                                    new_scope.add_macro(name, mac);
+                                    let mac = Lambda::new(code.clone(), &scope);
+                                    scope.add_macro(name, mac);
                                 }
-                                try!(process_imports(&new_scope, &m.imports));
-                                run_module_code(name, new_scope, m)
+                                try!(process_imports(&scope, &m.imports));
+                                run_module_code(name, scope, m)
                             }
                             Err(Error::DecodeError(DecodeError::IncorrectVersion(_)))
                                     if src_path.exists() => {
-                                load_module_from_file(new_scope, name, &src_path, &code_path)
+                                let code_path = if self.write_bytecode {
+                                    Some(code_path.as_path())
+                                } else {
+                                    None
+                                };
+
+                                load_module_from_file(scope, name,
+                                    &src_path, code_path)
                             }
                             Err(e) => Err(e)
                         }
                     });
                 }
                 ModuleFileResult::UseSource => {
-                    let new_scope = GlobalScope::new_using(scope);
+                    let code_path = if self.write_bytecode {
+                        Some(code_path.as_path())
+                    } else {
+                        None
+                    };
 
                     return self.guard_import(name, &src_path,
-                        || load_module_from_file(new_scope, name, &src_path, &code_path))
+                        || load_module_from_file(scope, name, &src_path, code_path))
                 }
                 ModuleFileResult::NotFound => ()
             }
         }
 
-        let new_scope = GlobalScope::new_using(scope);
-
-        load_builtin_module(name, new_scope)
+        Err(From::from(CompileError::ModuleError(name)))
     }
 }
 
@@ -336,13 +373,21 @@ enum ModuleFileResult {
     UseSource,
 }
 
-fn find_module_file(code_path: &Path, src_path: &Path) -> Result<ModuleFileResult, Error> {
+fn find_module_file(src_path: &Path, code_path: &Path) -> Result<ModuleFileResult, Error> {
     match (code_path.exists(), src_path.exists()) {
         (true, true) if try!(is_younger(code_path, src_path)) =>
             Ok(ModuleFileResult::UseCode),
         (_, true) => Ok(ModuleFileResult::UseSource),
         (true, false) => Ok(ModuleFileResult::UseCode),
         (false, false) => Ok(ModuleFileResult::NotFound)
+    }
+}
+
+fn find_source_file(src_path: &Path) -> ModuleFileResult {
+    if src_path.exists() {
+        ModuleFileResult::UseSource
+    } else {
+        ModuleFileResult::NotFound
     }
 }
 
@@ -368,7 +413,7 @@ fn is_younger_impl(ma: &Metadata, mb: &Metadata) -> bool {
 }
 
 fn load_module_from_file(scope: Scope, name: Name,
-        src_path: &Path, code_path: &Path) -> Result<Module, Error> {
+        src_path: &Path, code_path: Option<&Path>) -> Result<Module, Error> {
     let mut file = try!(File::open(src_path)
         .map_err(|e| IoError::new(IoMode::Open, src_path, e)));
     let mut buf = String::new();
@@ -402,13 +447,15 @@ fn load_module_from_file(scope: Scope, name: Name,
         imports: scope.with_imports(|i| i.to_vec()),
     };
 
-    let r = {
-        let names = scope.borrow_names();
-        write_bytecode_file(code_path, &mcode, &names)
-    };
+    if let Some(code_path) = code_path {
+        let r = {
+            let names = scope.borrow_names();
+            write_bytecode_file(code_path, &mcode, &names)
+        };
 
-    if let Err(e) = r {
-        let _ = writeln!(stderr(), "failed to write compiled bytecode: {}", e);
+        if let Err(e) = r {
+            let _ = writeln!(stderr(), "failed to write compiled bytecode: {}", e);
+        }
     }
 
     Ok(Module{

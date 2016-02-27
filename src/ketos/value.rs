@@ -522,7 +522,7 @@ macro_rules! ketos_fn {
     ( $scope:expr => $name:expr => fn $ident:ident
             ( $( $arg:ident : $arg_ty:ty ),* ) -> $res:ty ) => {
         $scope.add_value_with_name($name,
-            |name| Value::new_foreign_fn(name, move |_scope, args| {
+            |name| $crate::value::Value::new_foreign_fn(name, move |_scope, args| {
                 let mut iter = (&*args).iter();
 
                 let _expected = 0 $( + { stringify!($arg); 1 } )*;
@@ -535,7 +535,7 @@ macro_rules! ketos_fn {
                                 _found += 1;
                                 try!(<$arg_ty as $crate::value::FromValueRef>::from_value_ref(v))
                             }
-                            None => return Err(From::from(ExecError::ArityError{
+                            None => return Err(From::from($crate::exec::ExecError::ArityError{
                                 name: Some(name),
                                 expected: $crate::function::Arity::Exact(_expected),
                                 found: _found,
@@ -544,7 +544,7 @@ macro_rules! ketos_fn {
                     } ),*
                 ));
 
-                Ok(<$res as Into<Value>>::into(res))
+                Ok(<$res as Into<$crate::value::Value>>::into(res))
             }))
     }
 }

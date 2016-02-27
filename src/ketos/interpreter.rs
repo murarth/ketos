@@ -12,7 +12,7 @@ use error::Error;
 use exec::{call_function, execute, ExecError};
 use io::{IoError, IoMode};
 use lexer::{CodeMap, Lexer};
-use module::{FileModuleLoader, ModuleLoader, ModuleRegistry};
+use module::{BuiltinModuleLoader, FileModuleLoader, ModuleLoader, ModuleRegistry};
 use name::{debug_names, display_names, Name, NameStore};
 use parser::{ParseError, Parser};
 use scope::{GlobalIo, GlobalScope, MasterScope, Scope};
@@ -34,7 +34,7 @@ pub struct Interpreter {
 impl Interpreter {
     /// Creates a new `Interpreter`.
     pub fn new() -> Interpreter {
-        Interpreter::with_loader(Box::new(FileModuleLoader::new()))
+        Interpreter::with_loader(Box::new(BuiltinModuleLoader))
     }
 
     /// Creates a new `Interpreter` using the given `ModuleLoader` instance.
@@ -57,7 +57,7 @@ impl Interpreter {
     /// series of directories.
     pub fn with_search_paths(paths: Vec<PathBuf>) -> Interpreter {
         Interpreter::with_loader(Box::new(
-            FileModuleLoader::with_search_paths(paths)))
+            BuiltinModuleLoader.chain(FileModuleLoader::with_search_paths(paths))))
     }
 
     /// Clears cached source from the contained `CodeMap`.
