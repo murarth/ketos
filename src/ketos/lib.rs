@@ -45,6 +45,7 @@ pub use io::IoError;
 pub use module::{BuiltinModuleLoader, FileModuleLoader, Module, ModuleBuilder, ModuleLoader};
 pub use name::{Name, NameStore};
 pub use parser::{ParseError, ParseErrorKind};
+pub use run::run_code_in_scope;
 pub use scope::{GlobalScope, Scope};
 pub use value::{ForeignValue, FromValue, FromValueRef, Value};
 
@@ -63,6 +64,7 @@ pub mod module;
 pub mod name;
 pub mod parser;
 pub mod rc_vec;
+pub mod run;
 pub mod scope;
 mod string;
 pub mod string_fmt;
