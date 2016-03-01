@@ -47,6 +47,7 @@ pub use name::{Name, NameStore};
 pub use parser::{ParseError, ParseErrorKind};
 pub use run::run_code_in_scope;
 pub use scope::{GlobalScope, Scope};
+pub use trace::{clear_traceback, get_traceback, set_traceback, take_traceback, Trace};
 pub use value::{ForeignValue, FromValue, FromValueRef, Value};
 
 pub mod bytecode;
@@ -68,6 +69,7 @@ pub mod run;
 pub mod scope;
 mod string;
 pub mod string_fmt;
+pub mod trace;
 pub mod value;
 
 mod mod_code;

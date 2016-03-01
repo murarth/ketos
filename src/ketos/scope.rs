@@ -15,6 +15,7 @@ use value::Value;
 
 /// Represents the global namespace of an execution context.
 pub struct GlobalScope {
+    name: Name,
     namespace: RefCell<Namespace>,
     name_store: Rc<RefCell<NameStore>>,
     codemap: Rc<RefCell<CodeMap>>,
@@ -91,11 +92,13 @@ pub type WeakScope = Weak<GlobalScope>;
 
 impl GlobalScope {
     /// Creates a new global scope containing default values.
-    pub fn new(names: Rc<RefCell<NameStore>>,
+    pub fn new(name: Name,
+            names: Rc<RefCell<NameStore>>,
             codemap: Rc<RefCell<CodeMap>>,
             registry: Rc<ModuleRegistry>,
             io: Rc<GlobalIo>) -> GlobalScope {
         GlobalScope{
+            name: name,
             namespace: RefCell::new(Namespace::new()),
             name_store: names,
             codemap: codemap,
@@ -105,8 +108,9 @@ impl GlobalScope {
     }
 
     /// Creates a new global scope using the shared data from the given scope.
-    pub fn new_using(scope: &Scope) -> Scope {
+    pub fn new_using(name: Name, scope: &Scope) -> Scope {
         Rc::new(GlobalScope::new(
+            name,
             scope.name_store.clone(),
             scope.codemap.clone(),
             scope.modules.clone(),
@@ -190,6 +194,11 @@ impl GlobalScope {
     /// Returns a borrowed reference to the contained `ModuleRegistry`.
     pub fn get_modules(&self) -> &Rc<ModuleRegistry> {
         &self.modules
+    }
+
+    /// Returns the scope's name.
+    pub fn get_name(&self) -> Name {
+        self.name
     }
 
     /// Returns a borrowed reference to the contained `NameStore`.

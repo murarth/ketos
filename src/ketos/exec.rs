@@ -37,6 +37,7 @@ use scope::{MasterScope, Scope};
 use string_fmt::FormatError;
 use name::{display_names, get_standard_name, get_system_fn,
     Name, NameDisplay, NameStore};
+use trace::{Trace, TraceItem, set_traceback};
 use value::{FromValueRef, Value};
 
 /// Represents an error generated while executing bytecode.
@@ -292,14 +293,18 @@ impl NameDisplay for ExecError {
 
 /// Executes a code object and returns the value.
 pub fn execute(scope: &Scope, code: Rc<Code>) -> Result<Value, Error> {
-    Machine::new().execute(scope, code)
+    let mut mach = Machine::new();
+
+    mach.execute(scope, code)
+        .map_err(|e| { set_traceback(mach.build_trace()); e })
 }
 
 /// Calls a function or lambda in the given scope with the given arguments.
-pub fn call_function(scope: &Scope, fun: Value, args: Vec<Value>)
-        -> Result<Value, Error> {
+pub fn call_function(scope: &Scope, fun: Value, args: Vec<Value>) -> Result<Value, Error> {
     match fun {
-        Value::Function(fun) => execute_function(scope, fun, args),
+        Value::Function(fun) => execute_function(scope, fun, args)
+            .map_err(|e| { set_traceback(
+                Trace::single(TraceItem::CallSys(fun.name))); e }),
         Value::Lambda(l) => execute_lambda(l, args),
         ref v => Err(From::from(ExecError::expected("function", v)))
     }
@@ -323,7 +328,10 @@ pub fn execute_function(scope: &Scope, fun: Function, mut args: Vec<Value>)
 
 /// Executes a `Lambda` in the given scope and returns the value.
 pub fn execute_lambda(lambda: Lambda, args: Vec<Value>) -> Result<Value, Error> {
-    Machine::new().execute_lambda(lambda, args)
+    let mut mach = Machine::new();
+
+    mach.execute_lambda(lambda, args)
+        .map_err(|e| { set_traceback(mach.build_trace()); e })
 }
 
 struct StackFrame {
@@ -345,6 +353,7 @@ struct Machine {
     stack: Vec<Value>,
     call_stack: Vec<StackFrame>,
     value: Value,
+    sys_fn_call: Option<Name>,
 }
 
 impl Machine {
@@ -354,7 +363,29 @@ impl Machine {
             stack: Vec::with_capacity(10240),
             call_stack: Vec::with_capacity(1024),
             value: Value::Unit,
+            sys_fn_call: None,
         }
+    }
+
+    fn build_trace(&self) -> Trace {
+        let mut trace = Vec::new();
+
+        for frame in &self.call_stack {
+            let mod_name = frame.scope.get_name();
+
+            let item = match frame.code.name {
+                Some(fn_name) => TraceItem::CallCode(mod_name, fn_name),
+                None => TraceItem::CallLambda(mod_name),
+            };
+
+            trace.push(item);
+        }
+
+        if let Some(name) = self.sys_fn_call {
+            trace.push(TraceItem::CallSys(name));
+        }
+
+        Trace::new(trace)
     }
 
     fn execute(&mut self, scope: &Scope, code: Rc<Code>) -> Result<Value, Error> {
@@ -366,7 +397,7 @@ impl Machine {
             }));
         }
 
-        self.run(StackFrame{
+        self.start(StackFrame{
             code: code,
             scope: scope.clone(),
             values: None,
@@ -411,7 +442,7 @@ impl Machine {
             }
         }
 
-        self.run(StackFrame{
+        self.start(StackFrame{
             code: lambda.code,
             scope: scope,
             values: lambda.values,
@@ -421,7 +452,17 @@ impl Machine {
         })
     }
 
-    fn run(&mut self, mut frame: StackFrame) -> Result<Value, Error> {
+    fn start(&mut self, mut frame: StackFrame) -> Result<Value, Error> {
+        if let Err(e) = self.run(&mut frame) {
+            // Save the frame for stack traces
+            self.call_stack.push(frame);
+            return Err(e);
+        }
+
+        Ok(self.value.take())
+    }
+
+    fn run(&mut self, frame: &mut StackFrame) -> Result<(), Error> {
         use bytecode::Instruction::*;
 
         loop {
@@ -434,9 +475,9 @@ impl Machine {
 
             match instr {
                 Load(n) => try!(self.load(frame.sptr + n)),
-                LoadC(n) => try!(self.load_c(&frame, n)),
+                LoadC(n) => try!(self.load_c(frame, n)),
                 UnboundToUnit(n) => try!(self.unbound_to_unit(frame.sptr + n)),
-                GetDef(n) => try!(self.get_def(&frame, n)),
+                GetDef(n) => try!(self.get_def(frame, n)),
                 Push => try!(self.push_value()),
                 Unit => self.value = Value::Unit,
                 True => self.value = Value::Bool(true),
@@ -444,13 +485,13 @@ impl Machine {
                 Const(n) => try!(self.load_const(&frame.code, n)),
                 Store(n) => try!(self.store(frame.sptr + n)),
                 LoadPush(n) => try!(self.load_push(frame.sptr + n)),
-                LoadCPush(n) => try!(self.load_c_push(&frame, n)),
-                GetDefPush(n) => try!(self.get_def_push(&frame, n)),
+                LoadCPush(n) => try!(self.load_c_push(frame, n)),
+                GetDefPush(n) => try!(self.get_def_push(frame, n)),
                 UnitPush => try!(self.push(Value::Unit)),
                 TruePush => try!(self.push(Value::Bool(true))),
                 FalsePush => try!(self.push(Value::Bool(false))),
                 ConstPush(n) => try!(self.push_const(&frame.code, n)),
-                SetDef(n) => try!(self.set_def(&frame, n)),
+                SetDef(n) => try!(self.set_def(frame, n)),
                 List(n) => try!(self.build_list(n)),
                 Quote(n) => try!(self.quote_value(n)),
                 Quasiquote(n) => try!(self.quasiquote_value(n)),
@@ -458,21 +499,21 @@ impl Machine {
                 CommaAt(n) => try!(self.comma_at_value(n)),
                 BuildClosure(n_const, n_values) =>
                     try!(self.build_closure(&frame.code, n_const, n_values)),
-                Jump(label) => try!(self.jump(&mut frame, label)),
-                JumpIf(label) => try!(self.jump_if(&mut frame, label)),
+                Jump(label) => try!(self.jump(frame, label)),
+                JumpIf(label) => try!(self.jump_if(frame, label)),
                 JumpIfBound(label, n) => {
                     let n = frame.sptr + n;
-                    try!(self.jump_if_bound(&mut frame, label, n))
+                    try!(self.jump_if_bound(frame, label, n))
                 }
-                JumpIfNot(label) => try!(self.jump_if_not(&mut frame, label)),
-                JumpIfEq(label) => try!(self.jump_if_eq(&mut frame, label)),
-                JumpIfNotEq(label) => try!(self.jump_if_not_eq(&mut frame, label)),
-                JumpIfNull(label) => try!(self.jump_if_null(&mut frame, label)),
-                JumpIfNotNull(label) => try!(self.jump_if_not_null(&mut frame, label)),
+                JumpIfNot(label) => try!(self.jump_if_not(frame, label)),
+                JumpIfEq(label) => try!(self.jump_if_eq(frame, label)),
+                JumpIfNotEq(label) => try!(self.jump_if_not_eq(frame, label)),
+                JumpIfNull(label) => try!(self.jump_if_null(frame, label)),
+                JumpIfNotNull(label) => try!(self.jump_if_not_null(frame, label)),
                 JumpIfEqConst(label, n) =>
-                    try!(self.jump_if_eq_const(&mut frame, label, n)),
+                    try!(self.jump_if_eq_const(frame, label, n)),
                 JumpIfNotEqConst(label, n) =>
-                    try!(self.jump_if_not_eq_const(&mut frame, label, n)),
+                    try!(self.jump_if_not_eq_const(frame, label, n)),
                 Null => self.is_null(),
                 NotNull => self.is_not_null(),
                 Eq => try!(self.equal()),
@@ -491,15 +532,15 @@ impl Machine {
                 TailPush => try!(self.tail_push()),
                 InitPush => try!(self.init_push()),
                 LastPush => try!(self.last_push()),
-                CallSys(n) => try!(self.call_sys(&mut frame, n)),
+                CallSys(n) => try!(self.call_sys(frame, n)),
                 CallSysArgs(n, n_args) =>
-                    try!(self.call_sys_args(&mut frame, n, n_args)),
+                    try!(self.call_sys_args(frame, n, n_args)),
                 CallConst(n, n_args) =>
-                    try!(self.call_const(&mut frame, n, n_args)),
-                Call(n) => try!(self.call_function(&mut frame, n)),
-                Apply(n) => try!(self.apply(&mut frame, n)),
-                CallSelf(n) => try!(self.call_self(&mut frame, n)),
-                TailCall(n) => try!(self.tail_call(&mut frame, n)),
+                    try!(self.call_const(frame, n, n_args)),
+                Call(n) => try!(self.call_function(frame, n)),
+                Apply(n) => try!(self.apply(frame, n)),
+                CallSelf(n) => try!(self.call_self(frame, n)),
+                TailCall(n) => try!(self.tail_call(frame, n)),
                 Skip(n) => try!(self.skip_stack(n as usize)),
                 Return => {
                     match self.call_stack.pop() {
@@ -510,14 +551,14 @@ impl Machine {
                                 // Pop one more value for the function
                                 try!(self.pop());
                             }
-                            frame = call;
+                            *frame = call;
                         }
                     }
                 }
             }
         }
 
-        Ok(self.value.take())
+        Ok(())
     }
 
     fn build_closure(&mut self, code: &Code, n_const: u32, n_values: u32)
@@ -579,8 +620,13 @@ impl Machine {
                     try!(self.pop());
                 }
 
+                // Store the name for traceback if an error is generated
+                self.sys_fn_call = Some(name);
+
                 let v = try!((sys_fn.callback)(&frame.scope, &mut args));
                 self.value = v;
+
+                self.sys_fn_call = None;
 
                 Ok(())
         }

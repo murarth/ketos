@@ -7,7 +7,7 @@ use std::io::{stderr, Write};
 use std::path::{Path, PathBuf};
 
 use getopts::{Options, ParsingStyle};
-use ketos::{Interpreter, Error, ParseErrorKind};
+use ketos::{Interpreter, Error, ParseErrorKind, take_traceback};
 
 mod completion;
 mod readline;
@@ -90,6 +90,13 @@ fn run() -> i32 {
     0
 }
 
+fn display_error(interp: &Interpreter, e: &Error) {
+    if let Some(trace) = take_traceback() {
+        interp.display_trace(&trace);
+    }
+    interp.display_error(e);
+}
+
 fn run_expr(interp: &Interpreter, expr: &str) -> bool {
     match interp.run_code(expr, None) {
         Ok(value) => {
@@ -97,7 +104,7 @@ fn run_expr(interp: &Interpreter, expr: &str) -> bool {
             true
         }
         Err(e) => {
-            interp.display_error(&e);
+            display_error(&interp, &e);
             false
         }
     }
@@ -107,7 +114,7 @@ fn run_file(interp: &Interpreter, file: &Path) -> bool {
     match interp.run_file(file) {
         Ok(()) => true,
         Err(e) => {
-            interp.display_error(&e);
+            display_error(&interp, &e);
             false
         }
     }
@@ -151,7 +158,7 @@ fn run_repl(interp: &Interpreter) {
                 if !code.is_empty() {
                     match interp.execute_program(code) {
                         Ok(v) => interp.display_value(&v),
-                        Err(e) => interp.display_error(&e)
+                        Err(e) => display_error(&interp, &e)
                     }
                 }
             }
@@ -167,7 +174,7 @@ fn run_repl(interp: &Interpreter) {
                 prompt = Prompt::OpenString;
                 continue;
             }
-            Err(ref e) => interp.display_error(e)
+            Err(ref e) => display_error(&interp, e)
         }
 
         buf.clear();

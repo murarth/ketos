@@ -17,6 +17,7 @@ use name::{get_system_fn, is_system_operator, standard_names,
     Name, NameDisplay, NameMap, NameSet, NameStore,
     NUM_SYSTEM_OPERATORS, SYSTEM_OPERATORS_BEGIN};
 use scope::{GlobalScope, ImportSet, MasterScope, Scope};
+use trace::{Trace, TraceItem, set_traceback, take_traceback};
 use value::{StructDef, Value};
 
 const MAX_MACRO_RECURSION: u32 = 100;
@@ -161,21 +162,33 @@ impl NameDisplay for CompileError {
 
 /// Compiles an expression into a code object.
 pub fn compile(scope: &Scope, value: &Value) -> Result<Code, Error> {
-    Compiler::new(scope).compile(value)
+    let mut compiler = Compiler::new(scope);
+
+    compiler.compile(value)
+        .map_err(|e| { set_traceback(compiler.take_trace()); e })
 }
 
-fn compile_lambda(compiler: &Compiler,
+fn compile_lambda(compiler: &mut Compiler,
         name: Option<Name>,
         params: Vec<(Name, Option<Value>)>,
         req_params: u32,
         kw_params: Vec<(Name, Option<Value>)>,
         rest: Option<Name>, value: &Value)
         -> Result<(Code, Vec<Name>), Error> {
-    let outer = compiler.outer.iter().cloned()
-        .chain(Some(compiler)).collect::<Vec<_>>();
+    let r = {
+        let outer = compiler.outer.iter().cloned()
+            .chain(Some(&*compiler)).collect::<Vec<_>>();
 
-    Compiler::with_outer(&compiler.scope, name, &outer)
-        .compile_lambda(name, params, req_params, kw_params, rest, value)
+        let mut sub = Compiler::with_outer(&compiler.scope, name, &outer);
+
+        sub.compile_lambda(name, params, req_params, kw_params, rest, value)
+            .map_err(|e| (sub.take_trace(), e))
+    };
+
+    r.map_err(|(trace, e)| {
+        compiler.extend_trace(trace);
+        e
+    })
 }
 
 /// Compiles a single expression or function body
@@ -201,6 +214,8 @@ struct Compiler<'a> {
     self_name: Option<Name>,
     /// Depth of macro expansion
     macro_recursion: u32,
+    /// Traces item currently being compiled; used when errors are generated
+    trace: Vec<TraceItem>,
 }
 
 impl<'a> Compiler<'a> {
@@ -221,6 +236,7 @@ impl<'a> Compiler<'a> {
             outer: outer,
             self_name: name,
             macro_recursion: 0,
+            trace: Vec::new(),
         }
     }
 
@@ -306,13 +322,16 @@ impl<'a> Compiler<'a> {
         Ok(off)
     }
 
-    fn compile(mut self, value: &Value) -> Result<Code, Error> {
+    fn compile(&mut self, value: &Value) -> Result<Code, Error> {
         try!(self.compile_value(value));
+
+        let code = try!(self.assemble_code());
+        let consts = replace(&mut self.consts, Vec::new());
 
         Ok(Code{
             name: None,
-            code: try!(self.assemble_code()),
-            consts: self.consts.into_boxed_slice(),
+            code: code,
+            consts: consts.into_boxed_slice(),
             kw_params: vec![].into_boxed_slice(),
             n_params: 0,
             req_params: 0,
@@ -320,7 +339,7 @@ impl<'a> Compiler<'a> {
         })
     }
 
-    fn compile_lambda(mut self, name: Option<Name>,
+    fn compile_lambda(&mut self, name: Option<Name>,
             params: Vec<(Name, Option<Value>)>,
             req_params: u32,
             kw_params: Vec<(Name, Option<Value>)>,
@@ -401,17 +420,21 @@ impl<'a> Compiler<'a> {
 
         try!(self.compile_value(value));
 
+        let code = try!(self.assemble_code());
+        let consts = replace(&mut self.consts, Vec::new());
+        let captures = replace(&mut self.captures, Vec::new());
+
         let code = Code{
             name: name,
-            code: try!(self.assemble_code()),
-            consts: self.consts.into_boxed_slice(),
+            code: code,
+            consts: consts.into_boxed_slice(),
             kw_params: kw_names.into_boxed_slice(),
             n_params: n_params as u32,
             req_params: req_params,
             flags: flags,
         };
 
-        Ok((code, self.captures))
+        Ok((code, captures))
     }
 
     fn compile_value(&mut self, value: &Value) -> Result<(), Error> {
@@ -449,10 +472,15 @@ impl<'a> Compiler<'a> {
                         } else if self.self_name == Some(name) {
                             () // This is handled later
                         } else if self.is_macro(name) {
+                            self.trace.push(TraceItem::CallMacro(
+                                self.scope.get_name(), name));
+
                             self.macro_recursion += 1;
                             let v = try!(self.expand_macro(name, &li[1..]));
                             try!(self.compile_value(&v));
                             self.macro_recursion -= 1;
+
+                            self.trace.pop();
 
                             return Ok(());
                         } else if is_system_operator(name) {
@@ -460,11 +488,16 @@ impl<'a> Compiler<'a> {
                         } else if try!(self.specialize_call(name, &li[1..])) {
                             return Ok(());
                         }
+
+                        self.trace.push(TraceItem::CallCode(
+                            self.scope.get_name(), name));
                     }
                     Value::List(_) => {
                         try!(self.compile_value(fn_v));
                         try!(self.push_instruction(Instruction::Push));
                         pushed_fn = true;
+
+                        self.trace.push(TraceItem::CallExpr(self.scope.get_name()));
                     }
                     ref v => return Err(From::from(
                         CompileError::InvalidCallExpression(v.type_name())))
@@ -506,6 +539,8 @@ impl<'a> Compiler<'a> {
                         }
                     }
                 }
+
+                self.trace.pop();
             }
             Value::Comma(_, _) | Value::CommaAt(_, _) =>
                 return Err(From::from(CompileError::UnbalancedComma)),
@@ -517,11 +552,25 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
+    fn extend_trace(&mut self, trace: Trace) {
+        self.trace.extend(trace.get_items());
+    }
+
+    fn extend_global_trace(&mut self) {
+        if let Some(trace) = take_traceback() {
+            self.extend_trace(trace);
+        }
+    }
+
+    fn take_trace(&mut self) -> Trace {
+        Trace::new(replace(&mut self.trace, Vec::new()))
+    }
+
     fn is_macro(&self, name: Name) -> bool {
         self.scope.contains_macro(name)
     }
 
-    fn expand_macro(&self, name: Name, args: &[Value]) -> Result<Value, Error> {
+    fn expand_macro(&mut self, name: Name, args: &[Value]) -> Result<Value, Error> {
         if self.macro_recursion >= MAX_MACRO_RECURSION {
             return Err(From::from(CompileError::MacroRecursionExceeded));
         }
@@ -530,6 +579,7 @@ impl<'a> Compiler<'a> {
             .expect("macro not found in expand_macro");
 
         execute_lambda(lambda, args.to_vec())
+            .map_err(|e| { self.extend_global_trace(); e })
     }
 
     fn add_constant(&self, name: Name, value: Value) {
@@ -567,6 +617,15 @@ impl<'a> Compiler<'a> {
     }
 
     fn eval_constant_function(&mut self, name: Name, args: &[Value])
+            -> Result<ConstResult, Error> {
+        self.trace.push(TraceItem::CallCode(
+            self.scope.get_name(), name));
+        let v = try!(self.eval_constant_function_inner(name, args));
+        self.trace.pop();
+        Ok(v)
+    }
+
+    fn eval_constant_function_inner(&mut self, name: Name, args: &[Value])
             -> Result<ConstResult, Error> {
         let n_args = args.len();
 
@@ -752,6 +811,9 @@ impl<'a> Compiler<'a> {
         let op = get_system_operator(name);
         let n_args = args.len() as u32;
 
+        self.trace.push(TraceItem::CallOperator(
+            self.scope.get_name(), name));
+
         if !op.arity.accepts(n_args) {
             Err(From::from(CompileError::ArityError{
                 name: name,
@@ -759,7 +821,9 @@ impl<'a> Compiler<'a> {
                 found: n_args,
             }))
         } else {
-            (op.callback)(self, args)
+            try!((op.callback)(self, args));
+            self.trace.pop();
+            Ok(())
         }
     }
 
@@ -1633,6 +1697,10 @@ fn op_let(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 fn op_define(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     match args[0] {
         Value::Name(name) => {
+            // Replace operator item with more specific item
+            compiler.trace.pop();
+            compiler.trace.push(TraceItem::Define(compiler.scope.get_name(), name));
+
             try!(test_define_name(compiler.scope, name));
             try!(compiler.compile_value(&args[1]));
             let c = compiler.add_const(Owned(Value::Name(name)));
@@ -1641,11 +1709,16 @@ fn op_define(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
         }
         Value::List(ref li) => {
             let name = try!(get_name(&li[0]));
+
+            // Replace operator item with more specific item
+            compiler.trace.pop();
+            compiler.trace.push(TraceItem::Define(compiler.scope.get_name(), name));
+
             try!(test_define_name(compiler.scope, name));
             let c = compiler.add_const(Owned(Value::Name(name)));
 
             let (lambda, captures) = try!(make_lambda(
-                &compiler, Some(name), &li[1..], &args[1]));
+                compiler, Some(name), &li[1..], &args[1]));
 
             let code_c = compiler.add_const(Owned(Value::Lambda(lambda)));
             try!(compiler.load_lambda(code_c, &captures));
@@ -1665,6 +1738,11 @@ fn op_macro(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
         }
         _ => return Err(From::from(CompileError::SyntaxError("expected list")))
     };
+
+    // Replace operator item with more specific item
+    compiler.trace.pop();
+    compiler.trace.push(TraceItem::DefineMacro(
+        compiler.scope.get_name(), name));
 
     try!(test_define_name(compiler.scope, name));
 
@@ -1691,6 +1769,12 @@ fn op_macro(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 /// ```
 fn op_struct(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     let name = try!(get_name(&args[0]));
+
+    // Replace operator item with more specific item
+    compiler.trace.pop();
+    compiler.trace.push(TraceItem::DefineStruct(
+        compiler.scope.get_name(), name));
+
     try!(test_define_name(compiler.scope, name));
     let mut fields = NameMap::new();
 
@@ -1975,6 +2059,10 @@ fn op_cond(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 ///   (lambda (v) (+ v n)))
 /// ```
 fn op_lambda(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
+    // Replace operator item with more specific item
+    compiler.trace.pop();
+    compiler.trace.push(TraceItem::DefineLambda(compiler.scope.get_name()));
+
     let li = match args[0] {
         Value::Unit => &[][..],
         Value::List(ref li) => &li[..],
@@ -1982,7 +2070,7 @@ fn op_lambda(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     };
 
     let (lambda, captures) = try!(make_lambda(
-        &compiler, None, li, &args[1]));
+        compiler, None, li, &args[1]));
 
     let c = compiler.add_const(Owned(Value::Lambda(lambda)));
     try!(compiler.load_lambda(c, &captures));
@@ -2028,8 +2116,14 @@ fn op_export(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 /// ```
 fn op_use(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     let mod_name = try!(get_name(&args[0]));
+
+    // Replace operator item with more specific item
+    compiler.trace.pop();
+    compiler.trace.push(TraceItem::UseModule(compiler.scope.get_name(), mod_name));
+
     let mods = compiler.scope.get_modules();
-    let m = try!(mods.get_module(mod_name, compiler.scope));
+    let m = try!(mods.get_module(mod_name, compiler.scope)
+        .map_err(|e| { compiler.extend_global_trace(); e }));
 
     let mut imp_set = ImportSet::new(mod_name);
 
@@ -2100,6 +2194,11 @@ fn op_use(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 /// ```
 fn op_const(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     let name = try!(get_name(&args[0]));
+
+    // Replace operator item with more specific item
+    compiler.trace.pop();
+    compiler.trace.push(TraceItem::DefineConst(
+        compiler.scope.get_name(), name));
 
     try!(test_define_name(compiler.scope, name));
 
@@ -2239,7 +2338,7 @@ fn test_define_name(scope: &Scope, name: Name) -> Result<(), CompileError> {
 
 /// Creates a `Lambda` object using scope and local values from the given compiler.
 /// Returns the `Lambda` object and the set of names captured by the lambda.
-fn make_lambda(compiler: &Compiler, name: Option<Name>,
+fn make_lambda(compiler: &mut Compiler, name: Option<Name>,
         args: &[Value], body: &Value) -> Result<(Lambda, Vec<Name>), Error> {
     let mut params = Vec::new();
     let mut req_params = 0;
@@ -2341,7 +2440,7 @@ fn make_lambda(compiler: &Compiler, name: Option<Name>,
             "expected arguments after `:optional`")));
     }
 
-    let (code, captures) = try!(compile_lambda(&compiler,
+    let (code, captures) = try!(compile_lambda(compiler,
         name, params, req_params, kw_params, rest, body));
 
     Ok((Lambda::new(Rc::new(code), &compiler.scope), captures))

@@ -139,7 +139,7 @@ impl ModuleRegistry {
 
         // ... And the borrow_mut must be dropped before load_module is called.
 
-        let new_scope = GlobalScope::new_using(scope);
+        let new_scope = GlobalScope::new_using(name, scope);
 
         let m = try!(self.loader.load_module(name, new_scope));
         self.modules.borrow_mut().insert(name, m.clone());

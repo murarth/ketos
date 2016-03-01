@@ -16,6 +16,7 @@ use module::{BuiltinModuleLoader, FileModuleLoader, ModuleLoader, ModuleRegistry
 use name::{debug_names, display_names, Name, NameStore};
 use parser::{ParseError, Parser};
 use scope::{GlobalIo, GlobalScope, MasterScope, Scope};
+use trace::Trace;
 use value::Value;
 
 /// Provides a context in which to compile and execute code.
@@ -39,13 +40,17 @@ impl Interpreter {
 
     /// Creates a new `Interpreter` using the given `ModuleLoader` instance.
     pub fn with_loader(loader: Box<ModuleLoader>) -> Interpreter {
-        let names = Rc::new(RefCell::new(NameStore::new()));
+        let mut names = NameStore::new();
+        let name = names.add("main");
+
+        let names = Rc::new(RefCell::new(names));
         let codemap = Rc::new(RefCell::new(CodeMap::new()));
         let modules = Rc::new(ModuleRegistry::new(loader));
         let io = Rc::new(GlobalIo::default());
 
         Interpreter{
             scope: Rc::new(GlobalScope::new(
+                name,
                 names.clone(),
                 codemap.clone(),
                 modules,
@@ -93,6 +98,14 @@ impl Interpreter {
                 let _ = writeln!(stderr(), "io error: {}", e);
             }
             Error::ParseError(ref e) => self.display_parse_error(e),
+        }
+    }
+
+    /// Prints traceback information to `stderr`.
+    pub fn display_trace(&self, trace: &Trace) {
+        if !trace.get_items().is_empty() {
+            let _ = writeln!(stderr(), "Traceback:\n\n{}",
+                display_names(&self.scope.borrow_names(), trace));
         }
     }
 
