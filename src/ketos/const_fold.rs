@@ -91,7 +91,7 @@ impl FoldOp for FoldFloorDiv {
 fn check_number(v: &Value) -> Result<(), ExecError> {
     match *v {
         Value::Float(_) | Value::Integer(_) | Value::Ratio(_) => Ok(()),
-        ref v => Err(ExecError::expected("integer", v))
+        ref v => Err(ExecError::expected("number", v))
     }
 }
 
