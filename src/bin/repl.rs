@@ -174,7 +174,10 @@ fn run_repl(interp: &Interpreter) {
                 prompt = Prompt::OpenString;
                 continue;
             }
-            Err(ref e) => display_error(&interp, e)
+            Err(ref e) => {
+                prompt = Prompt::Normal;
+                display_error(&interp, e);
+            }
         }
 
         buf.clear();
