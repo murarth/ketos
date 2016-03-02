@@ -98,7 +98,7 @@ fn display_error(interp: &Interpreter, e: &Error) {
 }
 
 fn run_expr(interp: &Interpreter, expr: &str) -> bool {
-    match interp.run_code(expr, None) {
+    match interp.run_single_expr(expr, None) {
         Ok(value) => {
             interp.display_value(&value);
             true
