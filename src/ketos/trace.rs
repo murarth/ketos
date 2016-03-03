@@ -118,7 +118,7 @@ impl NameDisplay for Trace {
                 CallLambda(m) => try!(writeln!(f,
                     "  In {}, lambda", names.get(m))),
                 CallMacro(m, n) => try!(writeln!(f,
-                    "  In {}, macro {}", names.get(m), names.get(n))),
+                    "  In {}, macro expansion {}", names.get(m), names.get(n))),
                 CallOperator(m, n) => try!(writeln!(f,
                     "  In {}, operator {}", names.get(m), names.get(n))),
                 CallSys(n) => try!(writeln!(f,
