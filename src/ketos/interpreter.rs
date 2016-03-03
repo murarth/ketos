@@ -103,10 +103,8 @@ impl Interpreter {
 
     /// Prints traceback information to `stderr`.
     pub fn display_trace(&self, trace: &Trace) {
-        if !trace.get_items().is_empty() {
-            let _ = writeln!(stderr(), "Traceback:\n\n{}",
-                display_names(&self.scope.borrow_names(), trace));
-        }
+        let _ = writeln!(stderr(), "Traceback:\n\n{}",
+            display_names(&self.scope.borrow_names(), trace));
     }
 
     fn display_parse_error(&self, e: &ParseError) {

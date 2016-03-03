@@ -15,9 +15,9 @@ impl ketos::ForeignValue for MyType {
     fn compare_to(&self, rhs: &ForeignValue) -> Result<Ordering, ExecError> {
         match rhs.downcast_ref::<MyType>() {
             Some(rhs) => Ok(self.cmp(rhs)),
-            None => Err(ExecError::TypeError{
-                expected: self.type_name(),
-                found: rhs.type_name(),
+            None => Err(ExecError::TypeMismatch{
+                lhs: self.type_name(),
+                rhs: rhs.type_name(),
             })
         }
     }
@@ -25,9 +25,9 @@ impl ketos::ForeignValue for MyType {
     fn is_equal_to(&self, rhs: &ForeignValue) -> Result<bool, ExecError> {
         match rhs.downcast_ref::<MyType>() {
             Some(rhs) => Ok(*self == *rhs),
-            None => Err(ExecError::TypeError{
-                expected: self.type_name(),
-                found: rhs.type_name(),
+            None => Err(ExecError::TypeMismatch{
+                lhs: self.type_name(),
+                rhs: rhs.type_name(),
             })
         }
     }

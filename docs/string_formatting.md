@@ -134,6 +134,20 @@ If the `@` flag is present, the parameters are *col-rel*,*col-inc*.
 the directive will output *col-rel* spaces, then output enough spaces to advance
 to a column that is a multiple of *col-inc*, if necessary.
 
+## `z` - Pretty Print
+
+Formats a value in a human-readable fashion, inserting newlines and indentation
+into nested lists.
+
+Accepts a single parameter, *indent*.  
+Values within lists are indented, starting at *indent* characters from the
+first column. The top level value is not indented.
+
+```lisp
+(println "~z"    '(foo (bar (baz))))
+(println "  ~2z" '(foo (bar (baz))))
+```
+
 ## `?` - Indirection
 
 The directive will consume a string and a list, processing the string as a format

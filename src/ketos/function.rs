@@ -973,12 +973,8 @@ fn fn_dot_eq(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
             match def.fields.get(name) {
                 Some(&ty) => {
                     if !value_is(scope, &value, ty) {
-                        return Err(From::from(ExecError::FieldTypeError{
-                            struct_name: def.name,
-                            field: name,
-                            expected: ty,
-                            found: value.type_name(),
-                        }))
+                        return Err(From::from(ExecError::expected_field(
+                            def.name, name, ty, &value)));
                     }
                 }
                 None => return Err(From::from(ExecError::FieldError{
@@ -1021,12 +1017,8 @@ fn fn_new(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
         match def.fields.get(fname) {
             Some(&ty) => {
                 if !value_is(scope, &value, ty) {
-                    return Err(From::from(ExecError::FieldTypeError{
-                        struct_name: def.name,
-                        field: fname,
-                        expected: ty,
-                        found: value.type_name(),
-                    }))
+                    return Err(From::from(ExecError::expected_field(
+                        def.name, fname, ty, &value)));
                 } else {
                     fields.insert(fname, value);
                 }

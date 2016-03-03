@@ -35,7 +35,7 @@ use integer::{Integer, Ratio};
 use lexer::{highlight_span, Span};
 use scope::{MasterScope, Scope};
 use string_fmt::FormatError;
-use name::{display_names, get_standard_name, get_system_fn,
+use name::{debug_names, display_names, get_standard_name, get_system_fn,
     Name, NameDisplay, NameStore};
 use trace::{Trace, TraceItem, set_traceback};
 use value::{FromValueRef, Value};
@@ -83,6 +83,8 @@ pub enum ExecError {
         expected: Name,
         /// Name of type received
         found: &'static str,
+        /// Value received
+        value: Option<Value>,
     },
     /// Error in `format` call
     FormatError{
@@ -138,6 +140,8 @@ pub enum ExecError {
         expected: &'static str,
         /// Name of the type received
         found: &'static str,
+        /// Value received
+        value: Option<Value>,
     },
     /// Function received a value of incorrect type
     StructMismatch{
@@ -184,6 +188,20 @@ impl ExecError {
         ExecError::TypeError{
             expected: expected,
             found: v.type_name(),
+            value: Some(v.clone()),
+        }
+    }
+
+    /// Convenience function to return a `FieldTypeError` value when a struct
+    /// field of the incorrect type is received.
+    pub fn expected_field(struct_name: Name, field: Name,
+            expected: Name, v: &Value) -> ExecError {
+        ExecError::FieldTypeError{
+            struct_name: struct_name,
+            field: field,
+            expected: expected,
+            found: v.type_name(),
+            value: Some(v.clone()),
         }
     }
 }
@@ -225,7 +243,7 @@ impl fmt::Display for ExecError {
             Overflow => f.write_str("integer overflow"),
             Panic(_) => f.write_str("panic"),
             StackOverflow => f.write_str("stack overflow"),
-            TypeError{expected, found} =>
+            TypeError{expected, found, ..} =>
                 write!(f, "type error: expected {}; found {}", expected, found),
             StructMismatch{..} => f.write_str("incorrect struct type"),
             TypeMismatch{lhs, rhs} =>
@@ -256,12 +274,24 @@ impl NameDisplay for ExecError {
                 write!(f, "no such field `{}` in struct `{}`",
                     names.get(field),
                     names.get(struct_name)),
-            FieldTypeError{struct_name, field, expected, found} => write!(f,
-                "type error for field `{}` of struct `{}`: expected {}; found {}",
-                names.get(field),
-                names.get(struct_name),
-                names.get(expected),
-                found),
+            FieldTypeError{struct_name, field, expected, found, ref value} => {
+                if let Some(ref value) = *value {
+                    write!(f, "type error for field `{}` of struct `{}`: \
+                            expected {}; found {}: {}",
+                        names.get(field),
+                        names.get(struct_name),
+                        names.get(expected),
+                        found,
+                        debug_names(names, value))
+                } else {
+                    write!(f, "type error for field `{}` of struct `{}`: \
+                            expected {}; found {}",
+                        names.get(field),
+                        names.get(struct_name),
+                        names.get(expected),
+                        found)
+                }
+            }
             FormatError{ref fmt, span, ref err} => {
                 let hi = highlight_span(fmt, span);
 
@@ -286,6 +316,15 @@ impl NameDisplay for ExecError {
                 write!(f, "struct type mismatch: `{}` and `{}`",
                     names.get(lhs),
                     names.get(rhs)),
+            TypeError{expected, found, ref value} => {
+                if let Some(ref value) = *value {
+                    write!(f, "type error: expected {}; found {}: {}",
+                        expected, found, debug_names(names, value))
+                } else {
+                    write!(f, "type error: expected {}; found {}",
+                        expected, found)
+                }
+            }
             _ => fmt::Display::fmt(self, f)
         }
     }
@@ -304,7 +343,7 @@ pub fn call_function(scope: &Scope, fun: Value, args: Vec<Value>) -> Result<Valu
     match fun {
         Value::Function(fun) => execute_function(scope, fun, args)
             .map_err(|e| { set_traceback(
-                Trace::single(TraceItem::CallSys(fun.name))); e }),
+                Trace::single(TraceItem::CallSys(fun.name), None)); e }),
         Value::Lambda(l) => execute_lambda(l, args),
         ref v => Err(From::from(ExecError::expected("function", v)))
     }
@@ -385,7 +424,7 @@ impl Machine {
             trace.push(TraceItem::CallSys(name));
         }
 
-        Trace::new(trace)
+        Trace::new(trace, None)
     }
 
     fn execute(&mut self, scope: &Scope, code: Rc<Code>) -> Result<Value, Error> {

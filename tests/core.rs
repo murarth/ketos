@@ -629,6 +629,7 @@ fn test_zero() {
         ExecError::TypeError{
             expected: "number",
             found: "unit",
+            value: Some(Value::Unit),
         }));
 }
 
@@ -649,6 +650,7 @@ fn test_and() {
         ExecError::TypeError{
             expected: "bool",
             found: "unit",
+            value: Some(Value::Unit),
         }));
 }
 
@@ -663,6 +665,7 @@ fn test_or() {
         ExecError::TypeError{
             expected: "bool",
             found: "unit",
+            value: Some(Value::Unit),
         }));
 }
 
@@ -677,6 +680,7 @@ fn test_xor() {
         ExecError::TypeError{
             expected: "bool",
             found: "unit",
+            value: Some(Value::Unit),
         }));
 }
 
@@ -689,6 +693,7 @@ fn test_not() {
         ExecError::TypeError{
             expected: "bool",
             found: "unit",
+            value: Some(Value::Unit),
         }));
 }
 
@@ -706,6 +711,7 @@ fn test_if() {
         ExecError::TypeError{
             expected: "bool",
             found: "integer",
+            value: Some(Value::Integer(_)),
         }));
 }
 

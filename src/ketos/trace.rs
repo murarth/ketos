@@ -6,32 +6,48 @@
 //! (which removes the value) can be used.
 
 use std::cell::RefCell;
-use std::fmt;
+use std::fmt::{self, Write};
 use std::mem::replace;
 
 use name::{Name, NameDisplay, NameStore};
+use pretty::pretty_print;
+use value::Value;
 
 /// Represents a series of items, beginning with the outermost context
 /// and culminating with the context in which an error was generated.
 #[derive(Clone)]
 pub struct Trace {
     items: Vec<TraceItem>,
+    expr: Option<Value>,
 }
 
 impl Trace {
     /// Creates a new `Trace` from a series of items.
-    pub fn new(items: Vec<TraceItem>) -> Trace {
-        Trace{items: items}
+    pub fn new(items: Vec<TraceItem>, expr: Option<Value>) -> Trace {
+        Trace{
+            items: items,
+            expr: expr,
+        }
     }
 
     /// Creates a new `Trace` from a single item.
-    pub fn single(item: TraceItem) -> Trace {
-        Trace::new(vec![item])
+    pub fn single(item: TraceItem, expr: Option<Value>) -> Trace {
+        Trace::new(vec![item], expr)
     }
 
     /// Returns the series of traced items.
     pub fn get_items(&self) -> &[TraceItem] {
         &self.items
+    }
+
+    /// Returns a borrowed reference to the optional contained expression.
+    pub fn get_expr(&self) -> Option<&Value> {
+        self.expr.as_ref()
+    }
+
+    /// Takes the optional contained expression and returns it.
+    pub fn take_expr(&mut self) -> Option<Value> {
+        self.expr.take()
     }
 }
 
@@ -120,6 +136,12 @@ impl NameDisplay for Trace {
                 UseModule(m, n) => try!(writeln!(f,
                     "  In {}, use {}", names.get(m), names.get(n))),
             }
+        }
+
+        if let Some(ref expr) = self.expr {
+            try!(f.write_str("    "));
+            try!(pretty_print(f, names, expr, 4));
+            try!(f.write_char('\n'));
         }
 
         Ok(())

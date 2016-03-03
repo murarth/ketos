@@ -216,6 +216,8 @@ struct Compiler<'a> {
     macro_recursion: u32,
     /// Traces item currently being compiled; used when errors are generated
     trace: Vec<TraceItem>,
+    /// Expression added to trace
+    trace_expr: Option<Value>,
 }
 
 impl<'a> Compiler<'a> {
@@ -237,6 +239,7 @@ impl<'a> Compiler<'a> {
             self_name: name,
             macro_recursion: 0,
             trace: Vec::new(),
+            trace_expr: None,
         }
     }
 
@@ -476,7 +479,7 @@ impl<'a> Compiler<'a> {
                                 self.scope.get_name(), name));
 
                             self.macro_recursion += 1;
-                            let v = try!(self.expand_macro(name, &li[1..]));
+                            let v = try!(self.expand_macro(name, &li[1..], &value));
                             try!(self.compile_value(&v));
                             self.macro_recursion -= 1;
 
@@ -484,7 +487,7 @@ impl<'a> Compiler<'a> {
 
                             return Ok(());
                         } else if is_system_operator(name) {
-                            return self.compile_operator(name, &li[1..]);
+                            return self.compile_operator(name, &li[1..], &value);
                         } else if try!(self.specialize_call(name, &li[1..])) {
                             return Ok(());
                         }
@@ -499,8 +502,11 @@ impl<'a> Compiler<'a> {
 
                         self.trace.push(TraceItem::CallExpr(self.scope.get_name()));
                     }
-                    ref v => return Err(From::from(
-                        CompileError::InvalidCallExpression(v.type_name())))
+                    ref v => {
+                        self.set_trace_expr(&value);
+                        return Err(From::from(
+                            CompileError::InvalidCallExpression(v.type_name())));
+                    }
                 }
 
                 for v in &li[1..] {
@@ -521,6 +527,7 @@ impl<'a> Compiler<'a> {
                             match get_system_fn(name) {
                                 Some(sys_fn) => {
                                     if !sys_fn.arity.accepts(n_args) {
+                                        self.set_trace_expr(&value);
                                         return Err(From::from(CompileError::ArityError{
                                             name: name,
                                             expected: sys_fn.arity,
@@ -542,8 +549,10 @@ impl<'a> Compiler<'a> {
 
                 self.trace.pop();
             }
-            Value::Comma(_, _) | Value::CommaAt(_, _) =>
-                return Err(From::from(CompileError::UnbalancedComma)),
+            Value::Comma(_, _) | Value::CommaAt(_, _) => {
+                self.set_trace_expr(&value);
+                return Err(From::from(CompileError::UnbalancedComma));
+            }
             Value::Quasiquote(ref v, n) =>
                 try!(self.compile_quasiquote(v, n)),
             _ => try!(self.load_const_value(&value))
@@ -552,8 +561,9 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn extend_trace(&mut self, trace: Trace) {
+    fn extend_trace(&mut self, mut trace: Trace) {
         self.trace.extend(trace.get_items());
+        self.trace_expr = trace.take_expr();
     }
 
     fn extend_global_trace(&mut self) {
@@ -562,16 +572,22 @@ impl<'a> Compiler<'a> {
         }
     }
 
+    fn set_trace_expr(&mut self, e: &Value) {
+        self.trace_expr = Some(e.clone());
+    }
+
     fn take_trace(&mut self) -> Trace {
-        Trace::new(replace(&mut self.trace, Vec::new()))
+        Trace::new(replace(&mut self.trace, Vec::new()), self.trace_expr.take())
     }
 
     fn is_macro(&self, name: Name) -> bool {
         self.scope.contains_macro(name)
     }
 
-    fn expand_macro(&mut self, name: Name, args: &[Value]) -> Result<Value, Error> {
+    fn expand_macro(&mut self, name: Name, args: &[Value], expr: &Value)
+            -> Result<Value, Error> {
         if self.macro_recursion >= MAX_MACRO_RECURSION {
+            self.set_trace_expr(expr);
             return Err(From::from(CompileError::MacroRecursionExceeded));
         }
 
@@ -605,10 +621,17 @@ impl<'a> Compiler<'a> {
                 };
 
                 self.eval_constant_function(name, &li[1..])
+                    .map_err(|e| {
+                        self.set_trace_expr(value);
+                        e
+                    })
             }
             Value::Quasiquote(ref v, n) => self.eval_constant_quasiquote(v, n),
             Value::Comma(_, _) |
-            Value::CommaAt(_, _) => Err(From::from(CompileError::UnbalancedComma)),
+            Value::CommaAt(_, _) => {
+                self.set_trace_expr(value);
+                Err(From::from(CompileError::UnbalancedComma))
+            }
             Value::Quote(ref v, 1) => Ok(ConstResult::Constant((**v).clone())),
             Value::Quote(ref v, n) =>
                 Ok(ConstResult::Constant((**v).clone().quote(n - 1))),
@@ -644,7 +667,10 @@ impl<'a> Compiler<'a> {
 
                 let cond = match *cond {
                     Value::Bool(v) => v,
-                    ref v => return Err(From::from(ExecError::expected("bool", v)))
+                    ref v => {
+                        self.set_trace_expr(&cond);
+                        return Err(From::from(ExecError::expected("bool", v)));
+                    }
                 };
 
                 if cond {
@@ -705,8 +731,10 @@ impl<'a> Compiler<'a> {
         match *value {
             Value::List(ref li) =>
                 self.eval_constant_quasiquote_list(li, depth),
-            Value::Comma(_, n) if n > depth =>
-                Err(From::from(CompileError::UnbalancedComma)),
+            Value::Comma(_, n) if n > depth => {
+                self.set_trace_expr(value);
+                Err(From::from(CompileError::UnbalancedComma))
+            }
             Value::Comma(ref v, n) if n == depth => self.eval_constant(v),
             Value::Comma(ref v, n) => {
                 match try!(self.eval_constant_quasi_value(v, depth - n)) {
@@ -715,8 +743,10 @@ impl<'a> Compiler<'a> {
                     res => Ok(res)
                 }
             }
-            Value::CommaAt(_, _) =>
-                Err(From::from(CompileError::InvalidCommaAt)),
+            Value::CommaAt(_, _) => {
+                self.set_trace_expr(value);
+                Err(From::from(CompileError::InvalidCommaAt))
+            }
             Value::Quote(ref v, n) => {
                 match try!(self.eval_constant_quasi_value(v, depth)) {
                     ConstResult::Constant(v) =>
@@ -742,8 +772,10 @@ impl<'a> Compiler<'a> {
 
         for (i, v) in li.iter().enumerate() {
             match *v {
-                Value::CommaAt(_, n) if n > depth =>
-                    return Err(From::from(CompileError::InvalidCommaAt)),
+                Value::CommaAt(_, n) if n > depth => {
+                    self.set_trace_expr(v);
+                    return Err(From::from(CompileError::InvalidCommaAt));
+                }
                 Value::CommaAt(ref v, n) if n == depth => {
                     let v = match try!(self.eval_constant(v)) {
                         ConstResult::IsConstant => (**v).clone(),
@@ -760,7 +792,10 @@ impl<'a> Compiler<'a> {
                     match v {
                         Value::Unit => (),
                         Value::List(li) => values.extend(li.into_vec()),
-                        ref v => return Err(From::from(ExecError::expected("list", v)))
+                        ref v => {
+                            self.set_trace_expr(v);
+                            return Err(From::from(ExecError::expected("list", v)));
+                        }
                     }
                 }
                 Value::CommaAt(ref v, n) => {
@@ -807,7 +842,8 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    fn compile_operator(&mut self, name: Name, args: &[Value]) -> Result<(), Error> {
+    fn compile_operator(&mut self, name: Name, args: &[Value], expr: &Value)
+            -> Result<(), Error> {
         let op = get_system_operator(name);
         let n_args = args.len() as u32;
 
@@ -815,6 +851,7 @@ impl<'a> Compiler<'a> {
             self.scope.get_name(), name));
 
         if !op.arity.accepts(n_args) {
+            self.set_trace_expr(expr);
             Err(From::from(CompileError::ArityError{
                 name: name,
                 expected: op.arity,
@@ -855,15 +892,19 @@ impl<'a> Compiler<'a> {
         match *value {
             Value::Comma(ref v, n) if n == depth =>
                 self.compile_value(v),
-            Value::Comma(_, n) | Value::CommaAt(_, n) if n > depth =>
-                Err(From::from(CompileError::UnbalancedComma)),
+            Value::Comma(_, n) | Value::CommaAt(_, n) if n > depth => {
+                self.set_trace_expr(value);
+                Err(From::from(CompileError::UnbalancedComma))
+            }
             Value::Comma(ref v, n) => {
                 try!(self.compile_quasi_value(v, depth - n));
                 try!(self.push_instruction(Instruction::Comma(n)));
                 Ok(())
             }
-            Value::CommaAt(_, n) if n == depth =>
-                Err(From::from(CompileError::InvalidCommaAt)),
+            Value::CommaAt(_, n) if n == depth => {
+                self.set_trace_expr(value);
+                Err(From::from(CompileError::InvalidCommaAt))
+            }
             Value::List(ref li) =>
                 self.compile_quasiquote_list(li, depth),
             Value::Quote(ref v, n) => {
@@ -923,8 +964,10 @@ impl<'a> Compiler<'a> {
                     }
                     n_lists += 1;
                 }
-                Value::CommaAt(_, n) if n > depth =>
-                    return Err(From::from(CompileError::UnbalancedComma)),
+                Value::CommaAt(_, n) if n > depth => {
+                    self.set_trace_expr(v);
+                    return Err(From::from(CompileError::UnbalancedComma));
+                }
                 Value::CommaAt(ref v, n) => {
                     n_items += 1;
                     try!(self.compile_quasi_value(v, depth - n));
@@ -959,7 +1002,7 @@ impl<'a> Compiler<'a> {
 
     // Returns true if a value found within a quasiquoted value does not
     // contain any expressions to be evaluated.
-    fn is_quasi_const(&self, value: &Value, depth: u32) -> Result<bool, Error> {
+    fn is_quasi_const(&mut self, value: &Value, depth: u32) -> Result<bool, Error> {
         match *value {
             Value::List(ref li) => {
                 for v in li {
@@ -973,8 +1016,10 @@ impl<'a> Compiler<'a> {
             Value::Quasiquote(ref v, n) => self.is_quasi_const(v, depth + n),
             Value::Quote(ref v, _) => self.is_quasi_const(v, depth),
             Value::Comma(_, n)
-            | Value::CommaAt(_, n) if n > depth =>
-                Err(From::from(CompileError::UnbalancedComma)),
+            | Value::CommaAt(_, n) if n > depth => {
+                self.set_trace_expr(value);
+                Err(From::from(CompileError::UnbalancedComma))
+            }
             Value::Comma(_, n)
             | Value::CommaAt(_, n) if n == depth => Ok(false),
             Value::Comma(ref v, n)
@@ -1660,18 +1705,24 @@ fn op_let(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
             for v in li {
                 match *v {
                     Value::List(ref li) if li.len() == 2 => {
-                        let name = try!(get_name(&li[0]));
+                        let name = try!(get_name(compiler, &li[0]));
 
                         try!(compiler.compile_value(&li[1]));
                         compiler.push_var(name);
                         try!(compiler.push_instruction(Instruction::Push));
                     }
-                    _ => return Err(From::from(CompileError::SyntaxError(
-                        "expected list of 2 elements")))
+                    _ => {
+                        compiler.set_trace_expr(v);
+                        return Err(From::from(CompileError::SyntaxError(
+                            "expected list of 2 elements")))
+                    }
                 }
             }
         }
-        _ => return Err(From::from(CompileError::SyntaxError("expected list")))
+        ref v => {
+            compiler.set_trace_expr(v);
+            return Err(From::from(CompileError::SyntaxError("expected list")))
+        }
     }
 
     try!(compiler.compile_value(&args[1]));
@@ -1708,7 +1759,7 @@ fn op_define(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
             Ok(())
         }
         Value::List(ref li) => {
-            let name = try!(get_name(&li[0]));
+            let name = try!(get_name(compiler, &li[0]));
 
             // Replace operator item with more specific item
             compiler.trace.pop();
@@ -1725,7 +1776,10 @@ fn op_define(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
             try!(compiler.push_instruction(Instruction::SetDef(c)));
             Ok(())
         }
-        _ => Err(From::from(CompileError::SyntaxError("expected name or list")))
+        ref v => {
+            compiler.set_trace_expr(v);
+            Err(From::from(CompileError::SyntaxError("expected name or list")))
+        }
     }
 }
 
@@ -1733,10 +1787,13 @@ fn op_define(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 fn op_macro(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     let (name, params) = match args[0] {
         Value::List(ref li) => {
-            let name = try!(get_name(&li[0]));
+            let name = try!(get_name(compiler, &li[0]));
             (name, &li[1..])
         }
-        _ => return Err(From::from(CompileError::SyntaxError("expected list")))
+        ref v => {
+            compiler.set_trace_expr(v);
+            return Err(From::from(CompileError::SyntaxError("expected list")));
+        }
     };
 
     // Replace operator item with more specific item
@@ -1768,7 +1825,7 @@ fn op_macro(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 ///              (num integer)))
 /// ```
 fn op_struct(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
-    let name = try!(get_name(&args[0]));
+    let name = try!(get_name(compiler, &args[0]));
 
     // Replace operator item with more specific item
     compiler.trace.pop();
@@ -1784,17 +1841,23 @@ fn op_struct(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
             for v in li {
                 match *v {
                     Value::List(ref li) if li.len() == 2 => {
-                        let fname = try!(get_name(&li[0]));
-                        let fty = try!(get_name(&li[1]));
+                        let fname = try!(get_name(compiler, &li[0]));
+                        let fty = try!(get_name(compiler, &li[1]));
 
                         fields.insert(fname, fty);
                     }
-                    _ => return Err(From::from(CompileError::SyntaxError(
-                        "expected list of 2 elements")))
+                    _ => {
+                        compiler.set_trace_expr(v);
+                        return Err(From::from(CompileError::SyntaxError(
+                            "expected list of 2 elements")))
+                    }
                 }
             }
         }
-        _ => return Err(From::from(CompileError::SyntaxError("expected list")))
+        ref v => {
+            compiler.set_trace_expr(v);
+            return Err(From::from(CompileError::SyntaxError("expected list")));
+        }
     }
 
     let def = Value::StructDef(Rc::new(StructDef::new(name, fields.into_slice())));
@@ -1913,13 +1976,17 @@ fn op_case(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 
     for case in &args[1..] {
         if else_case {
+            compiler.set_trace_expr(case);
             return Err(From::from(CompileError::SyntaxError("unreachable case")));
         }
 
         let li = match *case {
             Value::List(ref li) if li.len() == 2 => li,
-            _ => return Err(From::from(CompileError::SyntaxError(
-                "expected list of 2 elements")))
+            _ => {
+                compiler.set_trace_expr(case);
+                return Err(From::from(CompileError::SyntaxError(
+                    "expected list of 2 elements")));
+            }
         };
 
         let pat = &li[0];
@@ -1951,8 +2018,11 @@ fn op_case(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
                 else_case = true;
                 compiler.current_block().jump_to(JumpInstruction::Jump, code_begin);
             }
-            _ => return Err(From::from(CompileError::SyntaxError(
-                "expected list or `else`")))
+            ref v => {
+                compiler.set_trace_expr(v);
+                return Err(From::from(CompileError::SyntaxError(
+                    "expected list or `else`")));
+            }
         }
 
         let prev_block = compiler.cur_block as u32;
@@ -2002,14 +2072,18 @@ fn op_cond(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 
     for arg in args {
         if else_case {
+            compiler.set_trace_expr(arg);
             return Err(From::from(CompileError::SyntaxError(
                 "unreachable condition")));
         }
 
         let case = match *arg {
             Value::List(ref li) if li.len() == 2 => li,
-            _ => return Err(From::from(CompileError::SyntaxError(
-                "expected list of 2 elements")))
+            _ => {
+                compiler.set_trace_expr(arg);
+                return Err(From::from(CompileError::SyntaxError(
+                    "expected list of 2 elements")));
+            }
         };
 
         let cond = &case[0];
@@ -2066,7 +2140,10 @@ fn op_lambda(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     let li = match args[0] {
         Value::Unit => &[][..],
         Value::List(ref li) => &li[..],
-        _ => return Err(From::from(CompileError::SyntaxError("expected list")))
+        ref v => {
+            compiler.set_trace_expr(v);
+            return Err(From::from(CompileError::SyntaxError("expected list")));
+        }
     };
 
     let (lambda, captures) = try!(make_lambda(
@@ -2090,14 +2167,17 @@ fn op_export(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     let li = match args[0] {
         Value::Unit => &[][..],
         Value::List(ref li) => &li[..],
-        _ => return Err(From::from(CompileError::SyntaxError(
-            "expected list of names in `export`")))
+        ref v => {
+            compiler.set_trace_expr(v);
+            return Err(From::from(CompileError::SyntaxError(
+                "expected list of names in `export`")));
+        }
     };
 
     let mut names = NameSet::new();
 
     for v in li {
-        names.insert(try!(get_name(v)));
+        names.insert(try!(get_name(compiler, v)));
     }
 
     compiler.scope.set_exports(names.into_slice());
@@ -2115,7 +2195,7 @@ fn op_export(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 ///          :macro (gamma))
 /// ```
 fn op_use(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
-    let mod_name = try!(get_name(&args[0]));
+    let mod_name = try!(get_name(compiler, &args[0]));
 
     // Replace operator item with more specific item
     compiler.trace.pop();
@@ -2137,8 +2217,11 @@ fn op_use(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
             try!(import_values(mod_name, &mut imp_set,
                 compiler.scope, &m.scope, li));
         }
-        _ => return Err(From::from(CompileError::SyntaxError(
-            "expected list of names or `:all`")))
+        ref v => {
+            compiler.set_trace_expr(v);
+            return Err(From::from(CompileError::SyntaxError(
+                "expected list of names or `:all`")));
+        }
     }
 
     let mut iter = args[2..].iter();
@@ -2155,8 +2238,11 @@ fn op_use(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
                     Some(&Value::List(ref li)) =>
                         try!(import_constants(mod_name, &mut imp_set,
                             compiler.scope, &m.scope, li)),
-                    _ => return Err(From::from(CompileError::SyntaxError(
-                        "expected `:all` or list of names after keyword")))
+                    _ => {
+                        compiler.set_trace_expr(arg);
+                        return Err(From::from(CompileError::SyntaxError(
+                            "expected `:all` or list of names after keyword")));
+                    }
                 }
             }
             Value::Keyword(standard_names::MACRO) => {
@@ -2169,12 +2255,18 @@ fn op_use(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
                     Some(&Value::List(ref li)) =>
                         try!(import_macros(mod_name, &mut imp_set,
                             compiler.scope, &m.scope, li)),
-                    _ => return Err(From::from(CompileError::SyntaxError(
-                        "expected `:all` or list of names after keyword")))
+                    _ => {
+                        compiler.set_trace_expr(arg);
+                        return Err(From::from(CompileError::SyntaxError(
+                            "expected `:all` or list of names after keyword")));
+                    }
                 }
             }
-            _ => return Err(From::from(CompileError::SyntaxError(
-                "expected keyword `:const` or `:macro`")))
+            ref v => {
+                compiler.set_trace_expr(v);
+                return Err(From::from(CompileError::SyntaxError(
+                    "expected keyword `:const` or `:macro`")));
+            }
         }
     }
 
@@ -2193,7 +2285,7 @@ fn op_use(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 /// (const bar (+ foo 1))
 /// ```
 fn op_const(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
-    let name = try!(get_name(&args[0]));
+    let name = try!(get_name(compiler, &args[0]));
 
     // Replace operator item with more specific item
     compiler.trace.pop();
@@ -2211,8 +2303,10 @@ fn op_const(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     match try!(compiler.eval_constant(&value)) {
         ConstResult::IsConstant => (),
         ConstResult::IsRuntime |
-        ConstResult::Partial(_) =>
-            return Err(From::from(CompileError::NotConstant(name))),
+        ConstResult::Partial(_) => {
+            compiler.set_trace_expr(&value);
+            return Err(From::from(CompileError::NotConstant(name)));
+        }
         ConstResult::Constant(v) => value = Owned(v)
     }
 
@@ -2309,8 +2403,7 @@ fn each_import<F>(items: &[Value], mut f: F) -> Result<(), CompileError>
                     "expected name following keyword"))
             },
             Value::Name(name) => (name, name),
-            _ => return Err(CompileError::SyntaxError(
-                "expected name or keyword"))
+            _ => return Err(CompileError::SyntaxError("expected name or keyword"))
         };
 
         try!(f(src, dest));
@@ -2319,10 +2412,13 @@ fn each_import<F>(items: &[Value], mut f: F) -> Result<(), CompileError>
     Ok(())
 }
 
-fn get_name(v: &Value) -> Result<Name, CompileError> {
+fn get_name(compiler: &mut Compiler, v: &Value) -> Result<Name, CompileError> {
     match *v {
         Value::Name(name) => Ok(name),
-        _ => Err(CompileError::SyntaxError("expected name"))
+        _ => {
+            compiler.set_trace_expr(v);
+            Err(CompileError::SyntaxError("expected name"))
+        }
     }
 }
 
@@ -2391,7 +2487,7 @@ fn make_lambda(compiler: &mut Compiler, name: Option<Name>,
                                 "expected name after `:rest`")))
                         };
 
-                        rest = Some(try!(get_name(arg)));
+                        rest = Some(try!(get_name(compiler, arg)));
 
                         match iter.next() {
                             Some(_) => return Err(From::from(CompileError::SyntaxError(
@@ -2405,11 +2501,14 @@ fn make_lambda(compiler: &mut Compiler, name: Option<Name>,
                 continue;
             }
             Value::List(ref li) if li.len() == 2 => {
-                let name = try!(get_name(&li[0]));
+                let name = try!(get_name(compiler, &li[0]));
                 (name, Some(li[1].clone()))
             }
-            _ => return Err(From::from(CompileError::SyntaxError(
-                "expected name, keyword, or list of 2 elements")))
+            ref v => {
+                compiler.set_trace_expr(v);
+                return Err(From::from(CompileError::SyntaxError(
+                    "expected name, keyword, or list of 2 elements")));
+            }
         };
 
         let exists = params.iter().any(|&(n, _)| n == name) ||

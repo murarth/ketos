@@ -15,6 +15,7 @@ use exec::ExecError;
 use integer::Integer;
 use lexer::{BytePos, Span};
 use name::{debug_names, display_names, NameDebug, NameDisplay, NameStore};
+use pretty::pretty_print;
 use value::Value;
 
 /// Represents an error in formatting a string.
@@ -293,6 +294,7 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
                         'x' => try!(self.format_integer(&dir, buf, 16)),
                         'p' => try!(self.format_plural(&dir, buf)),
                         't' => try!(self.format_tab(&dir, buf)),
+                        'z' => try!(self.pretty_print(&dir, buf)),
                         '?' => try!(self.process_indirection(&dir, buf)),
                         '*' => try!(self.process_goto(&dir)),
                         '<' => {
@@ -472,6 +474,19 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
                     FormatError::IncompleteDirective))
             }
         }
+    }
+
+    fn pretty_print(&mut self, dir: &Directive, buf: &mut String)
+            -> Result<(), ExecError> {
+        let mut fields = FieldParser::new(dir.fields);
+        let indent = try!(self.get_u32_field(&mut fields, dir.span)).unwrap_or(0);
+        try!(self.no_fields(fields, dir.span));
+
+        let arg = try!(self.consume_arg(dir.span));
+
+        let _ = pretty_print(buf, self.names, arg, indent);
+
+        Ok(())
     }
 
     fn format_aesthetic(&mut self, dir: &Directive, buf: &mut String)

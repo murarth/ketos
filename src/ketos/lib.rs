@@ -64,6 +64,7 @@ pub mod lexer;
 pub mod module;
 pub mod name;
 pub mod parser;
+pub mod pretty;
 pub mod rc_vec;
 pub mod run;
 pub mod scope;

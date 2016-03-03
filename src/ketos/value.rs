@@ -424,10 +424,12 @@ pub trait ForeignValue: AnyValue + fmt::Debug {
     /// Calls the value as a function.
     ///
     /// The default implementation unconditionally returns an error.
-    fn call_value(&self, _scope: &Scope, _args: &mut [Value]) -> Result<Value, Error> {
+    fn call_value(&self, _scope: &Scope, _args: &mut [Value])
+            -> Result<Value, Error> {
         Err(From::from(ExecError::TypeError{
             expected: "function",
             found: self.type_name(),
+            value: None,
         }))
     }
 }
