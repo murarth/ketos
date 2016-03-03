@@ -7,7 +7,7 @@ use exec::ExecError;
 use function::Arity::Exact;
 use module::{Module, ModuleBuilder};
 use scope::Scope;
-use value::{FromValueRef, Value};
+use value::Value;
 
 /// Loads the `math` module into the given scope.
 pub fn load(scope: Scope) -> Module {
@@ -150,5 +150,10 @@ fn fn_tanh(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 fn get_float(v: &Value) -> Result<f64, ExecError> {
-    FromValueRef::from_value_ref(v)
+    match *v {
+        Value::Float(f) => Ok(f),
+        Value::Integer(ref i) => i.to_f64().ok_or(ExecError::Overflow),
+        Value::Ratio(ref r) => r.to_f64().ok_or(ExecError::Overflow),
+        ref v => Err(ExecError::expected("number", v))
+    }
 }
