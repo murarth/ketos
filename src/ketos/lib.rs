@@ -41,7 +41,7 @@ pub use exec::{ExecError, panic, panic_none};
 pub use function::Arity;
 pub use interpreter::Interpreter;
 pub use integer::{Integer, Ratio};
-pub use io::IoError;
+pub use io::{File, GlobalIo, IoError, SharedWrite};
 pub use module::{BuiltinModuleLoader, FileModuleLoader, Module, ModuleBuilder, ModuleLoader};
 pub use name::{Name, NameStore};
 pub use parser::{ParseError, ParseErrorKind};

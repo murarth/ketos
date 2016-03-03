@@ -1,11 +1,10 @@
 //! Contains values associated with names in a given execution context.
 
 use std::cell::{Ref, RefMut, RefCell};
-use std::io;
 use std::rc::{Rc, Weak};
 
 use function::{Function, Lambda, SystemFn};
-use io::SharedWrite;
+use io::GlobalIo;
 use lexer::CodeMap;
 use module::ModuleRegistry;
 use name::{get_standard_name, get_system_fn, is_system_operator,
@@ -21,28 +20,6 @@ pub struct GlobalScope {
     codemap: Rc<RefCell<CodeMap>>,
     modules: Rc<ModuleRegistry>,
     io: Rc<GlobalIo>,
-}
-
-/// Contains global shared I/O objects
-pub struct GlobalIo {
-    /// Shared standard output writer
-    pub stdout: Rc<SharedWrite>,
-}
-
-impl GlobalIo {
-    /// Creates a `GlobalIo` instance using the given `stdout` writer.
-    pub fn new(stdout: Rc<SharedWrite>) -> GlobalIo {
-        GlobalIo{
-            stdout: stdout,
-        }
-    }
-}
-
-impl Default for GlobalIo {
-    /// Creates a `GlobalIo` instance using standard output writer.
-    fn default() -> GlobalIo {
-        GlobalIo::new(Rc::new(io::stdout()))
-    }
 }
 
 struct Namespace {

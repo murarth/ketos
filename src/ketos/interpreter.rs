@@ -10,12 +10,12 @@ use bytecode::Code;
 use compile::compile;
 use error::Error;
 use exec::{call_function, execute, ExecError};
-use io::{IoError, IoMode};
+use io::{GlobalIo, IoError, IoMode};
 use lexer::{CodeMap, Lexer};
 use module::{BuiltinModuleLoader, FileModuleLoader, ModuleLoader, ModuleRegistry};
 use name::{debug_names, display_names, Name, NameStore};
 use parser::{ParseError, Parser};
-use scope::{GlobalIo, GlobalScope, MasterScope, Scope};
+use scope::{GlobalScope, MasterScope, Scope};
 use trace::Trace;
 use value::Value;
 
@@ -48,13 +48,19 @@ impl Interpreter {
         let modules = Rc::new(ModuleRegistry::new(loader));
         let io = Rc::new(GlobalIo::default());
 
-        Interpreter{
-            scope: Rc::new(GlobalScope::new(
+        Interpreter::with_scope(
+            Rc::new(GlobalScope::new(
                 name,
                 names.clone(),
                 codemap.clone(),
                 modules,
-                io)),
+                io)))
+    }
+
+    /// Creates a new `Interpreter` using the given `Scope` instance.
+    pub fn with_scope(scope: Scope) -> Interpreter {
+        Interpreter{
+            scope: scope,
         }
     }
 

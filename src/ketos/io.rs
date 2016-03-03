@@ -4,6 +4,34 @@ use std::fmt::{self, Arguments};
 use std::fs;
 use std::io::{self, Stdout, Stderr, Write};
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
+
+/// Contains global shared I/O objects
+pub struct GlobalIo {
+    /// Shared standard output writer
+    pub stdout: Rc<SharedWrite>,
+}
+
+impl GlobalIo {
+    /// Creates a `GlobalIo` instance using the given `stdout` writer.
+    pub fn new(stdout: Rc<SharedWrite>) -> GlobalIo {
+        GlobalIo{
+            stdout: stdout,
+        }
+    }
+
+    /// Creates a `GlobalIo` instance whose `stdout` ignores all output.
+    pub fn null() -> GlobalIo {
+        GlobalIo::new(Rc::new(Sink))
+    }
+}
+
+impl Default for GlobalIo {
+    /// Creates a `GlobalIo` instance using standard output writer.
+    fn default() -> GlobalIo {
+        GlobalIo::new(Rc::new(io::stdout()))
+    }
+}
 
 /// Describes the cause of an `io::Error`.
 #[derive(Debug)]
