@@ -428,10 +428,12 @@ impl Machine {
     }
 
     fn execute(&mut self, scope: &Scope, code: Rc<Code>) -> Result<Value, Error> {
-        if code.req_params != 0 {
+        let arity = code.arity();
+
+        if arity != Arity::Exact(0) {
             return Err(From::from(ExecError::ArityError{
                 name: code.name,
-                expected: code.arity(),
+                expected: arity,
                 found: 0,
             }));
         }
