@@ -332,7 +332,7 @@ impl<'a, 'lex> Parser<'a, 'lex> {
     }
 
     fn next(&mut self) -> Result<(Span, Token<'lex>), ParseError> {
-        let r = try!(self.peek_all());
+        let r = try!(self.peek());
         self.cur_token = None;
         Ok(r)
     }
