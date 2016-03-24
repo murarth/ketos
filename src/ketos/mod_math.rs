@@ -12,26 +12,28 @@ use value::Value;
 /// Loads the `math` module into the given scope.
 pub fn load(scope: Scope) -> Module {
     ModuleBuilder::new("math", scope)
-        .add_constant("e",     consts::E)
-        .add_constant("pi",    consts::PI)
-        .add_function("acos",  fn_acos,   Exact(1))
-        .add_function("acosh", fn_acosh,  Exact(1))
-        .add_function("asin",  fn_asin,   Exact(1))
-        .add_function("asinh", fn_asinh,  Exact(1))
-        .add_function("atan",  fn_atan,   Exact(1))
-        .add_function("atanh", fn_atanh,  Exact(1))
-        .add_function("atan2", fn_atan2,  Exact(2))
-        .add_function("cos",   fn_cos,    Exact(1))
-        .add_function("cosh",  fn_cosh,   Exact(1))
-        .add_function("ln",    fn_ln,     Exact(1))
-        .add_function("log",   fn_log,    Exact(2))
-        .add_function("log2",  fn_log2,   Exact(1))
-        .add_function("log10", fn_log10,  Exact(1))
-        .add_function("sin",   fn_sin,    Exact(1))
-        .add_function("sinh",  fn_sinh,   Exact(1))
-        .add_function("sqrt",  fn_sqrt,   Exact(1))
-        .add_function("tan",   fn_tan,    Exact(1))
-        .add_function("tanh",  fn_tanh,   Exact(1))
+        .add_constant("e",          consts::E)
+        .add_constant("pi",         consts::PI)
+        .add_function("acos",       fn_acos,    Exact(1))
+        .add_function("acosh",      fn_acosh,   Exact(1))
+        .add_function("asin",       fn_asin,    Exact(1))
+        .add_function("asinh",      fn_asinh,   Exact(1))
+        .add_function("atan",       fn_atan,    Exact(1))
+        .add_function("atanh",      fn_atanh,   Exact(1))
+        .add_function("atan2",      fn_atan2,   Exact(2))
+        .add_function("cos",        fn_cos,     Exact(1))
+        .add_function("cosh",       fn_cosh,    Exact(1))
+        .add_function("degrees",    fn_degrees, Exact(1))
+        .add_function("ln",         fn_ln,      Exact(1))
+        .add_function("log",        fn_log,     Exact(2))
+        .add_function("log2",       fn_log2,    Exact(1))
+        .add_function("log10",      fn_log10,   Exact(1))
+        .add_function("radians",    fn_radians, Exact(1))
+        .add_function("sin",        fn_sin,     Exact(1))
+        .add_function("sinh",       fn_sinh,    Exact(1))
+        .add_function("sqrt",       fn_sqrt,    Exact(1))
+        .add_function("tan",        fn_tan,     Exact(1))
+        .add_function("tanh",       fn_tanh,    Exact(1))
         .finish()
 }
 
@@ -94,6 +96,12 @@ fn fn_cosh(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
     Ok(f.cosh().into())
 }
 
+/// `degrees` converts a value in radians to the equivalent value in degrees.
+fn fn_degrees(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+    let f = try!(get_float(&args[0]));
+    Ok(f.to_degrees().into())
+}
+
 /// `ln` returns the natural logarithm of a number.
 fn fn_ln(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
     let f = try!(get_float(&args[0]));
@@ -117,6 +125,12 @@ fn fn_log2(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
 fn fn_log10(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
     let f = try!(get_float(&args[0]));
     Ok(f.log10().into())
+}
+
+/// `radians` converts a value in degrees to the equivalent value in radians.
+fn fn_radians(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+    let f = try!(get_float(&args[0]));
+    Ok(f.to_radians().into())
 }
 
 /// `sin` computes the sine of a number, in radians.
