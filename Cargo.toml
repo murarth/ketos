@@ -23,7 +23,7 @@ name = "ketos"
 path = "src/ketos/lib.rs"
 
 [dependencies]
-byteorder = "0.4"
+byteorder = "0.5.1"
 getopts = "0.2"
 libc = "0.2"
 num = "0.1.28"

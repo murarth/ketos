@@ -8,7 +8,7 @@ use std::path::Path;
 use std::rc::Rc;
 use std::str::from_utf8;
 
-use byteorder::{self, BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
 
 use bytecode::{BYTECODE_VERSION, Code};
 use error::Error;
@@ -291,13 +291,8 @@ pub fn write_bytecode<W: Write>(w: &mut W, path: &Path, module: &ModuleCode,
     try!(w.write_all(MAGIC_NUMBER)
         .map_err(|e| IoError::new(IoMode::Write, path, e)));
 
-    match w.write_u32::<BigEndian>(BYTECODE_VERSION) {
-        Ok(_) => (),
-        Err(byteorder::Error::UnexpectedEOF) =>
-            return Err(From::from(DecodeError::UnexpectedEof)),
-        Err(byteorder::Error::Io(e)) =>
-            return Err(From::from(IoError::new(IoMode::Write, path, e)))
-    }
+    try!(w.write_u32::<BigEndian>(BYTECODE_VERSION)
+        .map_err(|e| IoError::new(IoMode::Write, path, e)));
 
     try!(w.write_all(&head_enc.into_bytes())
         .and_then(|_| w.write_all(&body_enc.into_bytes()))
