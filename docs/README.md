@@ -42,6 +42,20 @@ should only be used when you want to "comment out" a chunk of code.
 (foo) ; This comment draws attention to a line of code.
 ```
 
+#### Doc Comments
+
+Line comments beginning with two semicolons (`;;`) can be used to document
+expressions that create an item, such as `const`, `define`, `lambda`, `macro`,
+and `struct`.
+
+```lisp
+;; Adds `1` to the given value.
+(define (plus-1 a) (+ a 1))
+```
+
+Line comments beginning with three semicolons (`;;;`) at the top of a file can
+be used to document a module.
+
 ### Functions
 
 System functions perform basic functions on standard values.

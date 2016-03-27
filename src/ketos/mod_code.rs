@@ -7,7 +7,7 @@ use compile::compile;
 use error::Error;
 use exec::ExecError;
 use function::{plural, Lambda};
-use function::Arity::Exact;
+use function::Arity::*;
 use io::SharedWrite;
 use module::{Module, ModuleBuilder};
 use name::{debug_names, get_standard_name};
@@ -17,10 +17,13 @@ use value::{FromValueRef, Value};
 /// Loads the `code` module into the given scope.
 pub fn load(scope: Scope) -> Module {
     ModuleBuilder::new("code", scope)
-        .add_function("compile",     fn_compile,     Exact(1))
-        .add_function("disassemble", fn_disassemble, Exact(1))
-        .add_function("get-const",   fn_get_const,   Exact(2))
-        .add_function("get-value",   fn_get_value,   Exact(2))
+        .add_function("compile",        fn_compile,         Exact(1))
+        .add_function("disassemble",    fn_disassemble,     Exact(1))
+        .add_function("documentation",  fn_documentation,   Exact(1))
+        .add_function("get-const",      fn_get_const,       Exact(2))
+        .add_function("get-value",      fn_get_value,       Exact(2))
+        .add_function("module-documentation",
+                                fn_module_documentation,    Range(0, 1))
         .finish()
 }
 
@@ -191,6 +194,39 @@ fn print_instruction(scope: &Scope, lambda: &Lambda,
     Ok(())
 }
 
+/// `documentation` returns the docstring for a value.
+///
+/// If the named value does not exist or does not have a docstring,
+/// `()` is returned.
+fn fn_documentation(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+    match args[0] {
+        Value::Lambda(ref l) => {
+            Ok(l.code.doc.clone()
+                .map(Value::from)
+                .unwrap_or(Value::Unit))
+        }
+        Value::Name(name) => {
+            Ok(scope
+                .with_doc(name, |d| d.into())
+                .or_else(|| scope.get_value(name)
+                    .and_then(|v| value_doc(&v))
+                    .map(Value::from))
+                .or_else(|| scope.get_macro(name)
+                    .and_then(|l| l.code.doc.clone())
+                    .map(Value::from))
+                .unwrap_or(Value::Unit))
+        }
+        ref v => Err(From::from(ExecError::expected("name or function", v)))
+    }
+}
+
+fn value_doc(v: &Value) -> Option<String> {
+    match *v {
+        Value::Lambda(ref l) => l.code.doc.clone(),
+        _ => None
+    }
+}
+
 /// `get-const` returns the specified const value from a `Lambda` object.
 fn fn_get_const(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
     match args[0] {
@@ -219,4 +255,28 @@ fn fn_get_value(_scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
         }
         ref v => Err(From::from(ExecError::expected("lambda", v)))
     }
+}
+
+/// `module-documentation` returns the docstring for the named module.
+///
+/// If the named module is not currently loaded or it does not have a docstring,
+/// `()` is returned.
+///
+/// When given no parameters, the documentation for the current scope is returned.
+fn fn_module_documentation(scope: &Scope, args: &mut [Value]) -> Result<Value, Error> {
+    if args.len() == 0 {
+        return Ok(scope.with_module_doc(|d| d.into())
+            .unwrap_or(Value::Unit));
+    }
+
+    let name = match args[0] {
+        Value::Name(name) => name,
+        ref v => return Err(From::from(ExecError::expected("name", v)))
+    };
+
+    let m = scope.get_modules();
+
+    Ok(m.get_module(name)
+        .and_then(|m| m.scope.with_module_doc(|d| d.into()))
+        .unwrap_or(Value::Unit))
 }

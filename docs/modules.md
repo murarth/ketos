@@ -16,16 +16,19 @@ The `code` module offers facilities for inspecting compiled bytecode objects.
 
 * `compile` returns a compiled `lambda` value from an expression.
 * `disassemble` prints information about a `lambda` value to stdout.
+* `documentation` returns the docstring for the named item.
 * `get-const` returns a numbered const value from a `lambda` object.
 * `get-value` returns a numbered enclosed value from a `lambda` object.
+* `module-documentation` returns the docstring for the named module.
 
 ## `math`
 
 The `math` module contains mathematical constants and functions.
 
 These functions are identical to their Rust counterparts and include:
-`acos`, `acosh`, `asin`, `asinh`, `atan`, `atanh`, `atan2`, `cos`, `cosh`, `ln`,
-`log`, `log2`, `log10`, `sin`, `sinh`, `sqrt`, `tan`, and `tanh`.
+`acos`, `acosh`, `asin`, `asinh`, `atan`, `atanh`, `atan2`, `cos`, `cosh`,
+`degrees`, `ln`, `log`, `log2`, `log10`, `radians`, `sin`, `sinh`, `sqrt`,
+`tan`, and `tanh`.
 
 Constants included are: `e` (Euler's number) and `pi`.
 

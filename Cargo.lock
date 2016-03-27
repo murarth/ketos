@@ -1,6 +1,6 @@
 [root]
 name = "ketos"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "assert_matches 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "byteorder 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",

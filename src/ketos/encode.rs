@@ -15,7 +15,8 @@ use error::Error;
 use function::Lambda;
 use integer::{Integer, Ratio, Sign};
 use io::{IoError, IoMode};
-use name::{Name, NameMap, NameSet, NameSetSlice, NameStore,
+use module::ModuleCode;
+use name::{Name, NameMap, NameSet, NameStore,
     NameInputConversion, NameOutputConversion};
 use scope::{ImportSet, Scope};
 use value::{StructDef, Value};
@@ -98,18 +99,6 @@ impl fmt::Display for EncodeError {
     }
 }
 
-/// Contains code from a compiled module
-pub struct ModuleCode {
-    /// Decoded `Code` objects
-    pub code: Vec<Rc<Code>>,
-    /// Exported names
-    pub exports: NameSetSlice,
-    /// Imported names
-    pub imports: Vec<ImportSet>,
-    /// Decoded macro objects
-    pub macros: Vec<(Name, Rc<Code>)>,
-}
-
 /// Read compiled bytecode from a file
 pub fn read_bytecode_file(path: &Path, scope: &Scope) -> Result<ModuleCode, Error> {
     let mut f = try!(File::open(path)
@@ -163,34 +152,25 @@ pub fn read_bytecode<R: Read>(r: &mut R, path: &Path,
         let mod_name = try!(dec.read_name(&names));
         let mut imp = ImportSet::new(mod_name);
 
-        let n_consts = try!(dec.read_uint());
+        let n_names = try!(dec.read_uint());
 
-        for _ in 0..n_consts {
+        for _ in 0..n_names {
             let src = try!(dec.read_name(&names));
             let dest = try!(dec.read_name(&names));
 
-            imp.constants.push((src, dest));
-        }
-
-        let n_macros = try!(dec.read_uint());
-
-        for _ in 0..n_macros {
-            let src = try!(dec.read_name(&names));
-            let dest = try!(dec.read_name(&names));
-
-            imp.macros.push((src, dest));
-        }
-
-        let n_values = try!(dec.read_uint());
-
-        for _ in 0..n_values {
-            let src = try!(dec.read_name(&names));
-            let dest = try!(dec.read_name(&names));
-
-            imp.values.push((src, dest));
+            imp.names.push((src, dest));
         }
 
         imports.push(imp);
+    }
+
+    let n_consts = try!(dec.read_uint());
+    let mut consts = Vec::with_capacity(n_consts as usize);
+
+    for _ in 0..n_consts {
+        let name = try!(dec.read_name(&names));
+        let value = try!(dec.read_value(&names));
+        consts.push((name, value));
     }
 
     let n_macros = try!(dec.read_uint());
@@ -202,6 +182,23 @@ pub fn read_bytecode<R: Read>(r: &mut R, path: &Path,
         macros.push((name, code));
     }
 
+    let doc = try!(dec.read_string());
+    let doc = if doc.is_empty() {
+        None
+    } else {
+        Some(doc.to_owned())
+    };
+
+    let n_docs = try!(dec.read_uint());
+    let mut docs = Vec::with_capacity(n_docs as usize);
+
+    for _ in 0..n_docs {
+        let name = try!(dec.read_name(&names));
+        let doc = try!(dec.read_string());
+
+        docs.push((name, doc.to_owned()));
+    }
+
     let mut exprs = Vec::new();
 
     while !dec.is_empty() {
@@ -210,9 +207,12 @@ pub fn read_bytecode<R: Read>(r: &mut R, path: &Path,
 
     Ok(ModuleCode{
         code: exprs,
+        constants: consts,
         macros: macros,
         exports: exports.into_slice(),
         imports: imports,
+        module_doc: doc,
+        docs: docs,
     })
 }
 
@@ -235,26 +235,19 @@ pub fn write_bytecode<W: Write>(w: &mut W, path: &Path, module: &ModuleCode,
     for imp in &module.imports {
         try!(body_enc.write_name(imp.module_name, &mut names));
 
-        try!(body_enc.write_len(imp.constants.len()));
+        try!(body_enc.write_len(imp.names.len()));
 
-        for &(src, dest) in &imp.constants {
+        for &(src, dest) in &imp.names {
             try!(body_enc.write_name(src, &mut names));
             try!(body_enc.write_name(dest, &mut names));
         }
+    }
 
-        try!(body_enc.write_len(imp.macros.len()));
+    try!(body_enc.write_len(module.constants.len()));
 
-        for &(src, dest) in &imp.macros {
-            try!(body_enc.write_name(src, &mut names));
-            try!(body_enc.write_name(dest, &mut names));
-        }
-
-        try!(body_enc.write_len(imp.values.len()));
-
-        for &(src, dest) in &imp.values {
-            try!(body_enc.write_name(src, &mut names));
-            try!(body_enc.write_name(dest, &mut names));
-        }
+    for &(name, ref value) in &module.constants {
+        try!(body_enc.write_name(name, &mut names));
+        try!(body_enc.write_value(value, &mut names));
     }
 
     try!(body_enc.write_len(module.macros.len()));
@@ -262,6 +255,19 @@ pub fn write_bytecode<W: Write>(w: &mut W, path: &Path, module: &ModuleCode,
     for &(name, ref mac) in &module.macros {
         try!(body_enc.write_name(name, &mut names));
         try!(body_enc.write_code(mac, &mut names));
+    }
+
+    if let Some(ref doc) = module.module_doc {
+        try!(body_enc.write_string(doc));
+    } else {
+        try!(body_enc.write_string(""));
+    }
+
+    try!(body_enc.write_len(module.docs.len()));
+
+    for &(name, ref doc) in &module.docs {
+        try!(body_enc.write_name(name, &mut names));
+        try!(body_enc.write_string(doc));
     }
 
     for code in &module.code {
@@ -469,6 +475,12 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
             Some(try!(self.read_name(names)))
         };
 
+        let doc = if flags & HAS_DOC_STRING == 0 {
+            None
+        } else {
+            Some(try!(self.read_string()).to_owned())
+        };
+
         let n_consts = try!(self.read_len());
         let mut consts = Vec::with_capacity(n_consts);
 
@@ -515,7 +527,8 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
             kw_params: kw_params.into_boxed_slice(),
             n_params: n_params,
             req_params: req_params,
-            flags: flags
+            flags: flags,
+            doc: doc,
         })
     }
 
@@ -755,9 +768,14 @@ impl ValueEncoder {
         self.write_u8(code.flags as u8);
 
         assert_eq!(code.flags & HAS_NAME != 0, code.name.is_some());
+        assert_eq!(code.flags & HAS_DOC_STRING != 0, code.doc.is_some());
 
         if let Some(name) = code.name {
             try!(self.write_name(name, names));
+        }
+
+        if let Some(ref doc) = code.doc {
+            try!(self.write_string(doc));
         }
 
         try!(self.write_len(code.consts.len()));

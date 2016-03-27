@@ -20,7 +20,7 @@ concatenated to positional arguments.
 ## `const`
 
 ```
-(const name expression)
+(const name [docstring] expression)
 ```
 
 The `const` operator defines a compile-time constant value in the global scope.
@@ -30,6 +30,8 @@ without performing a name lookup operation at runtime.
 The expression must be a compile-time constant, which will not vary from one
 execution of the program to the next. Most system functions can be executed
 at compile time if all of the arguments are constant expressions.
+
+The optional parameter *docstring* will supply documentation for the item.
 
 ```lisp
 (const one 1)
@@ -71,7 +73,7 @@ execution of its body expression.
 ## `define`
 
 ```
-(define name expression)
+(define name [docstring] expression)
 
 (define (name [ arguments ...
                 [ :optional arguments ... ]
@@ -118,20 +120,24 @@ A default value can be given when the function is defined.
 (bar :a 2)
 ```
 
+The optional parameter *docstring* will supply documentation for the item.
+
 ## `macro`
 
 ```
-(macro (name [ arguments ... ]) expression)
+(macro (name [ arguments ... ]) [docstring] expression)
 ```
 
 The `macro` operator defines a compile-time macro. A macro behaves in all
 respects as any other function, except that it is executed at compile time
 and is expected to return code which is then further compiled.
 
+The optional parameter *docstring* will supply documentation for the item.
+
 ## `struct`
 
 ```
-(struct name ( [ ( name type-name ) ... ] ))
+(struct name [docstring] ( [ ( name type-name ) ... ] ))
 ```
 
 The `struct` operator creates a struct definition and adds it to the global scope.
@@ -141,6 +147,8 @@ The fields of the struct definition will be required to have the given types.
 (struct Foo ((a integer)
              (b string)))
 ```
+
+The optional parameter *docstring* will supply documentation for the item.
 
 ## `if`
 
@@ -211,7 +219,7 @@ the last case, as a catch-all branch.
 ## `lambda`
 
 ```
-(lambda ( [ arguments ... ] ) expression)
+(lambda ( [ arguments ... ] ) [docstring] expression)
 ```
 
 The `lambda` operator creates a function which may enclose one or more local
@@ -221,6 +229,8 @@ value bindings from the surrounding scope.
 (define (adder a)
   (lambda (b) (+ a b)))
 ```
+
+The optional parameter *docstring* will supply documentation for the item.
 
 ## `export`
 
@@ -234,11 +244,9 @@ Exported names may be imported from another module using the `use` operator.
 ## `use`
 
 ```
-(use { :all | ( [ name ... ] ) }
-  [ :const { :all | ( [ name ... ] ) } ]
-  [ :macro { :all | ( [ name ... ] ) } ])
+(use module-name { :all | ( [ name ... ] ) })
 ```
 
 The `use` operator loads a module and imports a series of named constants,
 macros, or values from its global scope. `:all` may be used in place of a name
-list to import all such public names from a module.
+list to import all public names from a module.

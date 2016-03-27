@@ -14,10 +14,12 @@ use value::Value;
 pub fn run_code_in_scope(scope: &Scope, input: &str) -> Result<Value, Error> {
     let offset = scope.borrow_codemap_mut().add_source(input, None);
 
-    let mut ns = scope.borrow_names_mut();
-    let mut p = Parser::new(&mut ns, Lexer::new(input, offset));
+    let exprs = {
+        let mut ns = scope.borrow_names_mut();
+        let mut p = Parser::new(&mut ns, Lexer::new(input, offset));
 
-    let exprs = try!(p.parse_exprs());
+        try!(p.parse_exprs())
+    };
 
     let code: Vec<_> = try!(exprs.iter()
         .map(|v| compile(scope, v)).collect());

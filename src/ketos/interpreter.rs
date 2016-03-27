@@ -13,9 +13,9 @@ use exec::{call_function, execute, ExecError};
 use io::{GlobalIo, IoError, IoMode};
 use lexer::{CodeMap, Lexer};
 use module::{BuiltinModuleLoader, FileModuleLoader, ModuleLoader, ModuleRegistry};
-use name::{debug_names, display_names, Name, NameStore};
+use name::{debug_names, display_names, NameStore};
 use parser::{ParseError, Parser};
-use scope::{GlobalScope, MasterScope, Scope};
+use scope::{GlobalScope, Scope};
 use trace::Trace;
 use value::Value;
 
@@ -161,7 +161,7 @@ impl Interpreter {
     pub fn call(&self, name: &str, args: Vec<Value>) -> Result<Value, Error> {
         let name = self.scope.borrow_names_mut().add(name);
 
-        let v = try!(self.get_value_name(name).ok_or(ExecError::NameError(name)));
+        let v = try!(self.scope.get_value(name).ok_or(ExecError::NameError(name)));
         self.call_value(v, args)
     }
 
@@ -180,13 +180,7 @@ impl Interpreter {
 
     /// Returns a value, if present, in the interpreter scope.
     pub fn get_value(&self, name: &str) -> Option<Value> {
-        let name = self.scope.borrow_names().get_name(name);
-
-        name.and_then(|name| self.get_value_name(name))
-    }
-
-    fn get_value_name(&self, name: Name) -> Option<Value> {
-        MasterScope::get(name).or_else(|| self.scope.get_value(name))
+        self.scope.get_named_value(name)
     }
 
     /// Calls a closure with a borrowed reference to the global scope.

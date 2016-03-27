@@ -192,30 +192,31 @@ standard_names!{
     "export" => EXPORT = 75,
     "use" => USE = 76,
     "const" => CONST = 77,
+    "set-module-doc" => SET_MODULE_DOC = 78,
 
     // Just plain names follow; these are used by system functions or operators
     // to delineate syntactical constructs or just as name values.
-    "all" => ALL = 78,
-    "else" => ELSE = 79,
-    "optional" => OPTIONAL = 80,
-    "key" => KEY = 81,
-    "rest" => REST = 82,
-    "unbound" => UNBOUND = 83,
-    "unit" => UNIT = 84,
-    "bool" => BOOL = 85,
-    "char" => CHAR = 86,
-    "integer" => INTEGER = 87,
-    "ratio" => RATIO = 88,
-    "struct-def" => STRUCT_DEF = 89,
-    "keyword" => KEYWORD = 90,
-    "object" => OBJECT = 91,
-    "name" => NAME = 92,
-    "number" => NUMBER = 93,
-    "function" => FUNCTION = 94,
+    "all" => ALL = 79,
+    "else" => ELSE = 80,
+    "optional" => OPTIONAL = 81,
+    "key" => KEY = 82,
+    "rest" => REST = 83,
+    "unbound" => UNBOUND = 84,
+    "unit" => UNIT = 85,
+    "bool" => BOOL = 86,
+    "char" => CHAR = 87,
+    "integer" => INTEGER = 88,
+    "ratio" => RATIO = 89,
+    "struct-def" => STRUCT_DEF = 90,
+    "keyword" => KEYWORD = 91,
+    "object" => OBJECT = 92,
+    "name" => NAME = 93,
+    "number" => NUMBER = 94,
+    "function" => FUNCTION = 95,
 }
 
 /// Number of standard names
-pub const NUM_STANDARD_NAMES: u32 = 95;
+pub const NUM_STANDARD_NAMES: u32 = 96;
 
 /// Number of names, starting at `0`, which refer to system functions.
 pub const NUM_SYSTEM_FNS: usize = 61;
@@ -226,7 +227,7 @@ pub const NUM_STANDARD_VALUES: u32 = 63;
 /// First standard name which refers to a system operator.
 pub const SYSTEM_OPERATORS_BEGIN: u32 = NUM_STANDARD_VALUES;
 /// One-past-the-end of standard names which refer to system operators.
-pub const SYSTEM_OPERATORS_END: u32 = 78;
+pub const SYSTEM_OPERATORS_END: u32 = 79;
 
 /// Number of system operators, beginning at `SYSTEM_OPERATORS_BEGIN`.
 pub const NUM_SYSTEM_OPERATORS: usize =
@@ -504,8 +505,7 @@ impl<T> NameMap<T> {
 
 impl<T> FromIterator<(Name, T)> for NameMap<T> {
     fn from_iter<I>(iterator: I) -> Self where I: IntoIterator<Item=(Name, T)> {
-        let mut v = iterator.into_iter()
-            .collect::<Vec<_>>();
+        let mut v = iterator.into_iter().collect::<Vec<_>>();
         v.sort_by(|a, b| a.0.cmp(&b.0));
         NameMap{values: v}
     }

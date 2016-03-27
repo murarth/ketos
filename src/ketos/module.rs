@@ -6,14 +6,15 @@ use std::io::{stderr, Read, Write};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
+use bytecode::Code;
 use compile::{compile, CompileError};
-use encode::{DecodeError, ModuleCode, read_bytecode_file, write_bytecode_file};
+use encode::{DecodeError, read_bytecode_file, write_bytecode_file};
 use error::Error;
 use exec::execute;
 use function::{Arity, Function, FunctionImpl, Lambda, SystemFn};
 use io::{IoError, IoMode};
 use lexer::Lexer;
-use name::{Name, NameMap};
+use name::{Name, NameMap, NameSetSlice};
 use parser::Parser;
 use scope::{GlobalScope, ImportSet, Scope};
 use value::Value;
@@ -112,6 +113,74 @@ impl ModuleBuilder {
     }
 }
 
+/// Contains code and data representing a compiled module
+#[derive(Clone, Default)]
+pub struct ModuleCode {
+    /// Decoded `Code` objects
+    pub code: Vec<Rc<Code>>,
+    /// Exported names
+    pub exports: NameSetSlice,
+    /// Imported names
+    pub imports: Vec<ImportSet>,
+    /// Decoded constant values
+    pub constants: Vec<(Name, Value)>,
+    /// Decoded macro objects
+    pub macros: Vec<(Name, Rc<Code>)>,
+    /// Module doc strings
+    pub module_doc: Option<String>,
+    /// Doc strings
+    pub docs: Vec<(Name, String)>,
+}
+
+impl ModuleCode {
+    /// Creates a `ModuleCode` from a series of code objects and a `Scope`.
+    pub fn new(code: Vec<Rc<Code>>, scope: &Scope) -> ModuleCode {
+        ModuleCode{
+            code: code,
+            constants: scope.with_constants(
+                |consts| consts.iter().cloned().collect()),
+            macros: scope.with_macros(
+                |macros| macros.iter()
+                    .map(|&(name, ref l)| (name, l.code.clone())).collect()),
+            exports: scope.with_exports(|e| e.clone())
+                .unwrap_or_else(NameSetSlice::default),
+            imports: scope.with_imports(|i| i.to_vec()),
+            module_doc: scope.with_module_doc(|d| d.to_owned()),
+            docs: scope.with_docs(
+                |d| d.iter().filter(|&&(name, _)| !scope.is_imported(name))
+                    .cloned().collect()),
+        }
+    }
+
+    /// Loads contained values into the given scope, which should be empty,
+    /// and sequentially executes all contained code objects within the scope.
+    pub fn load_in_scope(self, scope: &Scope) -> Result<(), Error> {
+        for (name, value) in self.constants {
+            scope.add_constant(name, value);
+        }
+
+        for (name, code) in self.macros {
+            let mac = Lambda::new(code, scope);
+            scope.add_macro(name, mac);
+        }
+
+        try!(process_imports(scope, &self.imports));
+
+        scope.set_exports(self.exports);
+
+        let mdoc = self.module_doc;
+        scope.with_module_doc_mut(|d| *d = mdoc);
+        let docs = self.docs;
+        scope.with_docs_mut(|d| *d = docs.into_iter().collect());
+
+        for code in self.code {
+            try!(execute(&scope, code));
+        }
+
+        Ok(())
+    }
+}
+
 /// Loads modules into the running program and caches previously loaded modules
 pub struct ModuleRegistry {
     loader: Box<ModuleLoader>,
@@ -128,9 +197,14 @@ impl ModuleRegistry {
         }
     }
 
+    /// Returns the named module, only if it is already loaded.
+    pub fn get_module(&self, name: Name) -> Option<Module> {
+        self.modules.borrow().get(name).cloned()
+    }
+
     /// Returns a loaded module. If the module has not been loaded in this
     /// registry; the contained `ModuleLoader` instance will be used to load it.
-    pub fn get_module(&self, name: Name, scope: &Scope) -> Result<Module, Error> {
+    pub fn load_module(&self, name: Name, scope: &Scope) -> Result<Module, Error> {
         // It's not necessary to borrow_mut here, but it means that this
         // function has consistent behavior with respect to existing borrows.
         if let Some(m) = self.modules.borrow_mut().get(name).cloned() {
@@ -326,12 +400,12 @@ impl ModuleLoader for FileModuleLoader {
                     return self.guard_import(name, &src_path, || {
                         match read_bytecode_file(&code_path, &scope) {
                             Ok(m) => {
-                                for &(name, ref code) in &m.macros {
-                                    let mac = Lambda::new(code.clone(), &scope);
-                                    scope.add_macro(name, mac);
-                                }
-                                try!(process_imports(&scope, &m.imports));
-                                run_module_code(name, scope, m)
+                                try!(m.load_in_scope(&scope));
+
+                                Ok(Module{
+                                    name: name,
+                                    scope: scope,
+                                })
                             }
                             Err(Error::DecodeError(DecodeError::IncorrectVersion(_)))
                                     if src_path.exists() => {
@@ -436,18 +510,11 @@ fn load_module_from_file(scope: Scope, name: Name,
         try!(execute(&scope, code.clone()));
     }
 
-    try!(check_exports(&scope, name));
-
-    let mcode = ModuleCode{
-        code: code.clone(),
-        macros: scope.with_macros(
-            |macros| macros.iter()
-                .map(|&(name, ref l)| (name, l.code.clone())).collect()),
-        exports: scope.with_exports(|e| e.cloned().unwrap()),
-        imports: scope.with_imports(|i| i.to_vec()),
-    };
-
     if let Some(code_path) = code_path {
+        try!(check_exports(&scope, name));
+
+        let mcode = ModuleCode::new(code, &scope);
+
         let r = {
             let names = scope.borrow_names();
             write_bytecode_file(code_path, &mcode, &names)
@@ -468,72 +535,64 @@ fn process_imports(scope: &Scope, imports: &[ImportSet]) -> Result<(), Error> {
     let mods = scope.get_modules();
 
     for imp in imports {
-        let m = try!(mods.get_module(imp.module_name, scope));
+        let m = try!(mods.load_module(imp.module_name, scope));
 
-        for &(src, dest) in &imp.constants {
-            let v = try!(m.scope.get_constant(src)
-                .ok_or(CompileError::ImportError{
+        for &(src, dest) in &imp.names {
+            if !m.scope.is_exported(src) {
+                return Err(From::from(CompileError::PrivacyError{
                     module: imp.module_name,
                     name: src,
                 }));
+            }
 
-            scope.add_constant(dest, v);
-        }
+            let mut found = false;
 
-        for &(src, dest) in &imp.macros {
-            let mac = try!(m.scope.get_macro(src)
-                .ok_or(CompileError::ImportError{
+            if let Some(v) = m.scope.get_constant(src) {
+                // Store the remote constant as a runtime value in local scope.
+                // The remote module may be changed without recompiling this
+                // module; therefore, the value is not truly constant.
+                scope.add_value(dest, v);
+                m.scope.with_doc(src, |d| scope.add_doc_string(dest, d.to_owned()));
+                found = true;
+            }
+
+            if let Some(v) = m.scope.get_macro(src) {
+                scope.add_macro(dest, v);
+                found = true;
+            }
+
+            if let Some(v) = m.scope.get_value(src) {
+                scope.add_value(dest, v);
+                m.scope.with_doc(src, |d| scope.add_doc_string(dest, d.to_owned()));
+                found = true;
+            }
+
+            if !found {
+                return Err(From::from(CompileError::ImportError{
                     module: imp.module_name,
                     name: src,
                 }));
-
-            scope.add_macro(dest, mac);
-        }
-
-        for &(src, dest) in &imp.values {
-            let v = try!(m.scope.get_value(src)
-                .ok_or(CompileError::ImportError{
-                    module: imp.module_name,
-                    name: src,
-                }));
-
-            scope.add_value(dest, v);
+            }
         }
     }
 
     Ok(())
 }
 
-fn run_module_code(name: Name, scope: Scope, mcode: ModuleCode) -> Result<Module, Error> {
-    scope.set_exports(mcode.exports);
-
-    for code in mcode.code {
-        try!(execute(&scope, code));
-    }
-
-    Ok(Module{
-        name: name,
-        scope: scope,
-    })
-}
-
 fn check_exports(scope: &Scope, mod_name: Name) -> Result<(), CompileError> {
     scope.with_exports(|exports| {
-        if let Some(exports) = exports {
-            for name in exports {
-                if !scope.contains_name(name) {
-                    return Err(CompileError::ExportError{
-                        module: mod_name,
-                        name: name,
-                    });
-                }
+        for name in exports {
+            if !scope.contains_name(name) {
+                return Err(CompileError::ExportError{
+                    module: mod_name,
+                    name: name,
+                });
             }
-
-            Ok(())
-        } else {
-            Err(CompileError::MissingExport)
         }
-    })
+
+        Ok(())
+    }).ok_or(CompileError::MissingExport)
+        .and_then(|r| r)
 }
 
 #[cfg(test)]

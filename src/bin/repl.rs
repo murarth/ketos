@@ -126,6 +126,7 @@ enum Prompt {
     OpenComment,
     OpenParen,
     OpenString,
+    DocComment,
 }
 
 fn read_line(interp: &Interpreter, prompt: Prompt) -> Option<String> {
@@ -134,6 +135,7 @@ fn read_line(interp: &Interpreter, prompt: Prompt) -> Option<String> {
         Prompt::OpenComment => "ketos#> ",
         Prompt::OpenParen => "ketos(> ",
         Prompt::OpenString => "ketos\"> ",
+        Prompt::DocComment => "ketos;> ",
     };
 
     readline::read_line(prompt, interp.get_scope())
@@ -174,6 +176,10 @@ fn run_repl(interp: &Interpreter) {
                 prompt = Prompt::OpenString;
                 continue;
             }
+            Err(Error::ParseError(ref e)) if e.kind == ParseErrorKind::DocCommentEof => {
+                prompt = Prompt::DocComment;
+                continue;
+            }
             Err(ref e) => {
                 prompt = Prompt::Normal;
                 display_error(&interp, e);
@@ -196,5 +202,5 @@ fn version() -> &'static str {
 }
 
 fn print_usage(arg0: &str, opts: &Options) {
-    print!("{}", opts.usage(&format!("Usage: {} [OPTIONS] [FILE]", arg0)));
+    print!("{}", opts.usage(&format!("Usage: {} [OPTIONS] [FILE] [ARGS]", arg0)));
 }

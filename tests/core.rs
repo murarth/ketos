@@ -73,6 +73,64 @@ fn test_const_error() {
 }
 
 #[test]
+fn test_docs() {
+    assert_eq!(run(r#"
+        (use code (documentation))
+
+        (const foo
+            "foo doc"
+            0)
+
+        (define bar
+            "bar doc"
+            0)
+
+        (define (baz)
+            "baz doc"
+            0)
+
+        (documentation 'foo)
+        (documentation 'bar)
+        (documentation 'baz)
+        (documentation (lambda () "lambda doc" 0))
+        "#).unwrap(),
+        ["()", "foo", "bar", "baz",
+            r#""foo doc""#,
+            r#""bar doc""#,
+            r#""baz doc""#,
+            r#""lambda doc""#]);
+
+    assert_eq!(run(r#"
+        (use code (documentation))
+
+        ;; foo doc
+        (const foo 0)
+
+        ;; bar doc
+        ;; with multiple lines
+        (define bar 0)
+
+        ;; baz doc
+        ;;
+        ;;   with indentation
+        (struct baz ())
+
+        (documentation 'foo)
+        (documentation 'bar)
+        (documentation 'baz)
+        (documentation
+            ;; lambda doc
+            (lambda () 0))
+        "#).unwrap(),
+        ["()", "foo", "bar", "baz",
+            r#""foo doc\n""#,
+            r#""bar doc\nwith multiple lines\n""#,
+            r#""baz doc\n\n  with indentation\n""#,
+            r#""lambda doc\n""#
+            ]);
+}
+
+#[test]
 fn test_integer() {
     assert_eq!(eval("123").unwrap(), "123");
     assert_eq!(eval("-123").unwrap(), "-123");

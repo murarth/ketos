@@ -1,5 +1,5 @@
 (use list :all)
-(use test () :macro :all)
+(use test :all)
 
 (run-tests
 

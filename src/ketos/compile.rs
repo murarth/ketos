@@ -18,7 +18,7 @@ use name::{get_system_fn, is_system_operator, standard_names,
     NUM_SYSTEM_OPERATORS, SYSTEM_OPERATORS_BEGIN};
 use scope::{GlobalScope, ImportSet, MasterScope, Scope};
 use trace::{Trace, TraceItem, set_traceback, take_traceback};
-use value::{StructDef, Value};
+use value::{StructDef, Value, FromValueRef};
 
 const MAX_MACRO_RECURSION: u32 = 100;
 
@@ -40,6 +40,8 @@ pub enum CompileError {
     ConstantExists(Name),
     /// Duplicate `exports` declaration
     DuplicateExports,
+    /// Duplicate `module-doc` declaration
+    DuplicateModuleDoc,
     /// Duplicate name in parameter list
     DuplicateParameter(Name),
     /// Attempt to export nonexistent name from module
@@ -106,6 +108,7 @@ impl fmt::Display for CompileError {
             ConstantExists(_) =>
                 f.write_str("cannot define name occupied by a constant value"),
             DuplicateExports => f.write_str("duplicate `exports` declaration"),
+            DuplicateModuleDoc => f.write_str("duplicate module doc comment"),
             DuplicateParameter(_) => f.write_str("duplicate parameter"),
             ExportError{..} => f.write_str("export name not found in module"),
             ImportCycle(_) => f.write_str("import cycle detected"),
@@ -339,6 +342,7 @@ impl<'a> Compiler<'a> {
             n_params: 0,
             req_params: 0,
             flags: 0,
+            doc: None,
         })
     }
 
@@ -435,6 +439,7 @@ impl<'a> Compiler<'a> {
             n_params: n_params as u32,
             req_params: req_params,
             flags: flags,
+            doc: None,
         };
 
         Ok((code, captures))
@@ -1642,18 +1647,19 @@ static SYSTEM_OPERATORS: [Operator; NUM_SYSTEM_OPERATORS] = [
     sys_op!(op_apply, Min(2)),
     sys_op!(op_do, Min(1)),
     sys_op!(op_let, Exact(2)),
-    sys_op!(op_define, Exact(2)),
-    sys_op!(op_macro, Exact(2)),
-    sys_op!(op_struct, Exact(2)),
+    sys_op!(op_define, Range(2, 3)),
+    sys_op!(op_macro, Range(2, 3)),
+    sys_op!(op_struct, Range(2, 3)),
     sys_op!(op_if, Range(2, 3)),
     sys_op!(op_and, Min(1)),
     sys_op!(op_or, Min(1)),
     sys_op!(op_case, Min(2)),
     sys_op!(op_cond, Min(1)),
-    sys_op!(op_lambda, Exact(2)),
+    sys_op!(op_lambda, Range(2, 3)),
     sys_op!(op_export, Exact(1)),
-    sys_op!(op_use, Min(2)),
-    sys_op!(op_const, Exact(2)),
+    sys_op!(op_use, Exact(2)),
+    sys_op!(op_const, Range(2, 3)),
+    sys_op!(op_set_module_doc, Exact(1)),
 ];
 
 /// `apply` calls a function or lambda with a series of arguments.
@@ -1752,8 +1758,14 @@ fn op_define(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
             compiler.trace.pop();
             compiler.trace.push(TraceItem::Define(compiler.scope.get_name(), name));
 
+            let (doc, body) = try!(extract_doc_string(args));
             try!(test_define_name(compiler.scope, name));
-            try!(compiler.compile_value(&args[1]));
+            try!(compiler.compile_value(&body));
+
+            if let Some(doc) = doc {
+                compiler.scope.add_doc_string(name, doc.to_owned());
+            }
+
             let c = compiler.add_const(Owned(Value::Name(name)));
             try!(compiler.push_instruction(Instruction::SetDef(c)));
             Ok(())
@@ -1765,11 +1777,12 @@ fn op_define(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
             compiler.trace.pop();
             compiler.trace.push(TraceItem::Define(compiler.scope.get_name(), name));
 
+            let (doc, body) = try!(extract_doc_string(args));
             try!(test_define_name(compiler.scope, name));
             let c = compiler.add_const(Owned(Value::Name(name)));
 
             let (lambda, captures) = try!(make_lambda(
-                compiler, Some(name), &li[1..], &args[1]));
+                compiler, Some(name), &li[1..], body, doc));
 
             let code_c = compiler.add_const(Owned(Value::Lambda(lambda)));
             try!(compiler.load_lambda(code_c, &captures));
@@ -1801,10 +1814,12 @@ fn op_macro(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     compiler.trace.push(TraceItem::DefineMacro(
         compiler.scope.get_name(), name));
 
+    let (doc, body) = try!(extract_doc_string(args));
+
     try!(test_define_name(compiler.scope, name));
 
     let (lambda, captures) = try!(make_lambda(compiler,
-        Some(name), params, &args[1]));
+        Some(name), params, &body, doc));
 
     if !captures.is_empty() {
         return Err(From::from(CompileError::SyntaxError(
@@ -1832,10 +1847,12 @@ fn op_struct(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     compiler.trace.push(TraceItem::DefineStruct(
         compiler.scope.get_name(), name));
 
+    let (doc, body) = try!(extract_doc_string(args));
+
     try!(test_define_name(compiler.scope, name));
     let mut fields = NameMap::new();
 
-    match args[1] {
+    match *body {
         Value::Unit => (),
         Value::List(ref li) => {
             for v in li {
@@ -1861,6 +1878,9 @@ fn op_struct(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     }
 
     let def = Value::StructDef(Rc::new(StructDef::new(name, fields.into_slice())));
+    if let Some(doc) = doc {
+        compiler.scope.add_doc_string(name, doc.to_owned());
+    }
 
     let name_c = compiler.add_const(Owned(Value::Name(name)));
     let c = compiler.add_const(Owned(def));
@@ -2137,6 +2157,8 @@ fn op_lambda(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     compiler.trace.pop();
     compiler.trace.push(TraceItem::DefineLambda(compiler.scope.get_name()));
 
+    let (doc, body) = try!(extract_doc_string(args));
+
     let li = match args[0] {
         Value::Unit => &[][..],
         Value::List(ref li) => &li[..],
@@ -2147,7 +2169,7 @@ fn op_lambda(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     };
 
     let (lambda, captures) = try!(make_lambda(
-        compiler, None, li, &args[1]));
+        compiler, None, li, body, doc));
 
     let c = compiler.add_const(Owned(Value::Lambda(lambda)));
     try!(compiler.load_lambda(c, &captures));
@@ -2160,7 +2182,7 @@ fn op_lambda(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 /// (export (foo bar baz))
 /// ```
 fn op_export(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
-    if compiler.scope.with_exports(|e| e.is_some()) {
+    if compiler.scope.with_exports(|_| ()).is_some() {
         return Err(From::from(CompileError::DuplicateExports));
     }
 
@@ -2190,9 +2212,6 @@ fn op_export(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 ///
 /// ```lisp
 /// (use foo (alpha beta gamma))
-///
-/// (use foo (alpha beta)
-///          :macro (gamma))
 /// ```
 fn op_use(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     let mod_name = try!(get_name(compiler, &args[0]));
@@ -2202,19 +2221,19 @@ fn op_use(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     compiler.trace.push(TraceItem::UseModule(compiler.scope.get_name(), mod_name));
 
     let mods = compiler.scope.get_modules();
-    let m = try!(mods.get_module(mod_name, compiler.scope)
+    let m = try!(mods.load_module(mod_name, compiler.scope)
         .map_err(|e| { compiler.extend_global_trace(); e }));
 
     let mut imp_set = ImportSet::new(mod_name);
 
     match args[1] {
         Value::Keyword(standard_names::ALL) => {
-            let names = compiler.scope.import_all_values(&m.scope);
-            imp_set.values.extend(names.iter().map(|&n| (n, n)));
+            let names = compiler.scope.import_all(&m.scope);
+            imp_set.names.extend(names.iter().map(|&n| (n, n)));
         }
         Value::Unit => (),
         Value::List(ref li) => {
-            try!(import_values(mod_name, &mut imp_set,
+            try!(import_names(mod_name, &mut imp_set,
                 compiler.scope, &m.scope, li));
         }
         ref v => {
@@ -2224,56 +2243,20 @@ fn op_use(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
         }
     }
 
-    let mut iter = args[2..].iter();
-
-    while let Some(arg) = iter.next() {
-        match *arg {
-            Value::Keyword(standard_names::CONST) => {
-                match iter.next() {
-                    Some(&Value::Keyword(standard_names::ALL)) => {
-                        let names = compiler.scope.import_all_constants(&m.scope);
-                        imp_set.constants.extend(names.iter().map(|&n| (n, n)));
-                    }
-                    Some(&Value::Unit) => (),
-                    Some(&Value::List(ref li)) =>
-                        try!(import_constants(mod_name, &mut imp_set,
-                            compiler.scope, &m.scope, li)),
-                    _ => {
-                        compiler.set_trace_expr(arg);
-                        return Err(From::from(CompileError::SyntaxError(
-                            "expected `:all` or list of names after keyword")));
-                    }
-                }
-            }
-            Value::Keyword(standard_names::MACRO) => {
-                match iter.next() {
-                    Some(&Value::Keyword(standard_names::ALL)) => {
-                        let names = compiler.scope.import_all_macros(&m.scope);
-                        imp_set.macros.extend(names.iter().map(|&n| (n, n)));
-                    }
-                    Some(&Value::Unit) => (),
-                    Some(&Value::List(ref li)) =>
-                        try!(import_macros(mod_name, &mut imp_set,
-                            compiler.scope, &m.scope, li)),
-                    _ => {
-                        compiler.set_trace_expr(arg);
-                        return Err(From::from(CompileError::SyntaxError(
-                            "expected `:all` or list of names after keyword")));
-                    }
-                }
-            }
-            ref v => {
-                compiler.set_trace_expr(v);
-                return Err(From::from(CompileError::SyntaxError(
-                    "expected keyword `:const` or `:macro`")));
-            }
-        }
-    }
-
     compiler.scope.add_imports(imp_set);
 
     try!(compiler.push_instruction(Instruction::Unit));
     Ok(())
+}
+
+fn extract_doc_string(args: &[Value]) -> Result<(Option<&str>, &Value), Error> {
+    if args.len() == 2 {
+        Ok((None, &args[1]))
+    } else {
+        let doc = try!(<&str>::from_value_ref(&args[1]));
+
+        Ok((Some(doc), &args[2]))
+    }
 }
 
 /// `const` declares a named constant value in global scope.
@@ -2292,13 +2275,15 @@ fn op_const(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     compiler.trace.push(TraceItem::DefineConst(
         compiler.scope.get_name(), name));
 
+    let (doc, body) = try!(extract_doc_string(args));
+
     try!(test_define_name(compiler.scope, name));
 
     if compiler.get_constant(name).is_some() {
         return Err(From::from(CompileError::ConstantExists(name)));
     }
 
-    let mut value = Borrowed(&args[1]);
+    let mut value = Borrowed(body);
 
     match try!(compiler.eval_constant(&value)) {
         ConstResult::IsConstant => (),
@@ -2311,83 +2296,75 @@ fn op_const(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     }
 
     compiler.add_constant(name, value.into_owned());
+    if let Some(doc) = doc {
+        compiler.scope.add_doc_string(name, doc.to_owned());
+    }
 
     try!(compiler.load_quoted_value(Owned(Value::Name(name))));
     Ok(())
 }
 
-fn import_constants(mod_name: Name, imps: &mut ImportSet,
-        a: &GlobalScope, b: &GlobalScope, names: &[Value]) -> Result<(), CompileError> {
-    each_import(names, |src, dest| {
-        match b.get_constant(src) {
-            Some(v) => {
-                if !b.is_exported(src) {
-                    return Err(CompileError::PrivacyError{
-                        module: mod_name,
-                        name: src,
-                    });
-                }
+/// `set-module-doc` initializes the docstring for the contained module.
+/// It may only appear at most one time per module.
+///
+/// ```lisp
+/// (set-module-doc "Module doc string")
+/// ```
+fn op_set_module_doc(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
+    let doc = try!(<&str>::from_value_ref(&args[0]));
 
-                a.add_constant(dest, v);
-                imps.constants.push((src, dest));
-            }
-            None => return Err(CompileError::ImportError{
-                module: mod_name,
-                name: src,
-            })
+    compiler.scope.with_module_doc_mut(|d| {
+        if d.is_none() {
+            *d = Some(doc.to_owned());
+            try!(compiler.push_instruction(Instruction::Unit));
+            Ok(())
+        } else {
+            Err(From::from(CompileError::DuplicateModuleDoc))
         }
-
-        Ok(())
     })
 }
 
-fn import_macros(mod_name: Name, imps: &mut ImportSet,
+fn import_names(mod_name: Name, imps: &mut ImportSet,
         a: &GlobalScope, b: &GlobalScope, names: &[Value]) -> Result<(), CompileError> {
     each_import(names, |src, dest| {
-        match b.get_macro(src) {
-            Some(v) => {
-                if !b.is_exported(src) {
-                    return Err(CompileError::PrivacyError{
-                        module: mod_name,
-                        name: src,
-                    });
-                }
+        if !b.is_exported(src) {
+            return Err(CompileError::PrivacyError{
+                module: mod_name,
+                name: src,
+            });
+        }
 
-                a.add_macro(dest, v);
-                imps.macros.push((src, dest));
-            }
-            None => return Err(CompileError::ImportError{
+        try!(test_define_name(a, dest));
+
+        let mut found = false;
+
+        if let Some(v) = b.get_constant(src) {
+            // Store the remote constants as a runtime value in local scope.
+            a.add_value(dest, v);
+            b.with_doc(src, |d| a.add_doc_string(dest, d.to_owned()));
+            found = true;
+        }
+
+        if let Some(v) = b.get_macro(src) {
+            a.add_macro(dest, v);
+            found = true;
+        }
+
+        if let Some(v) = b.get_value(src) {
+            a.add_value(dest, v);
+            b.with_doc(src, |d| a.add_doc_string(dest, d.to_owned()));
+            found = true;
+        }
+
+        if found {
+            imps.names.push((src, dest));
+            Ok(())
+        } else {
+            Err(CompileError::ImportError{
                 module: mod_name,
                 name: src,
             })
         }
-
-        Ok(())
-    })
-}
-
-fn import_values(mod_name: Name, imps: &mut ImportSet,
-        a: &GlobalScope, b: &GlobalScope, names: &[Value]) -> Result<(), CompileError> {
-    each_import(names, |src, dest| {
-        match b.get_value(src) {
-            Some(v) => {
-                if !b.is_exported(src) {
-                    return Err(CompileError::PrivacyError{
-                        module: mod_name,
-                        name: src,
-                    });
-                }
-
-                a.add_value(dest, v);
-                imps.values.push((src, dest));
-            }
-            None => return Err(CompileError::ImportError{
-                module: mod_name,
-                name: src,
-            })
-        }
-
-        Ok(())
     })
 }
 
@@ -2422,7 +2399,7 @@ fn get_name(compiler: &mut Compiler, v: &Value) -> Result<Name, CompileError> {
     }
 }
 
-fn test_define_name(scope: &Scope, name: Name) -> Result<(), CompileError> {
+fn test_define_name(scope: &GlobalScope, name: Name) -> Result<(), CompileError> {
     if !MasterScope::can_define(name) {
         Err(CompileError::CannotDefine(name))
     } else if scope.contains_constant(name) {
@@ -2435,7 +2412,8 @@ fn test_define_name(scope: &Scope, name: Name) -> Result<(), CompileError> {
 /// Creates a `Lambda` object using scope and local values from the given compiler.
 /// Returns the `Lambda` object and the set of names captured by the lambda.
 fn make_lambda(compiler: &mut Compiler, name: Option<Name>,
-        args: &[Value], body: &Value) -> Result<(Lambda, Vec<Name>), Error> {
+        args: &[Value], body: &Value, doc: Option<&str>)
+        -> Result<(Lambda, Vec<Name>), Error> {
     let mut params = Vec::new();
     let mut req_params = 0;
     let mut kw_params = Vec::new();
@@ -2539,8 +2517,13 @@ fn make_lambda(compiler: &mut Compiler, name: Option<Name>,
             "expected arguments after `:optional`")));
     }
 
-    let (code, captures) = try!(compile_lambda(compiler,
+    let (mut code, captures) = try!(compile_lambda(compiler,
         name, params, req_params, kw_params, rest, body));
+
+    if let Some(doc) = doc {
+        code.flags |= code_flags::HAS_DOC_STRING;
+        code.doc = Some(doc.to_owned());
+    }
 
     Ok((Lambda::new(Rc::new(code), &compiler.scope), captures))
 }

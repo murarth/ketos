@@ -409,6 +409,9 @@ fn parse_doc_comment(input: &str) -> (Token, usize) {
                     _ => break
                 }
             }
+            Some((_, ch)) if begin_line &&
+                ch != '\r' && ch != '\n' &&
+                ch.is_whitespace() => (),
             _ if begin_line => break,
             Some((_, '\r')) => {
                 if let Some((ind, '\n')) = chars.next() {

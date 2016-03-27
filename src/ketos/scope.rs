@@ -30,9 +30,13 @@ struct Namespace {
     exports: Option<NameSetSlice>,
     /// Names imported by a `use` declaration
     imports: Vec<ImportSet>,
+    /// Optional module-level docstring
+    module_doc: Option<String>,
+    /// Docstrings for constants or non-function values
+    docs: NameMap<String>,
 }
 
-/// Represents a set of named macros and values imported from a module.
+/// Represents a set of names imported from a module.
 ///
 /// Each import consists of a pair of names: a source name and a destination name.
 /// These are, respectively, the name of the value as it resides within the
@@ -41,12 +45,8 @@ struct Namespace {
 pub struct ImportSet {
     /// Name of module from which to import
     pub module_name: Name,
-    /// Named constants which are imported
-    pub constants: Vec<(Name, Name)>,
-    /// Named macros which are imported
-    pub macros: Vec<(Name, Name)>,
-    /// Named values which are imported
-    pub values: Vec<(Name, Name)>,
+    /// Names which are imported
+    pub names: Vec<(Name, Name)>,
 }
 
 impl ImportSet {
@@ -54,9 +54,7 @@ impl ImportSet {
     pub fn new(module_name: Name) -> ImportSet {
         ImportSet{
             module_name: module_name,
-            constants: Vec::new(),
-            macros: Vec::new(),
-            values: Vec::new(),
+            names: Vec::new(),
         }
     }
 }
@@ -94,9 +92,14 @@ impl GlobalScope {
             scope.io.clone()))
     }
 
-    /// Add a named constant value to the scope.
+    /// Adds a named constant value to the scope.
     pub fn add_constant(&self, name: Name, value: Value) {
         self.namespace.borrow_mut().constants.insert(name, value);
+    }
+
+    /// Adds a docstring for the named constant or value.
+    pub fn add_doc_string(&self, name: Name, doc: String) {
+        self.namespace.borrow_mut().docs.insert(name, doc);
     }
 
     /// Adds a macro function to the global scope.
@@ -163,6 +166,12 @@ impl GlobalScope {
         self.namespace.borrow().constants.get(name).cloned()
     }
 
+    /// Returns a named constant value, if present.
+    pub fn get_named_constant(&self, name: &str) -> Option<Value> {
+        let name = self.borrow_names().get_name(name);
+        name.and_then(|name| self.get_constant(name))
+    }
+
     /// Returns a borrowed reference to the contained `GlobalIo`.
     pub fn get_io(&self) -> &Rc<GlobalIo> {
         &self.io
@@ -212,27 +221,27 @@ impl GlobalScope {
         self.namespace.borrow().macros.get(name).cloned()
     }
 
+    /// Returns a macro function for the given name, if present.
+    pub fn get_named_macro(&self, name: &str) -> Option<Lambda> {
+        let name = self.borrow_names().get_name(name);
+        name.and_then(|name| self.get_macro(name))
+    }
+
+    /// Returns a `Value` for the given name, if present.
+    pub fn get_named_value(&self, name: &str) -> Option<Value> {
+        let name = self.borrow_names().get_name(name);
+        name.and_then(|name| self.get_value(name))
+    }
+
     /// Returns a `Value` for the given name, if present.
     pub fn get_value(&self, name: Name) -> Option<Value> {
         self.namespace.borrow().values.get(name).cloned()
     }
 
-    /// Clones all constant values from a scope into this one.
-    pub fn import_all_constants(&self, other: &GlobalScope) -> Vec<Name> {
-        self.namespace.borrow_mut()
-            .import_all_constants(&other.namespace.borrow())
-    }
-
     /// Clones all exported values from a scope into this scope.
-    pub fn import_all_macros(&self, other: &GlobalScope) -> Vec<Name> {
+    pub fn import_all(&self, other: &GlobalScope) -> Vec<Name> {
         self.namespace.borrow_mut()
-            .import_all_macros(&other.namespace.borrow())
-    }
-
-    /// Clones all exported values from a scope into this scope.
-    pub fn import_all_values(&self, other: &GlobalScope) -> Vec<Name> {
-        self.namespace.borrow_mut()
-            .import_all_values(&other.namespace.borrow())
+            .import_all(&other.namespace.borrow())
     }
 
     /// Returns whether the given name has been exported in this scope.
@@ -241,9 +250,55 @@ impl GlobalScope {
             .map_or(false, |e| e.contains(name))
     }
 
+    /// Returns whether the given name is imported from another module.
+    pub fn is_imported(&self, name: Name) -> bool {
+        self.namespace.borrow().is_imported(name)
+    }
+
     /// Assigns a set of exported names for this scope.
     pub fn set_exports(&self, names: NameSetSlice) {
         self.namespace.borrow_mut().exports = Some(names);
+    }
+
+    /// Calls a closure with a borrowed reference to the named documentation,
+    /// if present.
+    ///
+    /// # Note
+    ///
+    /// When a function is declared with a docstring, that docstring is stored
+    /// in the compiled `Code` object rather than the `GlobalScope`.
+    pub fn with_doc<F, R>(&self, name: Name, f: F) -> Option<R>
+            where F: FnOnce(&str) -> R {
+        let ns = self.namespace.borrow();
+        ns.docs.get(name).map(|s| f(s))
+    }
+
+    /// Calls a closure with a borrowed reference to the contained docstrings.
+    pub fn with_docs<F, R>(&self, f: F) -> R
+            where F: FnOnce(&NameMap<String>) -> R {
+        let ns = self.namespace.borrow();
+        f(&ns.docs)
+    }
+
+    /// Calls a closure with a mutable reference to the contained docstrings.
+    pub fn with_docs_mut<F, R>(&self, f: F) -> R
+            where F: FnOnce(&mut NameMap<String>) -> R {
+        let mut ns = self.namespace.borrow_mut();
+        f(&mut ns.docs)
+    }
+
+    /// Calls a closure with an optional reference to the module docstring.
+    pub fn with_module_doc<F, R>(&self, f: F) -> Option<R>
+            where F: FnOnce(&str) -> R {
+        let ns = self.namespace.borrow();
+        ns.module_doc.as_ref().map(|d| f(d))
+    }
+
+    /// Calls a closure with a mutable reference to the module docstring.
+    pub fn with_module_doc_mut<F, R>(&self, f: F) -> R
+            where F: FnOnce(&mut Option<String>) -> R {
+        let mut ns = self.namespace.borrow_mut();
+        f(&mut ns.module_doc)
     }
 
     /// Calls a closure with the borrowed string representation of a name.
@@ -254,10 +309,10 @@ impl GlobalScope {
     }
 
     /// Calls a closure with the set of exported names.
-    pub fn with_exports<F, R>(&self, f: F) -> R
-            where F: FnOnce(Option<&NameSetSlice>) -> R {
+    pub fn with_exports<F, R>(&self, f: F) -> Option<R>
+            where F: FnOnce(&NameSetSlice) -> R {
         let ns = self.namespace.borrow();
-        f(ns.exports.as_ref())
+        ns.exports.as_ref().map(f)
     }
 
     /// Calls a closure with the set of imported values.
@@ -297,6 +352,8 @@ impl Namespace {
             values: NameMap::new(),
             exports: None,
             imports: Vec::new(),
+            module_doc: None,
+            docs: NameMap::new(),
         }
     }
 
@@ -304,49 +361,42 @@ impl Namespace {
         self.imports.push(imports);
     }
 
-    fn import_all_constants(&mut self, other: &Namespace) -> Vec<Name> {
+    fn import_all(&mut self, other: &Namespace) -> Vec<Name> {
         let mut names = Vec::new();
 
         if let Some(ref exports) = other.exports {
             for name in exports {
-                if let Some(m) = other.constants.get(name).cloned() {
+                if let Some(v) = other.constants.get(name).cloned() {
                     names.push(name);
-                    self.constants.insert(name, m);
+                    self.constants.insert(name, v);
+                    self.import_doc(name, other);
                 }
-            }
-        }
 
-        names
-    }
-
-    fn import_all_macros(&mut self, other: &Namespace) -> Vec<Name> {
-        let mut names = Vec::new();
-
-        if let Some(ref exports) = other.exports {
-            for name in exports {
-                if let Some(m) = other.macros.get(name).cloned() {
+                if let Some(v) = other.macros.get(name).cloned() {
                     names.push(name);
-                    self.macros.insert(name, m);
+                    self.macros.insert(name, v);
                 }
-            }
-        }
 
-        names
-    }
-
-    fn import_all_values(&mut self, other: &Namespace) -> Vec<Name> {
-        let mut names = Vec::new();
-
-        if let Some(ref exports) = other.exports {
-            for name in exports {
                 if let Some(v) = other.values.get(name).cloned() {
                     names.push(name);
                     self.values.insert(name, v);
+                    self.import_doc(name, other);
                 }
             }
         }
 
         names
+    }
+
+    fn import_doc(&mut self, name: Name, other: &Namespace) {
+        if let Some(doc) = other.docs.get(name) {
+            self.docs.insert(name, doc.clone());
+        }
+    }
+
+    fn is_imported(&self, name: Name) -> bool {
+        self.imports.iter().any(
+            |imp| imp.names.iter().any(|&(_, dest)| name == dest))
     }
 }
 
