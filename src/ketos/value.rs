@@ -782,7 +782,7 @@ macro_rules! integer_from_ref {
 /// Generates conversion trait implementations for the given type.
 ///
 /// ```ignore
-/// foreign_type_conversions!{ MyType = "my-type" }
+/// foreign_type_conversions!{ MyType => "my-type" }
 /// ```
 #[macro_export]
 macro_rules! foreign_type_conversions {
