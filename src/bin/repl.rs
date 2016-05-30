@@ -5,9 +5,11 @@ extern crate libc;
 use std::env::{split_paths, var_os};
 use std::io::{stderr, Write};
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
+use std::time::Duration;
 
 use getopts::{Options, ParsingStyle};
-use ketos::{Interpreter, Error, ParseErrorKind, take_traceback};
+use ketos::{Builder, Interpreter, Error, ParseErrorKind, RestrictConfig, take_traceback};
 
 mod completion;
 mod readline;
@@ -28,6 +30,8 @@ fn run() -> i32 {
     opts.optflag ("h", "help", "Print this help message and exit");
     opts.optflag ("i", "interactive", "Run interactively even with a file");
     opts.optmulti("I", "", "Add DIR to list of module search paths", "DIR");
+    opts.optopt  ("R", "restrict", "Configure execution restrictions; \
+                                    see `-R help` for more details", "SPEC");
     opts.optflag ("", "no-rc", "Do not run ~/.ketosrc.ket on startup");
     opts.optflag ("V", "version", "Print version and exit");
 
@@ -57,7 +61,25 @@ fn run() -> i32 {
 
     paths.extend(matches.opt_strs("I").into_iter().map(PathBuf::from));
 
-    let interp = Interpreter::with_search_paths(paths);
+    let mut builder = Builder::new()
+        .search_paths(paths);
+
+    if let Some(res) = matches.opt_str("restrict") {
+        if res == "help" {
+            print_restrict_usage();
+            return 0;
+        }
+
+        builder = match parse_restrict(&res) {
+            Ok(res) => builder.restrict(res),
+            Err(e) => {
+                println!("{}: {}", args[0], e);
+                return 1;
+            }
+        }
+    }
+
+    let interp = builder.finish();
 
     let interactive = matches.opt_present("interactive") ||
         (matches.free.is_empty() && !matches.opt_present("e"));
@@ -88,6 +110,48 @@ fn run() -> i32 {
     }
 
     0
+}
+
+fn parse_restrict(params: &str) -> Result<RestrictConfig, String> {
+    let mut res = RestrictConfig::permissive();
+
+    for param in params.split(',') {
+        match param {
+            "permissive" => res = RestrictConfig::permissive(),
+            "strict" => res = RestrictConfig::strict(),
+            _ => {
+                let (name, value) = match param.find('=') {
+                    Some(pos) => (&param[..pos], &param[pos + 1..]),
+                    None => return Err(format!("unrecognized restrict option: {}", param))
+                };
+
+                match name {
+                    "execution_time" =>
+                        res.execution_time = Some(Duration::from_millis(
+                            try!(parse_param(name, value)))),
+                    "call_stack_size" =>
+                        res.call_stack_size = try!(parse_param(name, value)),
+                    "value_stack_size" =>
+                        res.value_stack_size = try!(parse_param(name, value)),
+                    "namespace_size" =>
+                        res.namespace_size = try!(parse_param(name, value)),
+                    "memory_limit" =>
+                        res.memory_limit = try!(parse_param(name, value)),
+                    "max_integer_size" =>
+                        res.max_integer_size = try!(parse_param(name, value)),
+                    "max_syntax_nesting" =>
+                        res.max_syntax_nesting = try!(parse_param(name, value)),
+                    _ => return Err(format!("unrecognized parameter: {}", name))
+                }
+            }
+        }
+    }
+
+    Ok(res)
+}
+
+fn parse_param<T: FromStr>(name: &str, value: &str) -> Result<T, String> {
+    value.parse().map_err(|_| format!("invalid `{}` value: {}", name, value))
 }
 
 fn display_error(interp: &Interpreter, e: &Error) {
@@ -203,4 +267,28 @@ fn version() -> &'static str {
 
 fn print_usage(arg0: &str, opts: &Options) {
     print!("{}", opts.usage(&format!("Usage: {} [OPTIONS] [FILE] [ARGS]", arg0)));
+}
+
+fn print_restrict_usage() {
+    print!(
+r#"The `-R` / `--restrict` option accepts a comma-separated list of parameters:
+
+  permissive
+    Applies "permissive" restrictions (default)
+
+  strict
+    Applies "strict" restrictions
+
+  key=value
+    Assigns a value to the named restriction configuration parameter.
+    Accepted keys are:
+
+      execution_time          Maximum execution time, in milliseconds
+      call_stack_size         Maximum call frames
+      value_stack_size        Maximum values stored on the stack
+      namespace_size          Maximum values stored in global namespace
+      memory_limit            Maximum total held memory, in abstract units
+      max_integer_size        Maximum integer size, in bits
+      max_syntax_nesting      Maximum nested syntax elements
+"#);
 }
