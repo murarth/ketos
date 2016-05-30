@@ -85,6 +85,7 @@ impl Builder {
         exclude!(self.name, "context", "name");
         exclude!(self.scope, "context", "scope");
         exclude!(self.restrict, "context", "restrict");
+        exclude!(self.io, "context", "io");
         exclude!(self.module_loader, "context", "module_loader");
         exclude!(self.search_paths, "context", "search_paths");
 
@@ -96,6 +97,7 @@ impl Builder {
     pub fn scope(mut self, scope: Scope) -> Self {
         exclude!(self.name, "scope", "name");
         exclude!(self.context, "scope", "context");
+        exclude!(self.io, "scope", "io");
         exclude!(self.module_loader, "scope", "module_loader");
         exclude!(self.search_paths, "scope", "search_paths");
 
@@ -106,9 +108,6 @@ impl Builder {
     /// Sets the restriction configuration in the new context.
     pub fn restrict(mut self, restrict: RestrictConfig) -> Self {
         exclude!(self.context, "restrict", "context");
-        exclude!(self.scope, "restrict", "scope");
-        exclude!(self.module_loader, "restrict", "module_loader");
-        exclude!(self.search_paths, "restrict", "search_paths");
 
         self.restrict = Some(restrict);
         self
