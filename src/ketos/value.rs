@@ -85,6 +85,7 @@ impl Value {
             (&Value::Integer(ref a), &Value::Integer(ref b)) => a.cmp(&b),
             (&Value::Ratio(ref a), &Value::Ratio(ref b)) => a.cmp(&b),
             (&Value::Name(a), &Value::Name(b)) => a.cmp(&b),
+            (&Value::Keyword(a), &Value::Keyword(b)) => a.cmp(&b),
             (&Value::Char(a), &Value::Char(b)) => a.cmp(&b),
             (&Value::String(ref a), &Value::String(ref b)) => a.cmp(&b),
             (&Value::Unit, &Value::List(_)) => Ordering::Less,
@@ -191,6 +192,7 @@ impl Value {
             (&Value::Ratio(ref a), &Value::Integer(ref b)) => a == b,
 
             (&Value::Name(a), &Value::Name(b)) => a == b,
+            (&Value::Keyword(a), &Value::Keyword(b)) => a == b,
             (&Value::Char(a), &Value::Char(b)) => a == b,
             (&Value::String(ref a), &Value::String(ref b)) => a == b,
             (&Value::Quote(ref a, na), &Value::Quote(ref b, nb)) =>

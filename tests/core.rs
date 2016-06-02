@@ -624,6 +624,9 @@ fn test_eq() {
     assert_eq!(eval("(= 'a 'a)").unwrap(), "true");
     assert_eq!(eval("(= 'a 'b)").unwrap(), "false");
 
+    assert_eq!(eval("(= :a :a)").unwrap(), "true");
+    assert_eq!(eval("(= :a :b)").unwrap(), "false");
+
     assert_eq!(eval("(= = =)").unwrap(), "true");
     assert_eq!(eval("(= id =)").unwrap(), "false");
 
@@ -669,6 +672,10 @@ fn test_cmp() {
 
     assert_eq!(eval("(< () '(0))").unwrap(), "true");
     assert_eq!(eval("(> '(0) ())").unwrap(), "true");
+
+    // Ordering is not predictable, but it should succeed.
+    assert!(eval("(< 'a 'b)").is_ok());
+    assert!(eval("(< :a :b)").is_ok());
 
     assert_matches!(eval("(< < <)").unwrap_err(),
         Error::ExecError(ExecError::CannotCompare("function")));
