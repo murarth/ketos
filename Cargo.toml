@@ -13,6 +13,8 @@ readme = "README.md"
 version = "0.1.1"
 authors = ["Murarth <murarth@gmail.com>"]
 
+build = "src/build.rs"
+
 [[bin]]
 name = "ketos"
 path = "src/bin/repl.rs"
@@ -28,6 +30,11 @@ getopts = "0.2"
 libc = "0.2"
 num = "0.1.32"
 rand = "0.3"
+serde = "0.7"
+
+[build-dependencies]
+serde_codegen = "0.7"
+syntex = "0.33"
 
 [dev-dependencies]
 assert_matches = "1.0"

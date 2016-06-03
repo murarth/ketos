@@ -24,6 +24,7 @@
 //! value register.
 
 use std::cell::Cell;
+use std::error::Error as StdError;
 use std::fmt;
 use std::mem::replace;
 use std::rc::Rc;
@@ -237,6 +238,10 @@ pub enum ExecError {
     UnrecognizedKeyword(Name),
     /// Unrecognized opcode
     UnrecognizedOpCode(u8),
+}
+
+impl StdError for ExecError {
+    fn description(&self) -> &str { "execution error" }
 }
 
 /// Returns a `Panic` error with the given value.
