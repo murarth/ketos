@@ -538,40 +538,34 @@ fn process_imports(ctx: &Context, imports: &[ImportSet]) -> Result<(), Error> {
         let m = try!(mods.load_module(imp.module_name, ctx));
 
         for &(src, dest) in &imp.names {
-            let exported = m.scope.is_exported(src);
-            let mut found = false;
+            if !m.scope.contains_name(src) {
+                return Err(From::from(CompileError::ImportError{
+                    module: imp.module_name,
+                    name: src,
+                }));
+            } else if !m.scope.is_exported(src) {
+                return Err(From::from(CompileError::PrivacyError{
+                    module: imp.module_name,
+                    name: src,
+                }));
+            }
 
             if let Some(v) = m.scope.get_constant(src) {
                 // Store the remote constant as a runtime value in local scope.
                 // The remote module may be changed without recompiling this
                 // module; therefore, the value is not truly constant.
                 ctx.scope().add_value(dest, v);
-                m.scope.with_doc(src, |d| ctx.scope().add_doc_string(dest, d.to_owned()));
-                found = true;
             }
 
             if let Some(v) = m.scope.get_macro(src) {
                 ctx.scope().add_macro(dest, v);
-                found = true;
             }
 
             if let Some(v) = m.scope.get_value(src) {
                 ctx.scope().add_value(dest, v);
-                m.scope.with_doc(src, |d| ctx.scope().add_doc_string(dest, d.to_owned()));
-                found = true;
             }
 
-            if found && !exported {
-                return Err(From::from(CompileError::PrivacyError{
-                    module: imp.module_name,
-                    name: src,
-                }));
-            } else if !found {
-                return Err(From::from(CompileError::ImportError{
-                    module: imp.module_name,
-                    name: src,
-                }));
-            }
+            m.scope.with_doc(src, |d| ctx.scope().add_doc_string(dest, d.to_owned()));
         }
     }
 

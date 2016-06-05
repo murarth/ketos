@@ -2335,7 +2335,12 @@ fn op_set_module_doc(compiler: &mut Compiler, args: &[Value]) -> Result<(), Erro
 fn import_names(mod_name: Name, imps: &mut ImportSet,
         a: &GlobalScope, b: &GlobalScope, names: &[Value]) -> Result<(), CompileError> {
     each_import(names, |src, dest| {
-        if !b.is_exported(src) {
+        if !b.contains_name(src) {
+            return Err(CompileError::ImportError{
+                module: mod_name,
+                name: src,
+            });
+        } else if !b.is_exported(src) {
             return Err(CompileError::PrivacyError{
                 module: mod_name,
                 name: src,
@@ -2344,35 +2349,22 @@ fn import_names(mod_name: Name, imps: &mut ImportSet,
 
         try!(test_define_name(a, dest));
 
-        let mut found = false;
-
         if let Some(v) = b.get_constant(src) {
             // Store the remote constants as a runtime value in local scope.
             a.add_value(dest, v);
-            b.with_doc(src, |d| a.add_doc_string(dest, d.to_owned()));
-            found = true;
         }
 
         if let Some(v) = b.get_macro(src) {
             a.add_macro(dest, v);
-            found = true;
         }
 
         if let Some(v) = b.get_value(src) {
             a.add_value(dest, v);
-            b.with_doc(src, |d| a.add_doc_string(dest, d.to_owned()));
-            found = true;
         }
 
-        if found {
-            imps.names.push((src, dest));
-            Ok(())
-        } else {
-            Err(CompileError::ImportError{
-                module: mod_name,
-                name: src,
-            })
-        }
+        b.with_doc(src, |d| a.add_doc_string(dest, d.to_owned()));
+        imps.names.push((src, dest));
+        Ok(())
     })
 }
 

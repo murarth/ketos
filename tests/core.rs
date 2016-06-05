@@ -1267,4 +1267,9 @@ fn test_use() {
         (sqrt 4.0)
         ").unwrap(),
         ["()", "2.0"]);
+
+    assert_matches!(run("
+        (use math (does-not-exist))
+        ").unwrap_err(),
+        Error::CompileError(CompileError::ImportError{..}));
 }
