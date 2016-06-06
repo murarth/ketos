@@ -397,7 +397,9 @@ impl NameStore {
     /// Adds a name to the `NameStore` if it is not present.
     /// Returns a `Name` value to refer to the new or existing name.
     pub fn add(&mut self, name: &str) -> Name {
-        if let Some(pos) = self.names.iter().position(|n| n == name) {
+        if let Some(name) = get_standard_name_for(name) {
+            name
+        } else if let Some(pos) = self.names.iter().position(|n| n == name) {
             Name(pos as u32 + NUM_STANDARD_NAMES)
         } else {
             let n = self.names.len();
