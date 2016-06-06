@@ -1370,27 +1370,15 @@ fn fn_slice(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
                 Err(From::from(ExecError::OutOfBounds(begin)))
             } else if end > n {
                 Err(From::from(ExecError::OutOfBounds(end)))
-            } else if !is_char_boundary(s, begin) {
+            } else if !s.is_char_boundary(begin) {
                 Err(From::from(ExecError::NotCharBoundary(begin)))
-            } else if !is_char_boundary(s, end) {
+            } else if !s.is_char_boundary(end) {
                 Err(From::from(ExecError::NotCharBoundary(end)))
             } else {
                 Ok(s[begin..end].into())
             }
         }
         ref v => Err(From::from(ExecError::expected("list or string", v)))
-    }
-}
-
-// Waiting on `str_char` feature stabilization
-fn is_char_boundary(s: &str, n: usize) -> bool {
-    if n == s.len() {
-        true
-    } else {
-        match s.as_bytes().get(n) {
-            Some(&b) => b < 128 || b >= 192,
-            None => false
-        }
     }
 }
 
