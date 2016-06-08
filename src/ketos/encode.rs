@@ -87,6 +87,8 @@ pub enum EncodeError {
     Overflow,
     /// Attempt to encode a type that cannot be encoded
     UnencodableType(&'static str),
+    /// Attempt to encode a value that cannot be encoded
+    UnencodableValue(&'static str),
 }
 
 impl fmt::Display for EncodeError {
@@ -96,6 +98,7 @@ impl fmt::Display for EncodeError {
         match *self {
             Overflow => f.write_str("integer overflow"),
             UnencodableType(ty) => write!(f, "cannot encode value of type `{}`", ty),
+            UnencodableValue(v) => write!(f, "cannot encode value {}", v),
         }
     }
 }
@@ -391,7 +394,8 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
                     .ok_or(DecodeError::InvalidChar(c))
             }
             STRING => self.read_string().map(|s| s.into()),
-            STRUCT => panic!("struct value decoding not implemented"),
+            // XXX: Decoding struct values is not implemented
+            STRUCT => return Err(DecodeError::InvalidType(STRUCT)),
             STRUCT_DEF => {
                 let name = try!(self.read_name(names));
                 let n = try!(self.read_uint());
@@ -677,7 +681,7 @@ impl ValueEncoder {
             // However, Struct encoding/decoding must also account for the
             // possibility that a Struct value exists in a module based on a
             // definition which is found in another module.
-            Value::Struct(_) => panic!("Struct value encoding not implemented"),
+            Value::Struct(_) => return Err(EncodeError::UnencodableType("struct")),
             Value::StructDef(ref def) => {
                 self.write_u8(STRUCT_DEF);
 
@@ -741,7 +745,8 @@ impl ValueEncoder {
             }
             Value::Lambda(ref l) => {
                 if l.values.is_some() {
-                    panic!("cannot encode Lambda with enclosed values");
+                    return Err(EncodeError::UnencodableValue(
+                        "lambda with enclosed values"));
                 }
                 self.write_u8(LAMBDA);
                 try!(self.write_code(&l.code, names));
