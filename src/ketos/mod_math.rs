@@ -13,27 +13,63 @@ use value::Value;
 pub fn load(scope: Scope) -> Module {
     ModuleBuilder::new("math", scope)
         .add_constant("e",          consts::E)
+        .add_doc     ("e",  "Euler's number")
         .add_constant("pi",         consts::PI)
-        .add_function("acos",       fn_acos,    Exact(1))
-        .add_function("acosh",      fn_acosh,   Exact(1))
-        .add_function("asin",       fn_asin,    Exact(1))
-        .add_function("asinh",      fn_asinh,   Exact(1))
-        .add_function("atan",       fn_atan,    Exact(1))
-        .add_function("atanh",      fn_atanh,   Exact(1))
-        .add_function("atan2",      fn_atan2,   Exact(2))
-        .add_function("cos",        fn_cos,     Exact(1))
-        .add_function("cosh",       fn_cosh,    Exact(1))
-        .add_function("degrees",    fn_degrees, Exact(1))
-        .add_function("ln",         fn_ln,      Exact(1))
-        .add_function("log",        fn_log,     Exact(2))
-        .add_function("log2",       fn_log2,    Exact(1))
-        .add_function("log10",      fn_log10,   Exact(1))
-        .add_function("radians",    fn_radians, Exact(1))
-        .add_function("sin",        fn_sin,     Exact(1))
-        .add_function("sinh",       fn_sinh,    Exact(1))
-        .add_function("sqrt",       fn_sqrt,    Exact(1))
-        .add_function("tan",        fn_tan,     Exact(1))
-        .add_function("tanh",       fn_tanh,    Exact(1))
+        .add_doc     ("pi", "The ratio of a circle's circumference to its diameter")
+        .add_function("acos",       fn_acos,    Exact(1), Some("\
+Computes the arctangent of a number.
+Return value is in radians in the range `[-pi/2, pi/2]`."))
+        .add_function("acosh",      fn_acosh,   Exact(1),
+            Some("Inverse hyperbolic cosine function."))
+        .add_function("asin",       fn_asin,    Exact(1), Some("\
+Computes the arcsine of a number.
+Return value is in radians in the range `[-pi/2, pi/2]` or `NaN`
+if the number is outside the range `[-1, 1]`."))
+        .add_function("asinh",      fn_asinh,   Exact(1),
+            Some("Inverse hyperbolic sine function"))
+        .add_function("atan",       fn_atan,    Exact(1), Some("\
+Computes the arctangent of a number.
+Return value is in radians in the range `[-pi/2, pi/2]`."))
+        .add_function("atanh",      fn_atanh,   Exact(1),
+            Some("Inverse hyperbolic tangent function."))
+        .add_function("atan2",      fn_atan2,   Exact(2), Some("\
+    (atan2 y x)
+
+Computes the four quadrant arctangent of `y` and `x`.
+
+* `x = 0`, `y = 0`: `0`
+* `x >= 0`: `arctan(y/x)` -> `[-pi/2, pi/2]`
+* `y >= 0`: `arctan(y/x) + pi` -> `(pi/2, pi]`
+* `y < 0`: `arctan(y/x) - pi` -> `(-pi, -pi/2)`"))
+        .add_function("cos",        fn_cos,     Exact(1),
+            Some("Computes the cosine of a number, in radians."))
+        .add_function("cosh",       fn_cosh,    Exact(1),
+            Some("Hyperbolic cosine function."))
+        .add_function("degrees",    fn_degrees, Exact(1),
+            Some("Converts a value in radians to degrees."))
+        .add_function("ln",         fn_ln,      Exact(1),
+            Some("Returns the natural logarithm of a number."))
+        .add_function("log",        fn_log,     Exact(2), Some("\
+    (log n base)
+
+Returns the logarithm of a number with respect to an arbitrary base."))
+        .add_function("log2",       fn_log2,    Exact(1), Some("\
+Returns the base 2 logarithm of a number."))
+        .add_function("log10",      fn_log10,   Exact(1), Some("\
+Returns the base 10 logarithm of a number."))
+        .add_function("radians",    fn_radians, Exact(1),
+            Some("Converts a value in degrees to radians."))
+        .add_function("sin",        fn_sin,     Exact(1),
+            Some("Computes the sine of a number, in radians."))
+        .add_function("sinh",       fn_sinh,    Exact(1),
+            Some("Hyperbolic sine function."))
+        .add_function("sqrt",       fn_sqrt,    Exact(1), Some("\
+Returns the square root of a number.
+Returns `NaN` if the number is negative."))
+        .add_function("tan",        fn_tan,     Exact(1),
+            Some("Computes the tangent of a number, in radians."))
+        .add_function("tanh",       fn_tanh,    Exact(1),
+            Some("Hyperbolic tangent function"))
         .finish()
 }
 

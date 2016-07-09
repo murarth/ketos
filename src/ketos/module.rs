@@ -68,14 +68,22 @@ impl ModuleBuilder {
         self
     }
 
+    /// Adds a documentation string for the given name.
+    pub fn add_doc(self, name: &str, doc: &str) -> Self {
+        let name = self.scope.add_name(name);
+        self.scope.add_doc_string(name, doc.to_owned());
+        self
+    }
+
     /// Adds a function to the module.
     pub fn add_function(self, name: &str,
-            callback: FunctionImpl, arity: Arity) -> Self {
+            callback: FunctionImpl, arity: Arity, doc: Option<&'static str>) -> Self {
         self.add_value_with_name(name, |name| Value::Function(Function{
                 name: name,
                 sys_fn: SystemFn{
                     arity: arity,
                     callback: callback,
+                    doc: doc,
                 },
             }))
     }

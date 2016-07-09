@@ -3,7 +3,7 @@
 use std::cell::{Ref, RefMut, RefCell};
 use std::rc::{Rc, Weak};
 
-use function::{Function, Lambda, SystemFn};
+use function::{Function, Lambda};
 use io::GlobalIo;
 use lexer::CodeMap;
 use module::{BuiltinModuleLoader, ModuleRegistry};
@@ -472,10 +472,7 @@ impl MasterScope {
     fn get_function(name: Name) -> Option<Value> {
         get_system_fn(name).map(|f| Value::Function(Function{
             name: name,
-            sys_fn: SystemFn{
-                arity: f.arity,
-                callback: f.callback,
-            },
+            sys_fn: f.clone(),
         }))
     }
 }

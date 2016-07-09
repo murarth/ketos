@@ -27,6 +27,8 @@ pub struct SystemFn {
     pub arity: Arity,
     /// Function implementation
     pub callback: FunctionImpl,
+    /// Function documentation
+    pub doc: Option<&'static str>,
 }
 
 impl Clone for SystemFn {
@@ -43,8 +45,8 @@ impl PartialEq for SystemFn {
 pub type FunctionImpl = fn(&Context, &mut [Value]) -> Result<Value, Error>;
 
 macro_rules! sys_fn {
-    ( $callback:path, $arity:expr ) => {
-        SystemFn{arity: $arity, callback: $callback}
+    ( $callback:path , $arity:expr , $doc:expr ) => {
+        SystemFn{arity: $arity, callback: $callback, doc: Some($doc)}
     };
 }
 
@@ -53,67 +55,181 @@ macro_rules! sys_fn {
 /// These names must correspond exactly to the first `NUM_SYSTEM_FNS`
 /// standard names defined in `name.rs`.
 pub static SYSTEM_FNS: [SystemFn; NUM_SYSTEM_FNS] = [
-    sys_fn!(fn_add,         Min(0)),
-    sys_fn!(fn_sub,         Min(1)),
-    sys_fn!(fn_mul,         Min(0)),
-    sys_fn!(fn_pow,         Exact(2)),
-    sys_fn!(fn_div,         Min(1)),
-    sys_fn!(fn_floor_div,   Min(1)),
-    sys_fn!(fn_rem,         Exact(2)),
-    sys_fn!(fn_shl,         Exact(2)),
-    sys_fn!(fn_shr,         Exact(2)),
-    sys_fn!(fn_eq,          Min(2)),
-    sys_fn!(fn_ne,          Min(2)),
-    sys_fn!(fn_lt,          Min(2)),
-    sys_fn!(fn_gt,          Min(2)),
-    sys_fn!(fn_le,          Min(2)),
-    sys_fn!(fn_ge,          Min(2)),
-    sys_fn!(fn_zero,        Min(1)),
-    sys_fn!(fn_max,         Min(1)),
-    sys_fn!(fn_min,         Min(1)),
-    sys_fn!(fn_append,      Min(1)),
-    sys_fn!(fn_elt,         Exact(2)),
-    sys_fn!(fn_concat,      Min(1)),
-    sys_fn!(fn_join,        Min(1)),
-    sys_fn!(fn_len,         Exact(1)),
-    sys_fn!(fn_slice,       Exact(3)),
-    sys_fn!(fn_first,       Exact(1)),
-    sys_fn!(fn_second,      Exact(1)),
-    sys_fn!(fn_last,        Exact(1)),
-    sys_fn!(fn_init,        Exact(1)),
-    sys_fn!(fn_tail,        Exact(1)),
-    sys_fn!(fn_list,        Min(0)),
-    sys_fn!(fn_reverse,     Exact(1)),
-    sys_fn!(fn_abs,         Exact(1)),
-    sys_fn!(fn_ceil,        Exact(1)),
-    sys_fn!(fn_floor,       Exact(1)),
-    sys_fn!(fn_round,       Exact(1)),
-    sys_fn!(fn_trunc,       Exact(1)),
-    sys_fn!(fn_int,         Exact(1)),
-    sys_fn!(fn_float,       Exact(1)),
-    sys_fn!(fn_inf,         Min(0)),
-    sys_fn!(fn_nan,         Min(0)),
-    sys_fn!(fn_denom,       Exact(1)),
-    sys_fn!(fn_fract,       Exact(1)),
-    sys_fn!(fn_numer,       Exact(1)),
-    sys_fn!(fn_rat,         Range(1, 2)),
-    sys_fn!(fn_recip,       Exact(1)),
-    sys_fn!(fn_chars,       Exact(1)),
-    sys_fn!(fn_string,      Exact(1)),
-    sys_fn!(fn_id,          Exact(1)),
-    sys_fn!(fn_is,          Exact(2)),
-    sys_fn!(fn_is_instance, Exact(2)),
-    sys_fn!(fn_null,        Exact(1)),
-    sys_fn!(fn_type_of,     Exact(1)),
-    sys_fn!(fn_dot,         Exact(2)),
-    sys_fn!(fn_dot_eq,      Min(1)),
-    sys_fn!(fn_new,         Min(1)),
-    sys_fn!(fn_format,      Min(1)),
-    sys_fn!(fn_print,       Min(1)),
-    sys_fn!(fn_println,     Min(1)),
-    sys_fn!(fn_panic,       Range(0, 1)),
-    sys_fn!(fn_xor,         Exact(2)),
-    sys_fn!(fn_not,         Exact(1)),
+    sys_fn!(fn_add,         Min(0),
+"Returns the sum of all arguments.
+
+Given no arguments, returns the additive identity, `0`."),
+    sys_fn!(fn_sub,         Min(1),
+"Returns the cumulative difference between successive arguments."),
+    sys_fn!(fn_mul,         Min(0),
+"Returns the product of all arguments.
+
+Given no arguments, returns the multiplicative identity, `1`."),
+    sys_fn!(fn_pow,         Exact(2),
+"Returns a base value raised to an exponent."),
+    sys_fn!(fn_div,         Min(1),
+"Returns the cumulative quotient of successive arguments."),
+    sys_fn!(fn_floor_div,   Min(1),
+"Returns the cumulative quotient of successive arguments,
+rounded toward negative infinity."),
+    sys_fn!(fn_rem,         Exact(2),
+"Returns the remainder of two arguments."),
+    sys_fn!(fn_shl,         Exact(2),
+"Returns an integer, bit shifted left by a given number."),
+    sys_fn!(fn_shr,         Exact(2),
+"Returns an integer, bit shifted right by a given number."),
+    sys_fn!(fn_eq,          Min(2),
+"Returns whether the given arguments compare equal to one another.
+
+Values of different types may not be compared. Attempts to do so will
+result in an error."),
+    sys_fn!(fn_ne,          Min(2),
+"Returns whether each given argument differs in value from each other argument.
+
+Values of different types may not be compared. Attempts to do so will
+result in an error."),
+    sys_fn!(fn_lt,          Min(2),
+"Returns whether each argument compares less than each successive argument.
+
+Values of different types may not be compared. Attempts to do so will
+result in an error."),
+    sys_fn!(fn_gt,          Min(2),
+"Returns whether each argument compares greater than each successive argument.
+
+Values of different types may not be compared. Attempts to do so will
+result in an error."),
+    sys_fn!(fn_le,          Min(2),
+"Returns whether each argument compares less than or equal to each
+successive argument.
+
+Values of different types may not be compared. Attempts to do so will
+result in an error."),
+    sys_fn!(fn_ge,          Min(2),
+"Returns whether each argument compares greater than or equal to each
+successive argument.
+
+Values of different types may not be compared. Attempts to do so will
+result in an error."),
+    sys_fn!(fn_zero,        Min(1),
+"Returns whether all given values are equal to zero."),
+    sys_fn!(fn_max,         Min(1),
+"Returns the greatest value of given arguments."),
+    sys_fn!(fn_min,         Min(1),
+"Returns the least value of given arguments."),
+    sys_fn!(fn_append,      Min(1),
+"Append a series of elements to a given list."),
+    sys_fn!(fn_elt,         Exact(2),
+"Returns an element from a list, starting at zero index."),
+    sys_fn!(fn_concat,      Min(1),
+"Concatenates a series of lists or strings and chars."),
+    sys_fn!(fn_join,        Min(1),
+"Joins a series of lists or strings and chars using a separator value."),
+    sys_fn!(fn_len,         Exact(1),
+"Returns the length of the given list or string.
+
+String length is in bytes rather than characters."),
+    sys_fn!(fn_slice,       Exact(3),
+"Returns a subsequence of a list or string."),
+    sys_fn!(fn_first,       Exact(1),
+"Returns the first element of the given list."),
+    sys_fn!(fn_second,      Exact(1),
+"Returns the second element of the given list."),
+    sys_fn!(fn_last,        Exact(1),
+"Returns the last element of the given list."),
+    sys_fn!(fn_init,        Exact(1),
+"Returns all but the last element of the given list."),
+    sys_fn!(fn_tail,        Exact(1),
+"Returns all but the first element of the given list."),
+    sys_fn!(fn_list,        Min(0),
+"Returns a list of values. In contrast with the `'(a b c ...)` list
+construction syntax, this function will evaluate each of its arguments."),
+    sys_fn!(fn_reverse,     Exact(1),
+"Returns a list in reverse order."),
+    sys_fn!(fn_abs,         Exact(1),
+"Returns the absolute value of the given numerical value."),
+    sys_fn!(fn_ceil,        Exact(1),
+"Returns a number value rounded toward positive infinity."),
+    sys_fn!(fn_floor,       Exact(1),
+"Returns a number value rounded toward negative infinity."),
+    sys_fn!(fn_round,       Exact(1),
+"Returns a number rounded to the nearest integer.
+Rounds half-way cases away from zero."),
+    sys_fn!(fn_trunc,       Exact(1),
+"Returns a number rounded toward zero."),
+    sys_fn!(fn_int,         Exact(1),
+"Truncates a float or ratio value and returns its whole portion as an integer.
+
+If the given value is infinite or `NaN`, an error will result."),
+    sys_fn!(fn_float,       Exact(1),
+"Returns the given value as a floating point value."),
+    sys_fn!(fn_inf,         Min(0),
+"Returns whether all given arguments are equal to positive or negative infinity.
+
+Given no arguments, returns the value of positive infinity."),
+    sys_fn!(fn_nan,         Min(0),
+"Returns whether all given arguments are equal to `NaN`.
+
+Given no arguments, returns the value of `NaN`."),
+    sys_fn!(fn_denom,       Exact(1),
+"Returns the denominator of a ratio."),
+    sys_fn!(fn_fract,       Exact(1),
+"Returns the fractional portion of a float or ratio."),
+    sys_fn!(fn_numer,       Exact(1),
+"Returns the numerator of a ratio."),
+    sys_fn!(fn_rat,         Range(1, 2),
+"Returns the given numerical value as a ratio."),
+    sys_fn!(fn_recip,       Exact(1),
+"Returns the reciprocal of the given numeric value.
+
+If the value is of type integer, the value returned will be a ratio."),
+    sys_fn!(fn_chars,       Exact(1),
+"Returns a string transformed into a list of characters."),
+    sys_fn!(fn_string,      Exact(1),
+"Returns an argument converted into a string."),
+    sys_fn!(fn_id,          Exact(1),
+"Returns the unmodified value of the argument received."),
+    sys_fn!(fn_is,          Exact(2),
+"    (is type value)
+
+Returns whether a given expression matches the named type.
+
+`is` also accepts `'number` as a type name, which matches `integer`, `float`,
+and `ratio` type values."),
+    sys_fn!(fn_is_instance, Exact(2),
+"    (is-instance def value)
+
+Returns whether a given struct value is an instance of
+the named struct definition."),
+    sys_fn!(fn_null,        Exact(1),
+"Returns whether the given value is unit, `()`."),
+    sys_fn!(fn_type_of,     Exact(1),
+"Returns a name representing the type of the given value."),
+    sys_fn!(fn_dot,         Exact(2),
+"    (. value field-name)
+
+Accesses a field from a struct value."),
+    sys_fn!(fn_dot_eq,      Min(1),
+"    (.= struct :field value)
+
+Returns a new struct value with named fields replaced with new values."),
+    sys_fn!(fn_new,         Min(1),
+"    (new struct-def :field value)
+
+Creates a struct value."),
+    sys_fn!(fn_format,      Min(1),
+"Returns a formatted string."),
+    sys_fn!(fn_print,       Min(1),
+"Prints a formatted string to `stdout`."),
+    sys_fn!(fn_println,     Min(1),
+"Prints a formatted string to `stdout`, followed by a newline."),
+    sys_fn!(fn_panic,       Range(0, 1),
+"Immediately interrupts execution upon evaluation.
+
+It accepts an optional parameter describing the reason for the panic."),
+    sys_fn!(fn_xor,         Exact(2),
+"Returns the exclusive-or of the given boolean values."),
+    sys_fn!(fn_not,         Exact(1),
+"Returns the inverse of the given boolean value."),
 ];
 
 /// Describes the number of arguments a function may accept.

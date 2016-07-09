@@ -12,8 +12,10 @@ use value::Value;
 /// Loads the `random` module into the given scope.
 pub fn load(scope: Scope) -> Module {
     ModuleBuilder::new("random", scope)
-        .add_function("random",  fn_random,  Exact(0))
-        .add_function("shuffle", fn_shuffle, Exact(1))
+        .add_function("random",  fn_random,  Exact(0),
+            Some("Returns a random float value in the range `[0.0, 1.0)`."))
+        .add_function("shuffle", fn_shuffle, Exact(1),
+            Some("Given a list, returns a new list with the elements shuffled."))
         .finish()
 }
 

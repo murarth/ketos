@@ -17,13 +17,28 @@ use value::{FromValueRef, Value};
 /// Loads the `code` module into the given scope.
 pub fn load(scope: Scope) -> Module {
     ModuleBuilder::new("code", scope)
-        .add_function("compile",        fn_compile,         Exact(1))
-        .add_function("disassemble",    fn_disassemble,     Exact(1))
-        .add_function("documentation",  fn_documentation,   Exact(1))
-        .add_function("get-const",      fn_get_const,       Exact(2))
-        .add_function("get-value",      fn_get_value,       Exact(2))
+        .add_function("compile",        fn_compile,         Exact(1),
+            Some("Compiles an expression into a lambda."))
+        .add_function("disassemble",    fn_disassemble,     Exact(1),
+            Some("Prints bytecode for the given lambda."))
+        .add_function("documentation",  fn_documentation,   Exact(1), Some(
+"Returns the documentation string for a lambda value or a name.
+Returns `()` if the item has no documentation."))
+        .add_function("get-const",      fn_get_const,       Exact(2), Some(
+"    (get-const lambda n)
+
+Returns the nth const value of a lambda."))
+        .add_function("get-value",      fn_get_value,       Exact(2), Some(
+"    (get-value lambda n)
+
+Returns the nth captured value of a lambda."))
         .add_function("module-documentation",
-                                fn_module_documentation,    Range(0, 1))
+                                fn_module_documentation,    Range(0, 1), Some(
+"    (module-documentation)
+    (module-documentation name)
+
+Returns the documentation string for the named module.
+Given no arguments, returns the documentation string for the current module."))
         .finish()
 }
 
@@ -202,6 +217,11 @@ fn print_instruction(ctx: &Context, lambda: &Lambda,
 /// `()` is returned.
 fn fn_documentation(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0] {
+        Value::Function(ref f) => {
+            Ok(f.sys_fn.doc
+                .map(Value::from)
+                .unwrap_or(Value::Unit))
+        }
         Value::Lambda(ref l) => {
             Ok(l.code.doc.clone()
                 .map(Value::from)
