@@ -28,10 +28,15 @@ type RlCompletionFn = extern "C" fn(*const c_char, c_int, c_int) -> *mut *const 
 extern "C" {
     static mut rl_attempted_completion_function: RlCompletionFn;
     static mut rl_attempted_completion_over: c_int;
-    static mut rl_basic_quote_characters: *const c_char;
+    static mut rl_basic_word_break_characters: *const c_char;
     static mut rl_line_buffer: *mut c_char;
 
-    static mut rl_basic_word_break_characters: *const c_char;
+    // The static variable `rl_basic_quote_characters` is not present in BSD
+    // versions of libreadline.
+    #[cfg(not(any(
+        target_os = "macos", target_os = "ios", target_os = "dragonfly",
+        target_os = "freebsd", target_os = "openbsd", target_os = "netbsd")))]
+    static mut rl_basic_quote_characters: *const c_char;
 
     #[link_name = "add_history"]
     fn rl_add_history(line: *const c_char);
@@ -51,19 +56,31 @@ fn init_readline() {
             b" \t\n#\"'(),:;@[\\]`{}\0" // NUL-terminated
             .as_ptr() as *const _;
 
-        // Inform readline that only a double-quote begins a string.
-        // This tells it that `'foo` does not constitute an unclosed string,
-        // which would otherwise inhibit matching paren blinking.
-        // Unfortunately, this also means that it does not recognize true
-        // character constants and will get confused with unbalanced
-        // single-quoted parentheses. However, this is less troublesome
-        // than the alternative.
-        rl_basic_quote_characters = b"\"\0".as_ptr() as *const _;
+        init_quote_characters();
 
         // Blink open paren when a closing paren is typed.
         rl_variable_bind(b"blink-matching-paren\0".as_ptr() as *const _,
             b"on\0".as_ptr() as *const _);
     }
+}
+
+#[cfg(any(
+    target_os = "macos", target_os = "ios", target_os = "dragonfly",
+    target_os = "freebsd", target_os = "openbsd", target_os = "netbsd"))]
+unsafe fn init_quote_characters() {}
+
+#[cfg(not(any(
+    target_os = "macos", target_os = "ios", target_os = "dragonfly",
+    target_os = "freebsd", target_os = "openbsd", target_os = "netbsd")))]
+unsafe fn init_quote_characters() {
+    // Inform readline that only a double-quote begins a string.
+    // This tells it that `'foo` does not constitute an unclosed string,
+    // which would otherwise inhibit matching paren blinking.
+    // Unfortunately, this also means that it does not recognize true
+    // character constants and will get confused with unbalanced
+    // single-quoted parentheses. However, this is less troublesome
+    // than the alternative.
+    rl_basic_quote_characters = b"\"\0".as_ptr() as *const _;
 }
 
 /// Pushes a single line into `readline` history.
