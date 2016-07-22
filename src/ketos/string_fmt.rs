@@ -4,17 +4,17 @@ use std::ascii::AsciiExt;
 use std::borrow::Cow::{self, Borrowed, Owned};
 use std::cmp::max;
 use std::f64;
-use std::fmt::{self, Write};
+use std::fmt;
 use std::iter::repeat;
 use std::mem::transmute;
 use std::str::CharIndices;
 
-use num::{One, Signed, ToPrimitive};
+use num::ToPrimitive;
 
 use exec::ExecError;
 use integer::Integer;
 use lexer::{BytePos, Span};
-use name::{debug_names, display_names, NameDebug, NameDisplay, NameStore};
+use name::{debug_names, display_names, NameStore};
 use pretty::pretty_print;
 use value::Value;
 

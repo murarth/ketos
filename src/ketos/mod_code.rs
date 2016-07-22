@@ -8,7 +8,6 @@ use error::Error;
 use exec::{Context, ExecError};
 use function::{plural, Lambda};
 use function::Arity::*;
-use io::SharedWrite;
 use module::{Module, ModuleBuilder};
 use name::{debug_names, get_standard_name};
 use scope::Scope;

@@ -2,7 +2,7 @@
 
 use std::any::{Any, TypeId};
 use std::cmp::Ordering;
-use std::fmt::{self, Write};
+use std::fmt;
 use std::mem::{replace, transmute};
 use std::rc::Rc;
 

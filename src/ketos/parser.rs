@@ -4,8 +4,6 @@ use std::borrow::Cow::{self, Borrowed, Owned};
 use std::collections::HashMap;
 use std::fmt;
 
-use num::Num;
-
 use error::Error;
 use exec::Context;
 use integer::{Integer, Ratio};
