@@ -27,14 +27,13 @@ path = "src/ketos/lib.rs"
 [dependencies]
 byteorder = "0.5.1"
 getopts = "0.2"
-libc = "0.2"
+linefeed = "0.1"
 num = "0.1.32"
 rand = "0.3"
 serde = "0.7"
 
 [build-dependencies]
 serde_codegen = "0.7"
-syntex = "0.33"
 
 [dev-dependencies]
 assert_matches = "1.0"

@@ -1,18 +1,24 @@
 extern crate getopts;
 extern crate ketos;
-extern crate libc;
+extern crate linefeed;
 
 use std::env::{split_paths, var_os};
 use std::io::{stderr, Write};
+use std::iter::repeat;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use std::str::FromStr;
 use std::time::Duration;
 
 use getopts::{Options, ParsingStyle};
-use ketos::{Builder, Interpreter, Error, ParseErrorKind, RestrictConfig, take_traceback};
+use ketos::{
+    Builder, Interpreter,
+    Error, ParseErrorKind, RestrictConfig, take_traceback,
+    Scope,
+};
+use linefeed::{Completion, Reader, Terminal};
 
 mod completion;
-mod readline;
 
 fn main() {
     let status = run();
@@ -184,43 +190,42 @@ fn run_file(interp: &Interpreter, file: &Path) -> bool {
     }
 }
 
-#[derive(Copy, Clone)]
-enum Prompt {
-    Normal,
-    OpenComment,
-    OpenParen,
-    OpenString,
-    DocComment,
-}
-
-fn read_line(interp: &Interpreter, prompt: Prompt) -> Option<String> {
-    let prompt = match prompt {
-        Prompt::Normal => "ketos=> ",
-        Prompt::OpenComment => "ketos#> ",
-        Prompt::OpenParen => "ketos(> ",
-        Prompt::OpenString => "ketos\"> ",
-        Prompt::DocComment => "ketos;> ",
-    };
-
-    readline::read_line(prompt, interp.scope())
-}
+const PROMPT_NORMAL : &'static str = "ketos=> ";
+const PROMPT_COMMENT: &'static str = "ketos#> ";
+const PROMPT_PAREN  : &'static str = "ketos(> ";
+const PROMPT_STRING : &'static str = "ketos\"> ";
+const PROMPT_DOC    : &'static str = "ketos;> ";
 
 fn run_repl(interp: &Interpreter) {
     let mut buf = String::new();
-    let mut prompt = Prompt::Normal;
+    let mut reader = match Reader::new("ketos") {
+        Ok(r) => r,
+        Err(_) => return
+    };
 
-    while let Some(line) = read_line(interp, prompt) {
+    reader.set_completer(Rc::new(Completer{
+        scope: interp.scope().clone(),
+    }));
+
+    reader.set_prompt(PROMPT_NORMAL);
+    reader.set_word_break_chars(" \t\n#\"'(),:;@[\\]`{}");
+    reader.set_string_chars("\"");
+
+    reader.set_blink_matching_paren(true);
+
+    while let Ok(Some(line)) = reader.read_line() {
         if line.chars().all(|c| c.is_whitespace()) {
             continue;
         }
 
-        readline::push_history(&line);
         buf.push_str(&line);
         buf.push('\n');
+        reader.add_history(line);
 
         match interp.compile_exprs(&buf) {
             Ok(code) => {
-                prompt = Prompt::Normal;
+                reader.set_prompt(PROMPT_NORMAL);
+
                 if !code.is_empty() {
                     match interp.execute_program(code) {
                         Ok(v) => interp.display_value(&v),
@@ -229,23 +234,23 @@ fn run_repl(interp: &Interpreter) {
                 }
             }
             Err(Error::ParseError(ref e)) if e.kind == ParseErrorKind::MissingCloseParen => {
-                prompt = Prompt::OpenParen;
+                reader.set_prompt(PROMPT_PAREN);
                 continue;
             }
             Err(Error::ParseError(ref e)) if e.kind == ParseErrorKind::UnterminatedComment => {
-                prompt = Prompt::OpenComment;
+                reader.set_prompt(PROMPT_COMMENT);
                 continue;
             }
             Err(Error::ParseError(ref e)) if e.kind == ParseErrorKind::UnterminatedString => {
-                prompt = Prompt::OpenString;
+                reader.set_prompt(PROMPT_STRING);
                 continue;
             }
             Err(Error::ParseError(ref e)) if e.kind == ParseErrorKind::DocCommentEof => {
-                prompt = Prompt::DocComment;
+                reader.set_prompt(PROMPT_DOC);
                 continue;
             }
             Err(ref e) => {
-                prompt = Prompt::Normal;
+                reader.set_prompt(PROMPT_NORMAL);
                 display_error(&interp, e);
             }
         }
@@ -255,6 +260,27 @@ fn run_repl(interp: &Interpreter) {
     }
 
     println!("");
+}
+
+struct Completer {
+    scope: Scope,
+}
+
+impl<Term: Terminal> linefeed::Completer<Term> for Completer {
+    fn complete(&self, word: &str, reader: &Reader<Term>,
+            start: usize, end: usize) -> Option<Vec<Completion>> {
+        let is_whitespace = reader.buffer()[..start]
+            .chars().all(|ch| ch.is_whitespace());
+
+        if is_whitespace && start == end {
+            // Indent when there's no word to complete
+            let n = 2 - start % 2;
+
+            Some(vec![Completion::simple(repeat(' ').take(n).collect())])
+        } else {
+            completion::complete(word, &self.scope)
+        }
+    }
 }
 
 fn print_version() {
