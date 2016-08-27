@@ -205,6 +205,11 @@ impl ModuleRegistry {
         }
     }
 
+    /// Inserts a named module into the registry.
+    pub fn add_module(&self, name: Name, module: Module) -> Option<Module> {
+        self.modules.borrow_mut().insert(name, module)
+    }
+
     /// Returns the named module, only if it is already loaded.
     pub fn get_module(&self, name: Name) -> Option<Module> {
         self.modules.borrow().get(name).cloned()
