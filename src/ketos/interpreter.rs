@@ -255,20 +255,8 @@ impl Interpreter {
     /// is the optional filename of the program. These are used if the error
     /// message refers to a span within the source code.
     pub fn display_error(&self, e: &Error) {
-        match *e {
-            Error::CompileError(ref e) => {
-                let _ = writeln!(stderr(), "compile error: {}",
-                    display_names(&self.scope().borrow_names(), e));
-            }
-            Error::ExecError(ref e) => {
-                let _ = writeln!(stderr(), "execution error: {}",
-                    display_names(&self.scope().borrow_names(), e));
-            }
-            Error::ParseError(ref e) => self.display_parse_error(e),
-            ref e => {
-                let _ = writeln!(stderr(), "{}: {}", e.description(), e);
-            }
-        }
+        let s = self.format_error(e);
+        let _ = writeln!(stderr(), "{}", s);
     }
 
     /// Prints traceback information to `stderr`.
@@ -277,20 +265,48 @@ impl Interpreter {
             display_names(&self.scope().borrow_names(), trace));
     }
 
-    fn display_parse_error(&self, e: &ParseError) {
+    fn format_parse_error(&self, e: &ParseError) -> String {
+        use std::fmt::Write;
+
         let codemap = self.scope().borrow_codemap();
         let hi = codemap.highlight_span(e.span);
 
-        let mut stderr = stderr();
-        let _ = writeln!(stderr, "{}:{}:{}:parse error: {}",
+        let mut res = String::with_capacity(32);
+
+        let _ = writeln!(res, "{}:{}:{}:parse error: {}",
             hi.filename.unwrap_or("<input>"), hi.line, hi.col, e.kind);
-        let _ = writeln!(stderr, "    {}", hi.source);
-        let _ = writeln!(stderr, "    {}", hi.highlight);
+        let _ = writeln!(res, "    {}", hi.source);
+        let _ = write!  (res, "    {}", hi.highlight);
+
+        res
     }
 
     /// Prints a string representation of a value to `stdout`.
     pub fn display_value(&self, value: &Value) {
         println!("{}", debug_names(&self.scope().borrow_names(), value));
+    }
+
+    /// Formats an error into a `String`.
+    pub fn format_error(&self, e: &Error) -> String {
+        match *e {
+            Error::CompileError(ref e) => {
+                format!("compile error: {}",
+                    display_names(&self.scope().borrow_names(), e))
+            }
+            Error::ExecError(ref e) => {
+                format!("execution error: {}",
+                    display_names(&self.scope().borrow_names(), e))
+            }
+            Error::ParseError(ref e) => self.format_parse_error(e),
+            ref e => format!("{}: {}", e.description(), e)
+        }
+    }
+
+    /// Formats a `Trace` into a `String`.
+    ///
+    /// The result does *not* include the `"Traceback:"` preamble.
+    pub fn format_trace(&self, trace: &Trace) -> String {
+        display_names(&self.scope().borrow_names(), trace).to_string()
     }
 
     /// Formats a value into a string.
