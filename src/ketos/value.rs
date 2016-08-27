@@ -414,7 +414,14 @@ pub trait ForeignValue: AnyValue + fmt::Debug {
     }
 
     /// Tests for equality between two values of a foreign type.
-    fn is_equal_to(&self, rhs: &ForeignValue) -> Result<bool, ExecError>;
+    ///
+    /// The default implementation unconditionally returns an error.
+    fn is_equal_to(&self, rhs: &ForeignValue) -> Result<bool, ExecError> {
+        Err(ExecError::TypeMismatch{
+            lhs: self.type_name(),
+            rhs: rhs.type_name(),
+        })
+    }
 
     /// Tests for equality between two values.
     ///
@@ -518,20 +525,6 @@ impl<F> ForeignValue for ForeignFn<F>
         where F: Any + Fn(&Context, &mut [Value]) -> Result<Value, Error> {
     fn compare_to(&self, _rhs: &ForeignValue) -> Result<Ordering, ExecError> {
         Err(ExecError::CannotCompare("foreign-fn"))
-    }
-
-    fn is_equal_to(&self, rhs: &ForeignValue) -> Result<bool, ExecError> {
-        // We can't guarantee that closure values are the same, so we always
-        // return false, only checking that `rhs` appears to be a ForeignFn.
-        let rhs_ty = rhs.type_name();
-        if rhs_ty == "foreign-fn" {
-            Ok(false)
-        } else {
-            Err(ExecError::TypeMismatch{
-                lhs: self.type_name(),
-                rhs: rhs_ty,
-            })
-        }
     }
 
     fn fmt_debug(&self, names: &NameStore, f: &mut fmt::Formatter) -> fmt::Result {
@@ -1210,9 +1203,6 @@ mod test {
     }
 
     impl ForeignValue for Dummy {
-        fn is_equal_to(&self, _rhs: &ForeignValue) -> Result<bool, ExecError> {
-            panic!()
-        }
         fn type_name(&self) -> &'static str { panic!() }
     }
 
