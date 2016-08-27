@@ -251,9 +251,6 @@ impl Interpreter {
     }
 
     /// Prints an error to `stderr`.
-    /// `input` is the source code which produced the error and `name`
-    /// is the optional filename of the program. These are used if the error
-    /// message refers to a span within the source code.
     pub fn display_error(&self, e: &Error) {
         let s = self.format_error(e);
         let _ = writeln!(stderr(), "{}", s);
