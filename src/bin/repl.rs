@@ -13,7 +13,8 @@ use std::time::Duration;
 use getopts::{Options, ParsingStyle};
 use ketos::{
     Builder, Interpreter,
-    Error, ParseErrorKind, RestrictConfig, take_traceback,
+    Error, RestrictConfig, take_traceback,
+    CodeBuffer, MoreResult,
     Scope,
 };
 use linefeed::{Completion, Reader, Terminal};
@@ -190,14 +191,9 @@ fn run_file(interp: &Interpreter, file: &Path) -> bool {
     }
 }
 
-const PROMPT_NORMAL : &'static str = "ketos=> ";
-const PROMPT_COMMENT: &'static str = "ketos#> ";
-const PROMPT_PAREN  : &'static str = "ketos(> ";
-const PROMPT_STRING : &'static str = "ketos\"> ";
-const PROMPT_DOC    : &'static str = "ketos;> ";
-
 fn run_repl(interp: &Interpreter) {
-    let mut buf = String::new();
+    let mut buf = CodeBuffer::new();
+
     let mut reader = match Reader::new("ketos") {
         Ok(r) => r,
         Err(_) => return
@@ -207,24 +203,23 @@ fn run_repl(interp: &Interpreter) {
         scope: interp.scope().clone(),
     }));
 
-    reader.set_prompt(PROMPT_NORMAL);
+    reader.set_prompt("ketos=> ");
     reader.set_word_break_chars(" \t\n#\"'(),:;@[\\]`{}");
     reader.set_string_chars("\"");
 
     reader.set_blink_matching_paren(true);
 
-    while let Ok(Some(line)) = reader.read_line() {
+    while let Ok(Some(mut line)) = reader.read_line() {
         if line.chars().all(|c| c.is_whitespace()) {
             continue;
         }
 
-        buf.push_str(&line);
-        buf.push('\n');
-        reader.add_history(line);
+        reader.add_history(line.clone());
+        line.push('\n');
 
-        match interp.compile_exprs(&buf) {
-            Ok(code) => {
-                reader.set_prompt(PROMPT_NORMAL);
+        match buf.feed_compile(&interp, &line) {
+            Ok(MoreResult::Complete(code)) => {
+                reader.set_prompt("ketos=> ");
 
                 if !code.is_empty() {
                     match interp.execute_program(code) {
@@ -233,29 +228,15 @@ fn run_repl(interp: &Interpreter) {
                     }
                 }
             }
-            Err(Error::ParseError(ref e)) if e.kind == ParseErrorKind::MissingCloseParen => {
-                reader.set_prompt(PROMPT_PAREN);
-                continue;
-            }
-            Err(Error::ParseError(ref e)) if e.kind == ParseErrorKind::UnterminatedComment => {
-                reader.set_prompt(PROMPT_COMMENT);
-                continue;
-            }
-            Err(Error::ParseError(ref e)) if e.kind == ParseErrorKind::UnterminatedString => {
-                reader.set_prompt(PROMPT_STRING);
-                continue;
-            }
-            Err(Error::ParseError(ref e)) if e.kind == ParseErrorKind::DocCommentEof => {
-                reader.set_prompt(PROMPT_DOC);
-                continue;
+            Ok(MoreResult::More(more)) => {
+                reader.set_prompt(&format!("ketos{}> ", more.as_char()));
             }
             Err(ref e) => {
-                reader.set_prompt(PROMPT_NORMAL);
+                reader.set_prompt("ketos=> ");
                 display_error(&interp, e);
             }
         }
 
-        buf.clear();
         interp.clear_codemap();
     }
 

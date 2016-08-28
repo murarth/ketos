@@ -34,6 +34,7 @@ extern crate serde;
 #[cfg(test)]
 #[macro_use] extern crate assert_matches;
 
+pub use buffer::{CodeBuffer, More, MoreResult};
 pub use bytecode::Code;
 pub use compile::CompileError;
 pub use encode::{DecodeError, EncodeError};
@@ -55,6 +56,7 @@ pub use value_decode::decode_value;
 pub use value_encode::encode_value;
 
 pub mod args;
+pub mod buffer;
 pub mod bytecode;
 pub mod compile;
 mod const_fold;
