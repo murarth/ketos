@@ -54,6 +54,7 @@ pub use value::{ForeignValue, FromValue, FromValueRef, Value};
 pub use value_decode::decode_value;
 pub use value_encode::encode_value;
 
+pub mod args;
 pub mod bytecode;
 pub mod compile;
 mod const_fold;

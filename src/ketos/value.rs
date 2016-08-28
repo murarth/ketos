@@ -1194,7 +1194,6 @@ impl StructDef {
 
 #[cfg(test)]
 mod test {
-    use exec::ExecError;
     use super::ForeignValue;
 
     #[derive(Debug)]
