@@ -1,0 +1,13 @@
+[package]
+name = "codegen-tests"
+version = "0.1.0"
+authors = ["Murarth <murarth@gmail.com>"]
+
+build = "src/build.rs"
+
+[dependencies]
+ketos = { version = "*", path = ".." }
+serde = "0.7"
+
+[build-dependencies]
+serde_codegen = "0.7"

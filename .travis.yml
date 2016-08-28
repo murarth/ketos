@@ -8,6 +8,11 @@ notifications:
 branches:
     only: master
 
+script:
+    - cargo build --verbose
+    - cargo test --verbose
+    - cd codegen-tests && cargo test --verbose
+
 after_success: |
     [ $TRAVIS_BRANCH = master ] &&
     [ $TRAVIS_PULL_REQUEST = false ] &&

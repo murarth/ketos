@@ -36,7 +36,7 @@ macro_rules! test {
 }
 
 fn interp(code: &str) -> Result<Interpreter, Error> {
-    let interp = Interpreter::with_search_paths(vec![PathBuf::from("lib")]);
+    let interp = Interpreter::with_search_paths(vec![PathBuf::from("../lib")]);
 
     try!(interp.run_code("(use test (assert-eq))", None));
     try!(interp.run_code(code, None));
