@@ -17,7 +17,7 @@ use name::{debug_names, display_names, NameStore};
 use parser::{ParseError, Parser};
 use scope::{GlobalScope, Scope};
 use restrict::RestrictConfig;
-use trace::Trace;
+use trace::{get_traceback, take_traceback, Trace};
 use value::Value;
 
 /// Builds an `Interpreter` with configured parameters.
@@ -304,6 +304,18 @@ impl Interpreter {
     /// The result does *not* include the `"Traceback:"` preamble.
     pub fn format_trace(&self, trace: &Trace) -> String {
         display_names(&self.scope().borrow_names(), trace).to_string()
+    }
+
+    /// Returns the traceback from the most recent error.
+    ///
+    /// The traceback will remain stored for future calls to `get_traceback`.
+    pub fn get_traceback(&self) -> Option<Trace> {
+        get_traceback()
+    }
+
+    /// Removes and returns the traceback from the most recent error.
+    pub fn take_traceback(&self) -> Option<Trace> {
+        take_traceback()
     }
 
     /// Formats a value into a string.
