@@ -25,7 +25,6 @@
 //! in the variant.
 
 use serde::{Serialize, Serializer};
-use serde::ser::{MapVisitor, SeqVisitor};
 
 use exec::{ExecError, panic};
 use error::Error;
@@ -248,6 +247,14 @@ impl<'a> VSerializer<'a> {
 impl<'a> Serializer for VSerializer<'a> {
     type Error = ExecError;
 
+    type SeqState = ();
+    type TupleState = ();
+    type TupleStructState = ();
+    type TupleVariantState = ();
+    type MapState = ();
+    type StructState = ();
+    type StructVariantState = ();
+
     fn serialize_bool(&mut self, v: bool) -> Result<(), ExecError> {
         self.emit_value(v);
         Ok(())
@@ -258,12 +265,57 @@ impl<'a> Serializer for VSerializer<'a> {
         Ok(())
     }
 
+    fn serialize_i8(&mut self, v: i8) -> Result<(), ExecError> {
+        self.emit_value(v);
+        Ok(())
+    }
+
+    fn serialize_i16(&mut self, v: i16) -> Result<(), ExecError> {
+        self.emit_value(v);
+        Ok(())
+    }
+
+    fn serialize_i32(&mut self, v: i32) -> Result<(), ExecError> {
+        self.emit_value(v);
+        Ok(())
+    }
+
     fn serialize_i64(&mut self, v: i64) -> Result<(), ExecError> {
         self.emit_value(v);
         Ok(())
     }
 
+    fn serialize_isize(&mut self, v: isize) -> Result<(), ExecError> {
+        self.emit_value(v);
+        Ok(())
+    }
+
+    fn serialize_u8(&mut self, v: u8) -> Result<(), ExecError> {
+        self.emit_value(v);
+        Ok(())
+    }
+
+    fn serialize_u16(&mut self, v: u16) -> Result<(), ExecError> {
+        self.emit_value(v);
+        Ok(())
+    }
+
+    fn serialize_u32(&mut self, v: u32) -> Result<(), ExecError> {
+        self.emit_value(v);
+        Ok(())
+    }
+
     fn serialize_u64(&mut self, v: u64) -> Result<(), ExecError> {
+        self.emit_value(v);
+        Ok(())
+    }
+
+    fn serialize_usize(&mut self, v: usize) -> Result<(), ExecError> {
+        self.emit_value(v);
+        Ok(())
+    }
+
+    fn serialize_f32(&mut self, v: f32) -> Result<(), ExecError> {
         self.emit_value(v);
         Ok(())
     }
@@ -276,6 +328,16 @@ impl<'a> Serializer for VSerializer<'a> {
     fn serialize_str(&mut self, v: &str) -> Result<(), ExecError> {
         self.emit_str(v);
         Ok(())
+    }
+
+    fn serialize_bytes(&mut self, v: &[u8]) -> Result<(), ExecError> {
+        let mut state = try!(self.serialize_seq(Some(v.len())));
+
+        for b in v {
+            try!(self.serialize_seq_elt(&mut state, *b));
+        }
+
+        self.serialize_seq_end(state)
     }
 
     fn serialize_unit(&mut self) -> Result<(), ExecError> {
@@ -303,76 +365,147 @@ impl<'a> Serializer for VSerializer<'a> {
         value.serialize(self)
     }
 
-    fn serialize_seq<V: SeqVisitor>(&mut self, mut visitor: V) -> Result<(), ExecError> {
-        self.begin_seq(visitor.len().unwrap_or(0));
+    fn serialize_seq_fixed_size(&mut self, len: usize) -> Result<(), ExecError> {
+        self.serialize_seq(Some(len))
+    }
 
-        while let Some(_) = try!(visitor.visit(self)) {}
-
-        self.end_seq();
+    fn serialize_seq(&mut self, len: Option<usize>) -> Result<(), ExecError> {
+        self.begin_seq(len.unwrap_or(0));
         Ok(())
     }
 
-    fn serialize_seq_elt<V: Serialize>(&mut self, value: V) -> Result<(), ExecError> {
-        value.serialize(self)
-    }
-
-    fn serialize_map<V: MapVisitor>(&mut self, mut visitor: V) -> Result<(), ExecError> {
-        self.begin_seq(visitor.len().unwrap_or(0));
-
-        while let Some(_) = try!(visitor.visit(self)) {}
-
-        self.end_seq();
-        Ok(())
-    }
-
-    fn serialize_map_elt<K, V>(&mut self, key: K, value: V) -> Result<(), ExecError>
-            where K: Serialize, V: Serialize {
-        self.emit_map_key();
-        try!(key.serialize(self));
-        value.serialize(self)
-    }
-
-    fn serialize_struct<V: MapVisitor>(&mut self, name: &'static str, mut visitor: V)
+    fn serialize_seq_elt<V: Serialize>(&mut self, _state: &mut (), value: V)
             -> Result<(), ExecError> {
-        self.begin_struct(name, visitor.len().unwrap_or(0));
+        value.serialize(self)
+    }
 
-        while let Some(_) = try!(visitor.visit(self)) {}
+    fn serialize_seq_end(&mut self, _state: ()) -> Result<(), ExecError> {
+        self.end_seq();
+        Ok(())
+    }
 
+    fn serialize_tuple(&mut self, len: usize) -> Result<(), ExecError> {
+        self.serialize_seq(Some(len))
+    }
+
+    fn serialize_tuple_elt<T>(&mut self, state: &mut (), value: T)
+            -> Result<(), ExecError> where T: Serialize {
+        self.serialize_seq_elt(state, value)
+    }
+
+    fn serialize_tuple_end(&mut self, state: ()) -> Result<(), ExecError> {
+        self.serialize_seq_end(state)
+    }
+
+    fn serialize_map(&mut self, len: Option<usize>) -> Result<(), ExecError> {
+        self.begin_seq(len.unwrap_or(0));
+        Ok(())
+    }
+
+    fn serialize_map_key<T>(&mut self, _state: &mut (), key: T)
+            -> Result<(), ExecError> where T: Serialize {
+        self.emit_map_key();
+        key.serialize(self)
+    }
+
+    fn serialize_map_value<T>(&mut self, _state: &mut (), value: T)
+            -> Result<(), ExecError> where T: Serialize {
+        value.serialize(self)
+    }
+
+    fn serialize_map_end(&mut self, _state: ()) -> Result<(), ExecError> {
+        self.end_seq();
+        Ok(())
+    }
+
+    fn serialize_struct(&mut self, name: &'static str, len: usize)
+            -> Result<(), ExecError> {
+        self.begin_struct(name, len);
+        Ok(())
+    }
+
+    fn serialize_struct_elt<T>(&mut self, _state: &mut (),
+            name: &'static str, value: T)
+            -> Result<(), ExecError> where T: Serialize {
+        self.field_name(name);
+        value.serialize(self)
+    }
+
+    fn serialize_struct_end(&mut self, _state: ()) -> Result<(), ExecError> {
         self.end_struct();
         Ok(())
     }
 
-    fn serialize_tuple_struct<V: SeqVisitor>(&mut self, name: &'static str,
-            mut visitor: V) -> Result<(), ExecError> {
-        self.begin_tuple_struct(name, visitor.len().unwrap_or(0));
+    fn serialize_newtype_struct<T>(&mut self, name: &'static str, value: T)
+            -> Result<(), ExecError> where T: Serialize {
+        let mut state = try!(self.serialize_tuple_struct(name, 1));
 
-        while let Some(_) = try!(visitor.visit(self)) {}
+        try!(self.serialize_tuple_struct_elt(&mut state, value));
 
+        self.serialize_tuple_struct_end(state)
+    }
+
+    fn serialize_tuple_struct(&mut self, name: &'static str, len: usize)
+            -> Result<(), ExecError> {
+        self.begin_tuple_struct(name, len);
+        Ok(())
+    }
+
+    fn serialize_tuple_struct_elt<T>(&mut self, _state: &mut (), value: T)
+            -> Result<(), ExecError> where T: Serialize {
+        value.serialize(self)
+    }
+
+    fn serialize_tuple_struct_end(&mut self, _state: ()) -> Result<(), ExecError> {
         self.end_seq();
         self.end_seq();
         Ok(())
     }
 
-    fn serialize_tuple_variant<V: SeqVisitor>(&mut self, name: &'static str,
-            _index: usize, variant: &'static str, mut visitor: V)
+    fn serialize_newtype_variant<T>(&mut self, name: &'static str,
+            index: usize, variant: &'static str, value: T)
+            -> Result<(), ExecError> where T: Serialize {
+        let mut state = try!(self.serialize_tuple_variant(name, index, variant, 1));
+
+        try!(self.serialize_tuple_variant_elt(&mut state, value));
+
+        self.serialize_tuple_variant_end(state)
+    }
+
+    fn serialize_tuple_variant(&mut self, name: &'static str,
+            _index: usize, variant: &'static str, len: usize)
             -> Result<(), ExecError> {
         self.begin_enum(name);
-        self.enum_variant(variant, visitor.len().unwrap_or(0));
+        self.enum_variant(variant, len);
+        Ok(())
+    }
 
-        while let Some(_) = try!(visitor.visit(self)) {}
+    fn serialize_tuple_variant_elt<T>(&mut self, _state: &mut (), value: T)
+            -> Result<(), ExecError> where T: Serialize {
+        value.serialize(self)
+    }
 
+    fn serialize_tuple_variant_end(&mut self, _state: ()) -> Result<(), ExecError> {
         self.end_enum();
         Ok(())
     }
 
-    fn serialize_struct_variant<V: MapVisitor>(&mut self, name: &'static str,
-            _index: usize, variant: &'static str, mut visitor: V)
+    fn serialize_struct_variant(&mut self, name: &'static str,
+            _index: usize, variant: &'static str, len: usize)
             -> Result<(), ExecError> {
         self.begin_enum(name);
-        self.struct_variant(variant, visitor.len().unwrap_or(0));
+        self.struct_variant(variant, len);
+        Ok(())
+    }
 
-        while let Some(_) = try!(visitor.visit(self)) {}
+    fn serialize_struct_variant_elt<T>(&mut self, _state: &mut (),
+            key: &'static str, value: T)
+            -> Result<(), ExecError> where T: Serialize {
+        self.field_name(key);
+        value.serialize(self)
+    }
 
+    fn serialize_struct_variant_end(&mut self, _state: ()) -> Result<(), ExecError> {
         self.end_struct();
         Ok(())
     }

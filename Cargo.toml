@@ -10,7 +10,7 @@ keywords = [ "scripting", "extension", "functional", "language", "lisp" ]
 license = "MIT/Apache-2.0"
 readme = "README.md"
 
-version = "0.2.2"
+version = "0.3.0"
 authors = ["Murarth <murarth@gmail.com>"]
 
 [[bin]]
@@ -28,7 +28,7 @@ getopts = "0.2"
 linefeed = "0.1"
 num = "0.1.32"
 rand = "0.3"
-serde = "0.7"
+serde = { version = "0.8", optional = true }
 
 [dev-dependencies]
 assert_matches = "1.0"

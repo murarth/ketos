@@ -29,7 +29,7 @@
 extern crate byteorder;
 extern crate num;
 extern crate rand;
-extern crate serde;
+#[cfg(feature = "serde")] extern crate serde;
 
 #[cfg(test)]
 #[macro_use] extern crate assert_matches;
@@ -52,8 +52,8 @@ pub use run::run_code;
 pub use scope::{GlobalScope, Scope};
 pub use trace::{clear_traceback, get_traceback, set_traceback, take_traceback, Trace};
 pub use value::{ForeignValue, FromValue, FromValueRef, Value};
-pub use value_decode::decode_value;
-pub use value_encode::encode_value;
+#[cfg(feature = "serde")] pub use value_decode::decode_value;
+#[cfg(feature = "serde")] pub use value_encode::encode_value;
 
 pub mod args;
 pub mod buffer;
@@ -80,8 +80,8 @@ mod string;
 pub mod string_fmt;
 pub mod trace;
 pub mod value;
-pub mod value_decode;
-pub mod value_encode;
+#[cfg(feature = "serde")] pub mod value_decode;
+#[cfg(feature = "serde")] pub mod value_encode;
 
 mod mod_code;
 mod mod_math;

@@ -10,13 +10,15 @@ branches:
 
 script:
     - cargo build --verbose
-    - cargo test --verbose
-    - cd codegen-tests && cargo test --verbose
+    - cargo test  --verbose
+    - cargo build --verbose --features serde
+    - cargo test  --verbose --features serde
+    - ( cd codegen-tests && cargo test --verbose )
 
 after_success: |
     [ $TRAVIS_BRANCH = master ] &&
     [ $TRAVIS_PULL_REQUEST = false ] &&
-    cargo doc &&
+    cargo doc --features serde &&
     echo '<meta http-equiv=refresh content=0;url=ketos/index.html>' > target/doc/index.html &&
     pip install --user ghp-import &&
     ghp-import -n target/doc &&

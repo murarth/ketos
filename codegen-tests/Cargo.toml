@@ -6,8 +6,8 @@ authors = ["Murarth <murarth@gmail.com>"]
 build = "src/build.rs"
 
 [dependencies]
-ketos = { version = "*", path = ".." }
-serde = "0.7"
+ketos = { version = "*", path = "..", features = ["serde"] }
+serde = "0.8"
 
 [build-dependencies]
-serde_codegen = "0.7"
+serde_codegen = "0.8"
