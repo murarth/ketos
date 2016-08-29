@@ -380,6 +380,7 @@ struct TraitObject {
 }
 
 /// Represents a type of value defined outside the core interpreter.
+#[allow(unused_variables)]
 pub trait ForeignValue: AnyValue + fmt::Debug {
     /// Performs ordered comparison between two values of a foreign type.
     ///
@@ -387,7 +388,7 @@ pub trait ForeignValue: AnyValue + fmt::Debug {
     /// `ExecError::CannotCompare(..)` should be returned.
     ///
     /// The default implementation unconditionally returns an error.
-    fn compare_to(&self, _rhs: &ForeignValue) -> Result<Ordering, ExecError> {
+    fn compare_to(&self, rhs: &ForeignValue) -> Result<Ordering, ExecError> {
         Err(ExecError::CannotCompare(self.type_name()))
     }
 
@@ -437,7 +438,7 @@ pub trait ForeignValue: AnyValue + fmt::Debug {
     /// Format the value in debugging mode.
     ///
     /// The default implementation uses the type's `fmt::Debug` representation.
-    fn fmt_debug(&self, _names: &NameStore, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt_debug(&self, names: &NameStore, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Debug::fmt(self, f)
     }
 
@@ -461,7 +462,7 @@ pub trait ForeignValue: AnyValue + fmt::Debug {
     /// Calls the value as a function.
     ///
     /// The default implementation unconditionally returns an error.
-    fn call_value(&self, _ctx: &Context, _args: &mut [Value])
+    fn call_value(&self, ctx: &Context, args: &mut [Value])
             -> Result<Value, Error> {
         Err(From::from(ExecError::TypeError{
             expected: "function",
