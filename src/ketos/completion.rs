@@ -1,17 +1,18 @@
-//! Performs name-based text completion using the current `GlobalScope`.
+//! Performs name-based text completion using a `GlobalScope`.
 
-use ketos::scope::{GlobalScope, MasterScope};
-use linefeed::Completion;
+use scope::{GlobalScope, MasterScope};
 
-/// Returns common prefix and possible completion suffixes for a given input.
-pub fn complete(word: &str, scope: &GlobalScope)
-        -> Option<Vec<Completion>> {
+/// Returns a sorted list of possible name completions for the given prefix.
+///
+/// Returns `None` if no possible completions exist.
+pub fn complete_name(word: &str, scope: &GlobalScope)
+        -> Option<Vec<String>> {
     let mut results = Vec::new();
 
     for name in MasterScope::get_names() {
         scope.with_name(name, |name| {
             if name.starts_with(word) {
-                results.push(Completion::simple(name.to_owned()));
+                results.push(name.to_owned());
             }
         });
     }
@@ -20,7 +21,7 @@ pub fn complete(word: &str, scope: &GlobalScope)
         for &(name, _) in values {
             scope.with_name(name, |name| {
                 if name.starts_with(word) {
-                    results.push(Completion::simple(name.to_owned()));
+                    results.push(name.to_owned());
                 }
             });
         }
@@ -30,7 +31,7 @@ pub fn complete(word: &str, scope: &GlobalScope)
         for &(name, _) in macros {
             scope.with_name(name, |name| {
                 if name.starts_with(word) {
-                    results.push(Completion::simple(name.to_owned()));
+                    results.push(name.to_owned());
                 }
             });
         }
@@ -39,6 +40,7 @@ pub fn complete(word: &str, scope: &GlobalScope)
     if results.is_empty() {
         None
     } else {
+        results.sort();
         Some(results)
     }
 }

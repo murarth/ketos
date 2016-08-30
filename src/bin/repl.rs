@@ -12,14 +12,12 @@ use std::time::Duration;
 
 use getopts::{Options, ParsingStyle};
 use ketos::{
-    Builder, Interpreter,
-    Error, RestrictConfig, take_traceback,
+    Builder, Interpreter, complete_name,
+    Error, RestrictConfig,
     CodeBuffer, MoreResult,
     Scope,
 };
 use linefeed::{Completion, Reader, Terminal};
-
-mod completion;
 
 fn main() {
     let status = run();
@@ -162,7 +160,7 @@ fn parse_param<T: FromStr>(name: &str, value: &str) -> Result<T, String> {
 }
 
 fn display_error(interp: &Interpreter, e: &Error) {
-    if let Some(trace) = take_traceback() {
+    if let Some(trace) = interp.take_traceback() {
         interp.display_trace(&trace);
     }
     interp.display_error(e);
@@ -259,7 +257,8 @@ impl<Term: Terminal> linefeed::Completer<Term> for Completer {
 
             Some(vec![Completion::simple(repeat(' ').take(n).collect())])
         } else {
-            completion::complete(word, &self.scope)
+            complete_name(word, &self.scope).map(
+                |words| words.into_iter().map(Completion::simple).collect())
         }
     }
 }
