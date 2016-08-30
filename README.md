@@ -17,7 +17,7 @@ To build Ketos into your Rust project, add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-ketos = { git = "https://github.com/murarth/ketos" }
+ketos = "0.3"
 ```
 
 ## Building the REPL
