@@ -1,7 +1,7 @@
 //! Contains implementations of core system functions.
 
 use std::borrow::Cow::{self, Borrowed, Owned};
-use std::cmp::{max, min, Ordering};
+use std::cmp::{max, Ordering};
 use std::f64;
 use std::fmt;
 use std::rc::Rc;
