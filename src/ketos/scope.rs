@@ -22,6 +22,7 @@ pub struct GlobalScope {
     io: Rc<GlobalIo>,
 }
 
+#[derive(Clone)]
 struct Namespace {
     constants: NameMap<Value>,
     macros: NameMap<Lambda>,
@@ -103,6 +104,22 @@ impl GlobalScope {
             scope.codemap.clone(),
             scope.modules.clone(),
             scope.io.clone()))
+    }
+
+    /// Creates a semi-"deep" clone of the `GlobalScope` object.
+    ///
+    /// All constants, macros, and values will be cloned into the new scope.
+    ///
+    /// Other data will be shared between this scope and the new scope.
+    pub fn clone_scope(&self) -> Scope {
+        Rc::new(GlobalScope{
+            name: self.name,
+            namespace: self.namespace.clone(),
+            name_store: self.name_store.clone(),
+            codemap: self.codemap.clone(),
+            modules: self.modules.clone(),
+            io: self.io.clone(),
+        })
     }
 
     /// Adds a named constant value to the scope.
