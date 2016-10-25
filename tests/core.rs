@@ -240,6 +240,12 @@ fn test_struct() {
         ").unwrap_err(),
         Error::ExecError(ExecError::FieldError{..}));
 
+    assert_matches!(run("
+        (struct foo ((a integer)))
+        (.= (new foo :a 1) :b 0)
+        ").unwrap_err(),
+        Error::ExecError(ExecError::FieldError{..}));
+
     assert_eq!(run("
         (struct foo ((a number)))
         (= (new foo :a 1) (new foo :a 1.0))

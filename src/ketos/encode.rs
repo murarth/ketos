@@ -424,10 +424,8 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
                     fields.insert(field, ty);
                 }
 
-                Ok(Value::StructDef(Rc::new(StructDef{
-                    name: name,
-                    fields: fields.into_slice(),
-                })))
+                Ok(Value::StructDef(Rc::new(
+                    StructDef::new(name, fields.into_slice()))))
             }
             QUASI_QUOTE => {
                 let n = try!(self.read_u8()) as u32;
@@ -705,10 +703,12 @@ impl ValueEncoder {
             Value::StructDef(ref def) => {
                 self.write_u8(STRUCT_DEF);
 
-                try!(self.write_name(def.name, names));
-                try!(self.write_len(def.fields.len()));
+                let fields = def.fields();
 
-                for &(name, ty) in &def.fields {
+                try!(self.write_name(def.name(), names));
+                try!(self.write_len(fields.len()));
+
+                for &(name, ty) in fields {
                     try!(self.write_name(name, names));
                     try!(self.write_name(ty, names));
                 }

@@ -13,7 +13,7 @@ use bytecode::Code;
 use error::Error;
 use exec::{Context, ExecError};
 use integer::{Integer, Ratio};
-use name::{Name, NameMap, NUM_SYSTEM_FNS};
+use name::{Name, NUM_SYSTEM_FNS};
 use restrict::RestrictError;
 use scope::{Scope, WeakScope};
 use string_fmt::format_string;
@@ -1085,7 +1085,7 @@ fn fn_is(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 fn fn_is_instance(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let def = try!(get_struct_def(&args[0]));
     let s = try!(get_struct(&args[1]));
-    Ok((def == &s.def).into())
+    Ok((def == s.def()).into())
 }
 
 /// `null` returns whether the given value is unit, `()`.
@@ -1146,7 +1146,7 @@ fn fn_dot(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match s.get_field(name) {
         Some(v) => Ok(v.clone()),
         None => Err(From::from(ExecError::FieldError{
-            struct_name: s.def.name,
+            struct_name: s.def().name(),
             field: name,
         }))
     }
@@ -1164,7 +1164,7 @@ fn fn_dot_eq(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     };
 
     {
-        let def = s.def.clone();
+        let def = s.def().clone();
         let mut s = Rc::make_mut(&mut s);
 
         let mut iter = args[1..].iter_mut();
@@ -1177,30 +1177,22 @@ fn fn_dot_eq(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
                 None => return Err(From::from(ExecError::OddKeywordParams))
             };
 
-            if !s.fields.contains_key(name) {
-                return Err(From::from(ExecError::FieldError{
-                    struct_name: def.name,
-                    field: name,
-                }));
-            }
-
-            match def.fields.get(name) {
-                Some(&ty) => {
+            match def.field_type(name) {
+                Some(ty) => {
                     if !value_is(ctx.scope(), &value, ty) {
                         return Err(From::from(ExecError::expected_field(
-                            def.name, name, ty, &value)));
+                            def.name(), name, ty, &value)));
                     }
                 }
                 None => return Err(From::from(ExecError::FieldError{
-                    struct_name: def.name,
+                    struct_name: def.name(),
                     field: name,
                 }))
             }
 
-            s.fields.set(name, value);
+            *s.get_field_mut(name).unwrap() = value;
         }
     }
-
 
     Ok(Value::Struct(s))
 }
@@ -1213,13 +1205,24 @@ fn fn_dot_eq(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 fn fn_new(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let def = try!(get_struct_def(&args[0])).clone();
 
-    let mut fields = NameMap::new();
+    let n_fields = def.fields().len();
+    let mut fields = vec![Value::Unbound; n_fields].into_boxed_slice();
     let mut iter = args[1..].iter_mut();
 
     while let Some(fname) = iter.next() {
         let fname = try!(get_keyword(fname));
 
-        if fields.contains_key(fname) {
+        let idx = match def.field_index(fname) {
+            Some(idx) => idx,
+            None => return Err(From::from(ExecError::FieldError{
+                struct_name: def.name(),
+                field: fname,
+            }))
+        };
+
+        if let Value::Unbound = fields[idx] {
+            // Nothing
+        } else {
             return Err(From::from(ExecError::DuplicateField(fname)));
         }
 
@@ -1228,32 +1231,29 @@ fn fn_new(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
             None => return Err(From::from(ExecError::OddKeywordParams))
         };
 
-        match def.fields.get(fname) {
-            Some(&ty) => {
+        match def.field_type(fname) {
+            Some(ty) => {
                 if !value_is(ctx.scope(), &value, ty) {
                     return Err(From::from(ExecError::expected_field(
-                        def.name, fname, ty, &value)));
+                        def.name(), fname, ty, &value)));
                 } else {
-                    fields.insert(fname, value);
+                    fields[idx] = value;
                 }
             }
-            None => return Err(From::from(ExecError::FieldError{
-                struct_name: def.name,
-                field: fname,
-            }))
+            None => unreachable!()
         }
     }
 
-    for &(fname, _) in &def.fields {
-        if !fields.contains_key(fname) {
+    for (n, &(fname, _)) in def.fields().iter().enumerate() {
+        if let Value::Unbound = fields[n] {
             return Err(From::from(ExecError::MissingField{
-                struct_name: def.name,
+                struct_name: def.name(),
                 field: fname,
             }));
         }
     }
 
-    Ok(Value::Struct(Rc::new(Struct::new(def, fields.into_slice()))))
+    Ok(Value::Struct(Rc::new(Struct::new(def, fields))))
 }
 
 /// `format` returns a formatted string.

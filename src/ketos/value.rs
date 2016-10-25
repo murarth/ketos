@@ -99,9 +99,7 @@ impl Value {
                 try!(cmp_value_slice(a, b)),
             (&Value::Struct(ref a), &Value::Struct(ref b)) => {
                 if a.def == b.def {
-                    try!(cmp_value_iter(
-                        a.fields.iter().map(|&(_, ref v)| v).zip(
-                            b.fields.iter().map(|&(_, ref v)| v))))
+                    try!(cmp_value_slice(&a.fields, &b.fields))
                 } else {
                     return Err(ExecError::StructMismatch{
                         lhs: a.def.name,
@@ -209,8 +207,7 @@ impl Value {
                 try!(eq_value_slice(a, b)),
             (&Value::Struct(ref a), &Value::Struct(ref b)) => {
                 if a.def == b.def {
-                    try!(eq_value_iter(a.fields.iter().zip(b.fields.iter())
-                        .map(|(&(_, ref a), &(_, ref b))| (a, b))))
+                    try!(eq_value_slice(&a.fields, &b.fields))
                 } else {
                     return Err(ExecError::StructMismatch{
                         lhs: a.def.name,
@@ -248,7 +245,7 @@ impl Value {
             (&Value::Struct(ref a), &Value::Struct(ref b)) =>
                 a.def == b.def &&
                     a.fields.iter().zip(b.fields.iter())
-                        .all(|(&(_, ref a), &(_, ref b))| a.is_identical(b)),
+                        .all(|(a, b)| a.is_identical(b)),
             (&Value::Name(a), &Value::Name(b)) => a == b,
             (&Value::Keyword(a), &Value::Keyword(b)) => a == b,
             (&Value::Char(a), &Value::Char(b)) => a == b,
@@ -302,7 +299,7 @@ impl Value {
                 1 + numer + denom
             }
             Value::Struct(ref s) =>
-                1 + s.fields.iter().map(|&(_, ref f)| f.size()).fold(0, |a, b| a + b),
+                1 + s.fields.iter().map(|f| f.size()).fold(0, |a, b| a + b),
             Value::StructDef(ref d) => 1 + d.fields.len(),
             Value::String(ref s) => 1 + s.len(),
             Value::Path(ref p) => 1 + p.as_os_str().len(),
@@ -680,18 +677,22 @@ impl NameDebug for Value {
             // Write out "(new 'name ...)"? Implement a shortcut syntax?
             Value::Struct(ref s) => {
                 if s.fields.is_empty() {
-                    write!(f, "{} {{}}", names.get(s.def.name))
+                    write!(f, "{} {{}}", names.get(s.def().name()))
                 } else {
-                    try!(write!(f, "{} {{ ", names.get(s.def.name)));
+                    let def = s.def();
 
-                    let mut iter = s.fields.iter();
+                    try!(write!(f, "{} {{ ", names.get(def.name())));
 
-                    if let Some(&(name, ref value)) = iter.next() {
+                    let mut iter = def.fields.iter()
+                        .zip(s.fields.iter())
+                        .map(|(&(name, _), f)| (name, f));
+
+                    if let Some((name, value)) = iter.next() {
                         try!(write!(f, "{}: ", names.get(name)));
                         try!(NameDebug::fmt(value, names, f));
                     }
 
-                    for &(name, ref value) in iter {
+                    for (name, value) in iter {
                         try!(write!(f, ", {}: ", names.get(name)));
                         try!(NameDebug::fmt(value, names, f));
                     }
@@ -758,18 +759,6 @@ fn flip_ordering(ord: Ordering) -> Ordering {
     }
 }
 
-fn cmp_value_iter<'a, I>(iter: I) -> Result<Ordering, ExecError>
-        where I: IntoIterator<Item=(&'a Value, &'a Value)> {
-    for (a, b) in iter {
-        match try!(a.compare(b)) {
-            Ordering::Equal => (),
-            ord => return Ok(ord),
-        }
-    }
-
-    Ok(Ordering::Equal)
-}
-
 fn cmp_value_slice(a: &[Value], b: &[Value]) -> Result<Ordering, ExecError> {
     for (a, b) in a.iter().zip(b) {
         match try!(a.compare(b)) {
@@ -779,17 +768,6 @@ fn cmp_value_slice(a: &[Value], b: &[Value]) -> Result<Ordering, ExecError> {
     }
 
     Ok(a.len().cmp(&b.len()))
-}
-
-fn eq_value_iter<'a, I>(iter: I) -> Result<bool, ExecError>
-        where I: IntoIterator<Item=(&'a Value, &'a Value)> {
-    for (a, b) in iter {
-        if !try!(a.is_equal(b)) {
-            return Ok(false);
-        }
-    }
-
-    Ok(true)
 }
 
 fn eq_value_slice(a: &[Value], b: &[Value]) -> Result<bool, ExecError> {
@@ -1244,14 +1222,14 @@ conv_tuple!{ 12 => A B C D E F G H I J K L }
 #[derive(Clone, Debug)]
 pub struct Struct {
     /// Struct definition
-    pub def: Rc<StructDef>,
+    def: Rc<StructDef>,
     /// Struct fields
-    pub fields: NameMapSlice<Value>,
+    fields: Box<[Value]>,
 }
 
 impl Struct {
     /// Creates a new `Struct` value with the given `StructDef` and field values.
-    pub fn new(def: Rc<StructDef>, fields: NameMapSlice<Value>) -> Struct {
+    pub fn new(def: Rc<StructDef>, fields: Box<[Value]>) -> Struct {
         Struct{
             def: def,
             fields: fields,
@@ -1260,7 +1238,25 @@ impl Struct {
 
     /// Returns the value for the named field, if present.
     pub fn get_field(&self, name: Name) -> Option<&Value> {
-        self.fields.get(name)
+        self.def.field_index(name).map(|idx| &self.fields[idx])
+    }
+
+    /// Returns a mutable reference to the named field, if present.
+    pub fn get_field_mut(&mut self, name: Name) -> Option<&mut Value> {
+        match self.def.field_index(name) {
+            Some(idx) => Some(&mut self.fields[idx]),
+            None => None
+        }
+    }
+
+    /// Returns the struct definition.
+    pub fn def(&self) -> &Rc<StructDef> {
+        &self.def
+    }
+
+    /// Returns the field values.
+    pub fn fields(&self) -> &[Value] {
+        &self.fields
     }
 }
 
@@ -1268,11 +1264,11 @@ impl Struct {
 #[derive(Clone, Debug)]
 pub struct StructDef {
     /// Struct name
-    pub name: Name,
+    name: Name,
     /// Struct fields, mapped to names of expected types
     // TODO: Name-based type-checking prevents a StructDef from requiring
     // a specific class of Struct value for a field.
-    pub fields: NameMapSlice<Name>,
+    fields: NameMapSlice<Name>,
 }
 
 impl PartialEq for StructDef {
@@ -1288,6 +1284,26 @@ impl StructDef {
             name: name,
             fields: fields,
         }
+    }
+
+    /// Returns the field index of the named field.
+    pub fn field_index(&self, name: Name) -> Option<usize> {
+        self.fields.index(name)
+    }
+
+    /// Returns the type of the named field.
+    pub fn field_type(&self, name: Name) -> Option<Name> {
+        self.fields.get(name).cloned()
+    }
+
+    /// Returns the struct name.
+    pub fn name(&self) -> Name {
+        self.name
+    }
+
+    /// Returns the map of struct fields.
+    pub fn fields(&self) -> &NameMapSlice<Name> {
+        &self.fields
     }
 }
 

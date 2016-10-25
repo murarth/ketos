@@ -547,7 +547,12 @@ impl<T> NameMapSlice<T> {
 
     /// Returns whether the map contains a value for the given name.
     pub fn contains_key(&self, name: Name) -> bool {
-        self.values.binary_search_by(|&(n, _)| n.cmp(&name)).is_ok()
+        self.index(name).is_some()
+    }
+
+    /// Returns the index within the internal `Vec` of the given key.
+    pub fn index(&self, name: Name) -> Option<usize> {
+        self.values.binary_search_by(|&(n, _)| n.cmp(&name)).ok()
     }
 
     /// Returns the value corresponding to the given name.
