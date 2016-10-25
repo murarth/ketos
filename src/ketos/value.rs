@@ -271,9 +271,14 @@ impl Value {
     }
 
     /// Returns the value, quasi-quoted.
+    ///
+    /// # Panics
+    ///
+    /// If `n` would overflow.
     pub fn quasiquote(self, n: u32) -> Value {
         match self {
-            Value::Quasiquote(v, i) => Value::Quasiquote(v, i + n),
+            Value::Quasiquote(v, i) => Value::Quasiquote(v,
+                i.checked_add(n).expect("quasiquote overflow")),
             v => Value::Quasiquote(Box::new(v), n),
         }
     }
@@ -308,26 +313,41 @@ impl Value {
     }
 
     /// Returns the value, comma'd.
+    ///
+    /// # Panics
+    ///
+    /// If `n` would overflow.
     pub fn comma(self, n: u32) -> Value {
         match self {
-            Value::Comma(v, i) => Value::Comma(v, i + n),
+            Value::Comma(v, i) => Value::Comma(v,
+                i.checked_add(n).expect("comma overflow")),
             Value::CommaAt(v, i) => Value::CommaAt(v, i + n),
             v => Value::Comma(Box::new(v), n),
         }
     }
 
     /// Returns the value, comma-at'd.
+    ///
+    /// # Panics
+    ///
+    /// If `n` would overflow.
     pub fn comma_at(self, n: u32) -> Value {
         match self {
-            Value::CommaAt(v, i) => Value::CommaAt(v, i + n),
+            Value::CommaAt(v, i) => Value::CommaAt(v,
+                i.checked_add(n).expect("comma_at overflow")),
             v => Value::CommaAt(Box::new(v), n)
         }
     }
 
     /// Returns the value, quoted.
+    ///
+    /// # Panics
+    ///
+    /// If `n` would overflow.
     pub fn quote(self, n: u32) -> Value {
         match self {
-            Value::Quote(v, i) => Value::Quote(v, i + n),
+            Value::Quote(v, i) => Value::Quote(v,
+                i.checked_add(n).expect("quote overflow")),
             v => Value::Quote(Box::new(v), n),
         }
     }
