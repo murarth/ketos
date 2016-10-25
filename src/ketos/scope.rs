@@ -202,7 +202,7 @@ impl GlobalScope {
     }
 
     /// Returns a borrowed reference to the contained `CodeMap`.
-    pub fn get_codemap(&self) -> &Rc<RefCell<CodeMap>> {
+    pub fn codemap(&self) -> &Rc<RefCell<CodeMap>> {
         &self.codemap
     }
 
@@ -218,22 +218,22 @@ impl GlobalScope {
     }
 
     /// Returns a borrowed reference to the contained `GlobalIo`.
-    pub fn get_io(&self) -> &Rc<GlobalIo> {
+    pub fn io(&self) -> &Rc<GlobalIo> {
         &self.io
     }
 
     /// Returns a borrowed reference to the contained `ModuleRegistry`.
-    pub fn get_modules(&self) -> &Rc<ModuleRegistry> {
+    pub fn modules(&self) -> &Rc<ModuleRegistry> {
         &self.modules
     }
 
     /// Returns the scope's name.
-    pub fn get_name(&self) -> Name {
+    pub fn name(&self) -> Name {
         self.name
     }
 
     /// Returns a borrowed reference to the contained `NameStore`.
-    pub fn get_names(&self) -> &Rc<RefCell<NameStore>> {
+    pub fn names(&self) -> &Rc<RefCell<NameStore>> {
         &self.name_store
     }
 
@@ -467,12 +467,12 @@ impl MasterScope {
     }
 
     /// Returns an iterator over all standard names.
-    pub fn get_names() -> MasterNames {
+    pub fn names() -> MasterNames {
         MasterNames::new()
     }
 
     /// Returns an iterator over all names contained in master scope.
-    pub fn get_values() -> MasterValues {
+    pub fn values() -> MasterValues {
         MasterValues::new()
     }
 

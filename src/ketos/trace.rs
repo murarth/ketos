@@ -36,12 +36,12 @@ impl Trace {
     }
 
     /// Returns the series of traced items.
-    pub fn get_items(&self) -> &[TraceItem] {
+    pub fn items(&self) -> &[TraceItem] {
         &self.items
     }
 
     /// Returns a borrowed reference to the optional contained expression.
-    pub fn get_expr(&self) -> Option<&Value> {
+    pub fn expr(&self) -> Option<&Value> {
         self.expr.as_ref()
     }
 

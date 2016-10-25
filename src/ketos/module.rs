@@ -545,7 +545,7 @@ fn load_module_from_file(ctx: Context, name: Name,
 }
 
 fn process_imports(ctx: &Context, imports: &[ImportSet]) -> Result<(), Error> {
-    let mods = ctx.scope().get_modules();
+    let mods = ctx.scope().modules();
 
     for imp in imports {
         let m = try!(mods.load_module(imp.module_name, ctx));

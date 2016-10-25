@@ -372,7 +372,7 @@ impl<'a> NameOutputConversion<'a> {
     }
 
     /// Returns the collection of name string representations.
-    pub fn get_names(&self) -> &[&'a str] {
+    pub fn names(&self) -> &[&'a str] {
         &self.names
     }
 
@@ -478,7 +478,7 @@ impl<T> NameMap<T> {
     }
 
     /// Returns a slice of the contained names and values.
-    pub fn get_values(&self) -> &[(Name, T)] {
+    pub fn values(&self) -> &[(Name, T)] {
         &self.values
     }
 
@@ -557,7 +557,7 @@ impl<T> NameMapSlice<T> {
     }
 
     /// Returns a slice of the contained names and values.
-    pub fn get_values(&self) -> &[(Name, T)] {
+    pub fn values(&self) -> &[(Name, T)] {
         &self.values
     }
 

@@ -490,7 +490,7 @@ impl Machine {
         let mut trace = Vec::new();
 
         for frame in &self.call_stack {
-            let mod_name = frame.scope.get_name();
+            let mod_name = frame.scope.name();
 
             let item = match frame.code.name {
                 Some(fn_name) => TraceItem::CallCode(mod_name, fn_name),
@@ -598,7 +598,7 @@ impl Machine {
             let instr = {
                 let mut r = CodeReader::new(&frame.code.code, frame.iptr as usize);
                 let instr = try!(r.read_instruction());
-                frame.iptr = r.get_offset() as u32;
+                frame.iptr = r.offset() as u32;
                 instr
             };
 

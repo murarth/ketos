@@ -1271,8 +1271,8 @@ fn fn_print(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 
     let s = try!(format_string(&scope.borrow_names(), fmt, &args[1..]));
 
-    try!(scope.get_io().stdout.write_all(s.as_bytes()));
-    try!(scope.get_io().stdout.flush());
+    try!(scope.io().stdout.write_all(s.as_bytes()));
+    try!(scope.io().stdout.flush());
 
     Ok(Value::Unit)
 }
@@ -1287,8 +1287,8 @@ fn fn_println(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
         s.push('\n');
     }
 
-    try!(scope.get_io().stdout.write_all(s.as_bytes()));
-    try!(scope.get_io().stdout.flush());
+    try!(scope.io().stdout.write_all(s.as_bytes()));
+    try!(scope.io().stdout.flush());
 
     Ok(Value::Unit)
 }

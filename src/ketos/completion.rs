@@ -9,7 +9,7 @@ pub fn complete_name(word: &str, scope: &GlobalScope)
         -> Option<Vec<String>> {
     let mut results = Vec::new();
 
-    for name in MasterScope::get_names() {
+    for name in MasterScope::names() {
         scope.with_name(name, |name| {
             if name.starts_with(word) {
                 results.push(name.to_owned());

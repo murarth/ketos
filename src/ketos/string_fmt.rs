@@ -203,7 +203,7 @@ impl<'a> FieldParser<'a> {
         FieldParser{s: s, chars: s.char_indices()}
     }
 
-    fn get_rest(mut self) -> &'a str {
+    fn rest(mut self) -> &'a str {
         match self.chars.next() {
             Some((ind, _)) => &self.s[ind..],
             None => &self.s[..0]
@@ -694,7 +694,7 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
 
         match try!(self.get_u32_field(&mut fields, dir.span)) {
             Some(n) if n >= 2 && n <= 36 => {
-                let new_dir = Directive{fields: fields.get_rest(), ..*dir};
+                let new_dir = Directive{fields: fields.rest(), ..*dir};
                 return self.format_integer(&new_dir, buf, n);
             }
             Some(n) => return Err(self.error(dir.span, FormatError::InvalidRadix(n))),

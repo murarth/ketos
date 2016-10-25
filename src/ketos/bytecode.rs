@@ -617,7 +617,7 @@ impl Instruction {
 
     /// If the instruction is a jump instruction, returns the jump offset.
     /// Otherwise, returns `None`.
-    pub fn get_jump_label(&self) -> Option<u32> {
+    pub fn jump_label(&self) -> Option<u32> {
         use self::Instruction::*;
 
         match *self {
@@ -781,7 +781,7 @@ impl<'a> CodeReader<'a> {
     }
 
     /// Returns the offset, in bytes, at which the next instruction will be read.
-    pub fn get_offset(&self) -> usize {
+    pub fn offset(&self) -> usize {
         self.offset
     }
 
@@ -872,7 +872,7 @@ impl CodeBlock {
     /// Returns encoded bytecode data.
     ///
     /// `flush` should be called first to ensure all instructions are encoded.
-    pub fn get_bytes(&self) -> &[u8] {
+    pub fn bytes(&self) -> &[u8] {
         &self.bytes
     }
 

@@ -56,7 +56,7 @@ fn fn_disassemble(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 
     let scope = ctx.scope();
     let code = &l.code;
-    let out = &scope.get_io().stdout;
+    let out = &scope.io().stdout;
 
     try!(writeln!(out, "{} positional argument{} total",
         code.n_params, plural(code.n_params)));
@@ -110,7 +110,7 @@ fn fn_disassemble(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 
     // Collect all jump labels
     for &(_, ref instr) in &instrs {
-        if let Some(off) = instr.get_jump_label() {
+        if let Some(off) = instr.jump_label() {
             match jumps.binary_search(&off) {
                 Ok(_) => (),
                 Err(pos) => jumps.insert(pos, off)
@@ -134,7 +134,7 @@ fn get_instructions(code: &[u8]) -> Result<Vec<(u32, Instruction)>, ExecError> {
     let mut r = CodeReader::new(code, 0);
 
     loop {
-        let off = r.get_offset() as u32;
+        let off = r.offset() as u32;
 
         let instr = match r.read_instruction() {
             Ok(instr) => instr,
@@ -156,7 +156,7 @@ fn print_instruction(ctx: &Context, lambda: &Lambda,
     let scope = ctx.scope();
     let label_str = if is_label { ">>" } else { "  " };
     let code = &lambda.code;
-    let out = &scope.get_io().stdout;
+    let out = &scope.io().stdout;
 
     let extra = {
         let names = scope.borrow_names();
@@ -298,7 +298,7 @@ fn fn_module_documentation(ctx: &Context, args: &mut [Value]) -> Result<Value, E
         ref v => return Err(From::from(ExecError::expected("name", v)))
     };
 
-    let m = ctx.scope().get_modules();
+    let m = ctx.scope().modules();
 
     Ok(m.get_module(name)
         .and_then(|m| m.scope.with_module_doc(|d| d.into()))

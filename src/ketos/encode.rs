@@ -148,7 +148,7 @@ pub fn read_bytecode<R: Read>(r: &mut R, path: &Path, ctx: &Context)
     let mut names = NameInputConversion::new();
 
     {
-        let mut name_store = ctx.scope().get_names().borrow_mut();
+        let mut name_store = ctx.scope().names().borrow_mut();
 
         for _ in 0..n_names {
             let s = try!(dec.read_string());
@@ -297,7 +297,7 @@ pub fn write_bytecode<W: Write>(w: &mut W, path: &Path, module: &ModuleCode,
 
     try!(head_enc.write_len(names.len()));
 
-    for name in names.get_names() {
+    for name in names.names() {
         try!(head_enc.write_string(name));
     }
 

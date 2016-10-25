@@ -255,7 +255,7 @@ impl<'a> Compiler<'a> {
         let mut res = Vec::with_capacity(total);
 
         for block in &mut self.blocks {
-            res.extend(block.get_bytes());
+            res.extend(block.bytes());
         }
 
         assert_eq!(res.len(), total);
@@ -485,7 +485,7 @@ impl<'a> Compiler<'a> {
                             () // This is handled later
                         } else if self.is_macro(name) {
                             self.trace.push(TraceItem::CallMacro(
-                                self.ctx.scope().get_name(), name));
+                                self.ctx.scope().name(), name));
 
                             self.macro_recursion += 1;
                             let v = try!(self.expand_macro(name, &li[1..], &value));
@@ -502,7 +502,7 @@ impl<'a> Compiler<'a> {
                         }
 
                         self.trace.push(TraceItem::CallCode(
-                            self.ctx.scope().get_name(), name));
+                            self.ctx.scope().name(), name));
                     }
                     Value::List(_) => {
                         try!(self.compile_value(fn_v));
@@ -510,7 +510,7 @@ impl<'a> Compiler<'a> {
                         pushed_fn = true;
 
                         self.trace.push(
-                            TraceItem::CallExpr(self.ctx.scope().get_name()));
+                            TraceItem::CallExpr(self.ctx.scope().name()));
                     }
                     ref v => {
                         self.set_trace_expr(&value);
@@ -572,7 +572,7 @@ impl<'a> Compiler<'a> {
     }
 
     fn extend_trace(&mut self, mut trace: Trace) {
-        self.trace.extend(trace.get_items());
+        self.trace.extend(trace.items());
         self.trace_expr = trace.take_expr();
     }
 
@@ -656,7 +656,7 @@ impl<'a> Compiler<'a> {
     fn eval_constant_function(&mut self, name: Name, args: &[Value])
             -> Result<ConstResult, Error> {
         self.trace.push(TraceItem::CallCode(
-            self.ctx.scope().get_name(), name));
+            self.ctx.scope().name(), name));
         let v = try!(self.eval_constant_function_inner(name, args));
         self.trace.pop();
         Ok(v)
@@ -862,7 +862,7 @@ impl<'a> Compiler<'a> {
         let n_args = args.len() as u32;
 
         self.trace.push(TraceItem::CallOperator(
-            self.ctx.scope().get_name(), name));
+            self.ctx.scope().name(), name));
 
         if !op.arity.accepts(n_args) {
             self.set_trace_expr(expr);
@@ -1795,7 +1795,7 @@ fn op_define(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
         Value::Name(name) => {
             // Replace operator item with more specific item
             compiler.trace.pop();
-            compiler.trace.push(TraceItem::Define(compiler.ctx.scope().get_name(), name));
+            compiler.trace.push(TraceItem::Define(compiler.ctx.scope().name(), name));
 
             let (doc, body) = try!(extract_doc_string(args));
             try!(test_define_name(compiler.scope(), name));
@@ -1814,7 +1814,7 @@ fn op_define(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 
             // Replace operator item with more specific item
             compiler.trace.pop();
-            compiler.trace.push(TraceItem::Define(compiler.ctx.scope().get_name(), name));
+            compiler.trace.push(TraceItem::Define(compiler.ctx.scope().name(), name));
 
             let (doc, body) = try!(extract_doc_string(args));
             try!(test_define_name(compiler.scope(), name));
@@ -1851,7 +1851,7 @@ fn op_macro(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     // Replace operator item with more specific item
     compiler.trace.pop();
     compiler.trace.push(TraceItem::DefineMacro(
-        compiler.ctx.scope().get_name(), name));
+        compiler.ctx.scope().name(), name));
 
     let (doc, body) = try!(extract_doc_string(args));
 
@@ -1884,7 +1884,7 @@ fn op_struct(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     // Replace operator item with more specific item
     compiler.trace.pop();
     compiler.trace.push(TraceItem::DefineStruct(
-        compiler.ctx.scope().get_name(), name));
+        compiler.ctx.scope().name(), name));
 
     let (doc, body) = try!(extract_doc_string(args));
 
@@ -2194,7 +2194,7 @@ fn op_cond(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 fn op_lambda(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     // Replace operator item with more specific item
     compiler.trace.pop();
-    compiler.trace.push(TraceItem::DefineLambda(compiler.ctx.scope().get_name()));
+    compiler.trace.push(TraceItem::DefineLambda(compiler.ctx.scope().name()));
 
     let (doc, body) = try!(extract_doc_string(args));
 
@@ -2257,10 +2257,10 @@ fn op_use(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 
     // Replace operator item with more specific item
     compiler.trace.pop();
-    compiler.trace.push(TraceItem::UseModule(compiler.ctx.scope().get_name(), mod_name));
+    compiler.trace.push(TraceItem::UseModule(compiler.ctx.scope().name(), mod_name));
 
     let ctx = compiler.ctx.clone();
-    let mods = ctx.scope().get_modules();
+    let mods = ctx.scope().modules();
     let m = try!(mods.load_module(mod_name, &ctx)
         .map_err(|e| { compiler.extend_global_trace(); e }));
 
@@ -2313,7 +2313,7 @@ fn op_const(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     // Replace operator item with more specific item
     compiler.trace.pop();
     compiler.trace.push(TraceItem::DefineConst(
-        compiler.ctx.scope().get_name(), name));
+        compiler.ctx.scope().name(), name));
 
     let (doc, body) = try!(extract_doc_string(args));
 
