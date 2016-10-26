@@ -170,6 +170,8 @@ fn print_instruction(ctx: &Context, lambda: &Lambda,
             Const(n) |
             GetDefPush(n) |
             ConstPush(n) |
+            EqConst(n) |
+            NotEqConst(n) |
             SetDef(n) |
             BuildClosure(n, _) |
             CallConst(n, _)
