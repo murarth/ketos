@@ -484,6 +484,17 @@ impl ForeignValue {
         self.type_id() == TypeId::of::<T>()
     }
 
+    /// Returns an owned `Rc` reference to the contained value,
+    /// if it is os the given type.
+    pub fn downcast<T: Any>(rc: Rc<Self>) -> Result<Rc<T>, Rc<Self>> {
+        if rc.is::<T>() {
+            let obj: TraitObject = unsafe { transmute(rc) };
+            Ok(unsafe { transmute(obj.data) })
+        } else {
+            Err(rc)
+        }
+    }
+
     /// Returns a reference to the contained value, if it is of the given type.
     pub fn downcast_ref<T: Any>(&self) -> Option<&T> {
         if self.is::<T>() {
@@ -1197,17 +1208,32 @@ impl StructDef {
 mod test {
     use super::ForeignValue;
 
+    use std::rc::Rc;
+
     #[derive(Debug)]
     struct Dummy {
         a: i32,
     }
+
+    #[derive(Debug)]
+    struct Dumber;
 
     impl ForeignValue for Dummy {
         fn type_name(&self) -> &'static str { panic!() }
     }
 
     #[test]
-    fn test_foreign_value() {
+    fn test_downcast() {
+        let a: Rc<ForeignValue> = Rc::new(Dummy{a: 0});
+
+        let b = ForeignValue::downcast::<Dumber>(a).unwrap_err();
+        let c = ForeignValue::downcast::<Dummy>(b).unwrap();
+
+        assert_eq!(c.a, 0);
+    }
+
+    #[test]
+    fn test_downcast_ref() {
         let mut a: Box<ForeignValue> = Box::new(Dummy{a: 0});
 
         {
