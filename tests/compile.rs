@@ -211,8 +211,8 @@ fn test_tail_recursion() {
     ]);
 
     assert_eq!(lambda("(define (foo) (and a (foo)))").unwrap(), [
-        GET_DEF, 0,
-        JUMP_IF_NOT, 6,
+        GET_DEF_0,
+        JUMP_IF_NOT, 5,
         TAIL_CALL_SELF, 0,
         RETURN,
     ]);
@@ -244,8 +244,8 @@ fn test_tail_recursion_apply() {
     ]);
 
     assert_eq!(lambda("(define (foo) (and a (apply foo ())))").unwrap(), [
-        GET_DEF, 0,
-        JUMP_IF_NOT, 7,
+        GET_DEF_0,
+        JUMP_IF_NOT, 6,
         UNIT,
         TAIL_APPLY_SELF, 0,
         RETURN,
