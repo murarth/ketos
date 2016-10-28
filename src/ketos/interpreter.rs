@@ -286,14 +286,6 @@ impl Interpreter {
     /// Formats an error into a `String`.
     pub fn format_error(&self, e: &Error) -> String {
         match *e {
-            Error::CompileError(ref e) => {
-                format!("compile error: {}",
-                    display_names(&self.scope().borrow_names(), e))
-            }
-            Error::ExecError(ref e) => {
-                format!("execution error: {}",
-                    display_names(&self.scope().borrow_names(), e))
-            }
             Error::ParseError(ref e) => self.format_parse_error(e),
             ref e => format!("{}: {}", e.description(), e)
         }

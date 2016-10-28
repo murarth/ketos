@@ -32,6 +32,8 @@
 use std::fmt;
 use std::time::Duration;
 
+use name::{NameDisplay, NameStore};
+
 /// Contains parameters configuring restrictions of runtime code execution
 ///
 /// See [module-level documentation](index.html) for an example of its use.
@@ -101,6 +103,12 @@ impl RestrictError {
 impl fmt::Display for RestrictError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str(self.description())
+    }
+}
+
+impl NameDisplay for RestrictError {
+    fn fmt(&self, _names: &NameStore, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
     }
 }
 

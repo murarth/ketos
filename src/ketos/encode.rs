@@ -17,7 +17,7 @@ use function::Lambda;
 use integer::{Integer, Ratio, Sign};
 use io::{IoError, IoMode};
 use module::ModuleCode;
-use name::{Name, NameMap, NameSet, NameStore,
+use name::{Name, NameDisplay, NameMap, NameSet, NameStore,
     NameInputConversion, NameOutputConversion};
 use scope::ImportSet;
 use value::{StructDef, Value};
@@ -80,6 +80,12 @@ impl fmt::Display for DecodeError {
     }
 }
 
+impl NameDisplay for DecodeError {
+    fn fmt(&self, _names: &NameStore, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
+    }
+}
+
 /// Error in encoding bytecode file format
 #[derive(Debug)]
 pub enum EncodeError {
@@ -100,6 +106,12 @@ impl fmt::Display for EncodeError {
             UnencodableType(ty) => write!(f, "cannot encode value of type `{}`", ty),
             UnencodableValue(v) => write!(f, "cannot encode value {}", v),
         }
+    }
+}
+
+impl NameDisplay for EncodeError {
+    fn fmt(&self, _names: &NameStore, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
     }
 }
 

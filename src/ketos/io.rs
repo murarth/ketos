@@ -6,6 +6,8 @@ use std::io::{self, Stdout, Stderr, Write};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
+use name::{NameDisplay, NameStore};
+
 /// Contains global shared I/O objects
 pub struct GlobalIo {
     /// Shared standard output writer
@@ -59,6 +61,12 @@ impl fmt::Display for IoError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "failed to {} file `{}`: {}",
             self.mode, self.path.display(), self.err)
+    }
+}
+
+impl NameDisplay for IoError {
+    fn fmt(&self, _names: &NameStore, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
     }
 }
 

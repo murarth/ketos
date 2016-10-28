@@ -1,11 +1,13 @@
 //! Contains consolidated `Error` type.
 
+use std::error::Error as StdError;
 use std::fmt;
 
 use compile::CompileError;
 use encode::{DecodeError, EncodeError};
 use exec::ExecError;
 use io::IoError;
+use name::{NameDisplay, NameStore};
 use parser::ParseError;
 use restrict::RestrictError;
 
@@ -21,6 +23,14 @@ macro_rules! error_type {
             fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
                 match *self {
                     $( $name::$var(ref e) => fmt::Display::fmt(e, f) ),+
+                }
+            }
+        }
+
+        impl NameDisplay for $name {
+            fn fmt(&self, names: &NameStore, f: &mut fmt::Formatter) -> fmt::Result {
+                match *self {
+                    $( $name::$var(ref e) => NameDisplay::fmt(e, names, f) ),+
                 }
             }
         }
@@ -68,5 +78,11 @@ impl Error {
             Error::ParseError(_) => "parse error",
             Error::RestrictError(_) => "restriction error",
         }
+    }
+}
+
+impl StdError for Error {
+    fn description(&self) -> &str {
+        self.description()
     }
 }
