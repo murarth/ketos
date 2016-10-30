@@ -933,6 +933,25 @@ fn test_list_fns() {
 }
 
 #[test]
+fn test_str_fns() {
+    assert_eq!(eval(r#"(first "abc")"#).unwrap(), r#"#'a'"#);
+    assert_eq!(eval(r#"(last  "abc")"#).unwrap(), r#"#'c'"#);
+    assert_eq!(eval(r#"(init  "abc")"#).unwrap(), r#""ab""#);
+    assert_eq!(eval(r#"(tail  "abc")"#).unwrap(), r#""bc""#);
+    assert_eq!(eval(r#"(init  "x")"#).unwrap(), r#""""#);
+    assert_eq!(eval(r#"(tail  "x")"#).unwrap(), r#""""#);
+
+    assert_matches!(eval(r#"(first "")"#).unwrap_err(),
+        Error::ExecError(ExecError::OutOfBounds(0)));
+    assert_matches!(eval(r#"(last "")"#).unwrap_err(),
+        Error::ExecError(ExecError::OutOfBounds(0)));
+    assert_matches!(eval(r#"(init "")"#).unwrap_err(),
+        Error::ExecError(ExecError::OutOfBounds(0)));
+    assert_matches!(eval(r#"(tail "")"#).unwrap_err(),
+        Error::ExecError(ExecError::OutOfBounds(0)));
+}
+
+#[test]
 fn test_list() {
     assert_eq!(eval("(list 1 2 (+ 1 2))").unwrap(), "(1 2 3)");
 }

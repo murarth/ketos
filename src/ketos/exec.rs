@@ -33,7 +33,7 @@ use std::vec::Drain;
 
 use bytecode::{Code, CodeReader};
 use error::Error;
-use function::{Arity, Function, Lambda, SystemFn};
+use function::{Arity, Function, Lambda, SystemFn, first, last, init, tail};
 use integer::{Integer, Ratio};
 use lexer::{highlight_span, Span};
 use restrict::{RestrictConfig, RestrictError};
@@ -1405,79 +1405,51 @@ impl Machine {
         Ok(())
     }
 
-    fn first(&mut self) -> Result<(), ExecError> {
-        let v = match self.value {
-            Value::List(ref li) => li[0].clone(),
-            ref v => return Err(ExecError::expected("list", v))
-        };
+    fn first(&mut self) -> Result<(), Error> {
+        let v = try!(first(&self.value));
 
         self.value = v;
         Ok(())
     }
 
-    fn tail(&mut self) -> Result<(), ExecError> {
-        let v = match self.value {
-            Value::List(ref li) => li.slice(1..),
-            ref v => return Err(ExecError::expected("list", v))
-        };
+    fn tail(&mut self) -> Result<(), Error> {
+        let v = try!(tail(&self.value));
 
-        self.value = v.into();
+        self.value = v;
         Ok(())
     }
 
-    fn init(&mut self) -> Result<(), ExecError> {
-        let v = match self.value {
-            Value::List(ref li) => li.slice(..li.len() - 1),
-            ref v => return Err(ExecError::expected("list", v))
-        };
+    fn init(&mut self) -> Result<(), Error> {
+        let v = try!(init(&self.value));
 
-        self.value = v.into();
+        self.value = v;
         Ok(())
     }
 
-    fn last(&mut self) -> Result<(), ExecError> {
-        let v = match self.value {
-            Value::List(ref li) => li.last().cloned().unwrap(),
-            ref v => return Err(ExecError::expected("list", v))
-        };
+    fn last(&mut self) -> Result<(), Error> {
+        let v = try!(last(&self.value));
 
-        self.value = v.into();
+        self.value = v;
         Ok(())
     }
 
     fn first_push(&mut self) -> Result<(), Error> {
-        let v = match self.value {
-            Value::List(ref li) => li[0].clone(),
-            ref v => return Err(From::from(ExecError::expected("list", v)))
-        };
-
+        let v = try!(first(&self.value));
         self.push(v)
     }
 
     fn tail_push(&mut self) -> Result<(), Error> {
-        let v = match self.value {
-            Value::List(ref li) => li.slice(1..),
-            ref v => return Err(From::from(ExecError::expected("list", v)))
-        };
-
-        self.push(v.into())
+        let v = try!(tail(&self.value));
+        self.push(v)
     }
 
     fn init_push(&mut self) -> Result<(), Error> {
-        let v = match self.value {
-            Value::List(ref li) => li.slice(..li.len() - 1),
-            ref v => return Err(From::from(ExecError::expected("list", v)))
-        };
-
-        self.push(v.into())
+        let v = try!(init(&self.value));
+        self.push(v)
     }
 
     fn last_push(&mut self) -> Result<(), Error> {
-        let v = match self.value {
-            Value::List(ref li) => li.last().cloned().unwrap(),
-            ref v => return Err(From::from(ExecError::expected("list", v)))
-        };
-
+        let v = try!(last(&self.value));
         self.push(v)
     }
 }

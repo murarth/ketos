@@ -131,15 +131,15 @@ String length is in bytes rather than characters."),
     sys_fn!(fn_slice,       Exact(3),
 "Returns a subsequence of a list or string."),
     sys_fn!(fn_first,       Exact(1),
-"Returns the first element of the given list."),
+"Returns the first element of the given list or string."),
     sys_fn!(fn_second,      Exact(1),
 "Returns the second element of the given list."),
     sys_fn!(fn_last,        Exact(1),
-"Returns the last element of the given list."),
+"Returns the last element of the given list or string."),
     sys_fn!(fn_init,        Exact(1),
-"Returns all but the last element of the given list."),
+"Returns all but the last element of the given list or string."),
     sys_fn!(fn_tail,        Exact(1),
-"Returns all but the first element of the given list."),
+"Returns all but the first element of the given list or string."),
     sys_fn!(fn_list,        Min(0),
 "Returns a list of values. In contrast with the `'(a b c ...)` list
 construction syntax, this function will evaluate each of its arguments."),
@@ -1498,13 +1498,9 @@ fn fn_slice(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     }
 }
 
-/// `first` returns the first element of the given list.
+/// `first` returns the first element of the given list or string.
 fn fn_first(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    match args[0] {
-        // There can't be an empty list, so this should never panic.
-        Value::List(ref li) => Ok(li[0].clone()),
-        ref v => Err(From::from(ExecError::expected("list", v)))
-    }
+    first(&args[0])
 }
 
 /// `second` returns the second element of the given list.
@@ -1516,30 +1512,86 @@ fn fn_second(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     }
 }
 
-/// `last` returns the last element of the given list.
+/// `last` returns the last element of the given list or string.
 fn fn_last(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    match args[0] {
-        Value::List(ref li) => Ok(li.last().cloned().unwrap()),
+    last(&args[0])
+}
+
+/// `init` returns all but the last element of the given list or string.
+fn fn_init(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
+    init(&args[0])
+}
+
+/// `tail` returns all but the first element of the given list or string.
+fn fn_tail(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
+    tail(&args[0])
+}
+
+/// Returns the first element of a list or string.
+///
+/// Returns an error in case of an empty list or string.
+pub fn first(v: &Value) -> Result<Value, Error> {
+    match *v {
+        // There can't be an empty list, so this should never panic.
+        Value::List(ref li) => Ok(li[0].clone()),
+        Value::String(ref s) => match s.chars().next() {
+            Some(ch) => Ok(ch.into()),
+            None => Err(From::from(ExecError::OutOfBounds(0)))
+        },
         ref v => Err(From::from(ExecError::expected("list", v)))
     }
 }
 
-/// `init` returns all but the last element of the given list.
-fn fn_init(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    match args[0].take() {
+/// Returns the last element of a list or string.
+///
+/// Returns an error in case of an empty list or string.
+pub fn last(v: &Value) -> Result<Value, Error> {
+    match *v {
+        Value::List(ref li) => Ok(li.last().cloned().unwrap()),
+        Value::String(ref s) => match s.chars().next_back() {
+            Some(ch) => Ok(ch.into()),
+            None => Err(From::from(ExecError::OutOfBounds(0)))
+        },
+        ref v => Err(From::from(ExecError::expected("list", v)))
+    }
+}
+
+/// Returns all but the last element of a list or string.
+///
+/// Returns an error in case of an empty list or string.
+pub fn init(v: &Value) -> Result<Value, Error> {
+    match *v {
         Value::List(ref li) => {
             let len = li.len();
             Ok(li.slice(..len - 1).into())
+        }
+        Value::String(ref s) => {
+            let mut chars = s.char_indices();
+
+            match chars.next_back() {
+                Some((idx, _)) => Ok(s[..idx].into()),
+                None => Err(From::from(ExecError::OutOfBounds(0)))
+            }
         }
         ref v => Err(From::from(ExecError::expected("list", v)))
     }
 }
 
-/// `tail` returns all but the first element of the given list.
-fn fn_tail(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    match args[0].take() {
+/// Returns all but the first element of a list or string.
+///
+/// Returns an error in case of an empty list or string.
+pub fn tail(v: &Value) -> Result<Value, Error> {
+    match *v {
         Value::List(ref li) => {
             Ok(li.slice(1..).into())
+        }
+        Value::String(ref s) => {
+            let mut chars = s.chars();
+
+            match chars.next() {
+                Some(_) => Ok(chars.as_str().into()),
+                None => Err(From::from(ExecError::OutOfBounds(0)))
+            }
         }
         ref v => Err(From::from(ExecError::expected("list", v)))
     }

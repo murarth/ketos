@@ -130,21 +130,21 @@ pub enum Instruction {
     Dec,
     /// Append value to list on top of stack; result will be in value
     Append,
-    /// Take first element of list and assign to value
+    /// Take first element of list or string and assign to value
     First,
-    /// Take tail of list and assign to value
+    /// Take tail of list or string and assign to value
     Tail,
-    /// Take head of list and assign to value
+    /// Take head of list or string and assign to value
     Init,
-    /// Take last element of list and assign to value
+    /// Take last element of list or string and assign to value
     Last,
-    /// Push first value from list
+    /// Push first value from list or string
     FirstPush,
-    /// Push tail from list
+    /// Push tail from list or string
     TailPush,
-    /// Push head from list
+    /// Push head from list or string
     InitPush,
-    /// Push last value from list
+    /// Push last value from list or string
     LastPush,
     /// Call system function *n* with known number of arguments on stack.
     /// Only functions with `Exact` arity may be called in this manner.
