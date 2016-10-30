@@ -287,7 +287,8 @@ impl Interpreter {
     pub fn format_error(&self, e: &Error) -> String {
         match *e {
             Error::ParseError(ref e) => self.format_parse_error(e),
-            ref e => format!("{}: {}", e.description(), e)
+            ref e => format!("{}: {}", e.description(),
+                display_names(&self.scope().borrow_names(), e))
         }
     }
 
