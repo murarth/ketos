@@ -1342,6 +1342,10 @@ fn fn_concat(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 fn concat_list(args: &mut [Value]) -> Result<Value, Error> {
+    if args.len() == 1 {
+        return Ok(args[0].take());
+    }
+
     let mut v = Vec::new();
 
     for arg in args {
@@ -1355,7 +1359,11 @@ fn concat_list(args: &mut [Value]) -> Result<Value, Error> {
     Ok(v.into())
 }
 
-fn concat_string(args: &[Value]) -> Result<Value, Error> {
+fn concat_string(args: &mut [Value]) -> Result<Value, Error> {
+    if args.len() == 1 {
+        return Ok(args[0].take());
+    }
+
     let mut res = String::new();
 
     for arg in args {
@@ -1393,6 +1401,10 @@ fn fn_join(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 fn join_list(sep: &[Value], args: &mut [Value]) -> Result<Value, Error> {
+    if args.len() == 1 {
+        return Ok(args[0].take());
+    }
+
     let mut v = Vec::new();
 
     if let Some((first, rest)) = args.split_first_mut() {
@@ -1416,7 +1428,11 @@ fn join_list(sep: &[Value], args: &mut [Value]) -> Result<Value, Error> {
     Ok(v.into())
 }
 
-fn join_string(sep: &str, args: &[Value]) -> Result<Value, Error> {
+fn join_string(sep: &str, args: &mut [Value]) -> Result<Value, Error> {
+    if args.len() == 1 {
+        return Ok(args[0].take());
+    }
+
     let mut res = String::new();
 
     if let Some(value) = args.first() {
@@ -1491,7 +1507,7 @@ fn fn_slice(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
             } else if !s.is_char_boundary(end) {
                 Err(From::from(ExecError::NotCharBoundary(end)))
             } else {
-                Ok(s[begin..end].into())
+                Ok(s.slice(begin..end).into())
             }
         }
         ref v => Err(From::from(ExecError::expected("list or string", v)))
@@ -1569,7 +1585,7 @@ pub fn init(v: &Value) -> Result<Value, Error> {
             let mut chars = s.char_indices();
 
             match chars.next_back() {
-                Some((idx, _)) => Ok(s[..idx].into()),
+                Some((idx, _)) => Ok(s.slice(..idx).into()),
                 None => Err(From::from(ExecError::OutOfBounds(0)))
             }
         }
@@ -1589,7 +1605,7 @@ pub fn tail(v: &Value) -> Result<Value, Error> {
             let mut chars = s.chars();
 
             match chars.next() {
-                Some(_) => Ok(chars.as_str().into()),
+                Some(ch) => Ok(s.slice(ch.len_utf8()..).into()),
                 None => Err(From::from(ExecError::OutOfBounds(0)))
             }
         }

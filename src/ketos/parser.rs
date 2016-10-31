@@ -213,7 +213,7 @@ impl<'a, 'lex> Parser<'a, 'lex> {
                 Token::Char(ch) => parse_char(ch)
                     .map(Value::Char).map_err(From::from),
                 Token::String(s) => parse_string(s)
-                    .map(Value::String).map_err(From::from),
+                    .map(|s| s.into()).map_err(From::from),
                 Token::Name(name) => Ok(self.name_value(name)),
                 Token::Keyword(name) => Ok(Value::Keyword(self.add_name(name))),
                 Token::BackQuote => {

@@ -11,7 +11,7 @@ use exec::{Context, ExecError};
 use function::{Function, Lambda};
 use integer::{Integer, Ratio};
 use name::{Name, NameDebug, NameDisplay, NameMapSlice, NameStore};
-use rc_vec::RcVec;
+use rc_vec::{RcString, RcVec};
 
 /// Represents a value.
 #[derive(Clone, Debug)]
@@ -40,7 +40,7 @@ pub enum Value {
     /// Character
     Char(char),
     /// String
-    String(String),
+    String(RcString),
     /// Quasiquoted value; quote depth **MUST NEVER be zero.**
     Quasiquote(Box<Value>, u32),
     /// Comma'd value; comma depth **MUST NEVER be zero.**
@@ -990,7 +990,7 @@ simple_from_value!{ bool; "bool"; Value::Bool(b) => b }
 simple_from_value!{ char; "char"; Value::Char(ch) => ch }
 simple_from_value!{ f32; "float"; Value::Float(f) => f as f32 }
 simple_from_value!{ f64; "float"; Value::Float(f) => f }
-simple_from_value!{ String; "string"; Value::String(s) => s }
+simple_from_value!{ String; "string"; Value::String(s) => s.into_string() }
 simple_from_value!{ Integer; "integer"; Value::Integer(i) => i }
 simple_from_value!{ Ratio; "ratio"; Value::Ratio(r) => r }
 
@@ -1047,13 +1047,19 @@ value_from!{ bool; b => Value::Bool(b) }
 value_from!{ char; c => Value::Char(c) }
 value_from!{ Integer; i => Value::Integer(i) }
 value_from!{ Ratio; r => Value::Ratio(r) }
-value_from!{ String; s => Value::String(s) }
+value_from!{ String; s => Value::String(RcString::new(s)) }
 value_from!{ f32; f => Value::Float(f as f64) }
 value_from!{ f64; f => Value::Float(f) }
 
 impl<'a> From<&'a str> for Value {
     fn from(s: &str) -> Value {
         s.to_owned().into()
+    }
+}
+
+impl From<RcString> for Value {
+    fn from(s: RcString) -> Value {
+        Value::String(s)
     }
 }
 

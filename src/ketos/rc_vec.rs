@@ -1,17 +1,11 @@
 //! Implements a reference-counted `Vec` supporting efficient subslicing.
 
+use std::borrow::Cow;
+use std::cmp::Ordering;
+use std::fmt;
 use std::ops;
 use std::rc::Rc;
 use std::slice::Iter;
-
-/// Represents a reference-counted view into a `Vec`.
-/// Subslices may be created which will share the underlying data buffer.
-#[derive(Clone, Debug)]
-pub struct RcVec<T> {
-    data: Rc<Vec<T>>,
-    start: usize,
-    end: usize,
-}
 
 // A duplicate of `collections::range::RangeArgument`, which is unstable.
 /// Argument for functions accepting a range
@@ -32,6 +26,188 @@ impl<T> RangeArgument<T> for ops::RangeFrom<T> {
 }
 impl<T> RangeArgument<T> for ops::RangeTo<T> {
     fn end(&self) -> Option<&T> { Some(&self.end) }
+}
+
+/// Represents a reference-counted view into a `String`.
+/// Subslices may be created which will share the underlying data buffer.
+#[derive(Clone)]
+pub struct RcString {
+    data: Rc<String>,
+    start: usize,
+    end: usize,
+}
+
+impl RcString {
+    /// Constructs a new `RcString` from a `String`.
+    pub fn new(data: String) -> RcString {
+        let n = data.len();
+
+        RcString{
+            data: Rc::new(data),
+            start: 0,
+            end: n,
+        }
+    }
+
+    /// Returns whether the visible slice is empty.
+    pub fn is_empty(&self) -> bool {
+        self.start == self.end
+    }
+
+    /// Returns the length of the visible slice.
+    pub fn len(&self) -> usize {
+        self.end - self.start
+    }
+
+    /// Returns a subslice of the `RcString`.
+    pub fn slice<R: RangeArgument<usize>>(&self, range: R) -> RcString {
+        let start = range.start().map_or(0, |v| *v);
+        let end = range.end().map_or(self.len(), |v| *v);
+
+        let a = self.start + start;
+        let b = self.start + end;
+
+        if a > self.end {
+            panic!("RcString slice out of bounds; start is {} but length is {}",
+                start, self.len());
+        }
+
+        if b > self.end {
+            panic!("RcString slice out of bounds; end is {} but length is {}",
+                end, self.len());
+        }
+
+        if !self.data.is_char_boundary(a) || !self.data.is_char_boundary(b) {
+            panic!("index {} and/or {} in RcString `{}` do not lie on \
+                character boundary", a, b, &self[..]);
+        }
+
+        RcString{
+            data: self.data.clone(),
+            start: a,
+            end: b,
+        }
+    }
+
+    /// Consumes the `RcString` and returns a `String`.
+    pub fn into_string(self) -> String {
+        match Rc::try_unwrap(self.data) {
+            Ok(mut s) => {
+                let _ = s.drain(self.end..);
+                let _ = s.drain(..self.start);
+                s
+            }
+            Err(data) => data[self.start..self.end].to_owned()
+        }
+    }
+
+    /// Pushes a `char` to the end of the contained `String`.
+    pub fn push(&mut self, ch: char) {
+        self.make_mut().push(ch);
+        self.end += ch.len_utf8();
+    }
+
+    /// Pushes a `&str` to the end of the contained `String`.
+    pub fn push_str(&mut self, s: &str) {
+        self.make_mut().push_str(s);
+        self.end += s.len();
+    }
+
+    fn make_mut(&mut self) -> &mut String {
+        let mut s = Rc::make_mut(&mut self.data);
+
+        let _ = s.drain(self.end..);
+        let _ = s.drain(..self.start);
+        let n = s.len();
+
+        self.start = 0;
+        self.end = n;
+
+        s
+    }
+}
+
+impl AsRef<str> for RcString {
+    fn as_ref(&self) -> &str {
+        &self.data[self.start..self.end]
+    }
+}
+
+impl ops::Deref for RcString {
+    type Target = str;
+
+    fn deref(&self) -> &str {
+        self.as_ref()
+    }
+}
+
+impl ops::DerefMut for RcString {
+    fn deref_mut(&mut self) -> &mut str {
+        self.make_mut()
+    }
+}
+
+impl fmt::Debug for RcString {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Debug::fmt(&self[..], f)
+    }
+}
+
+impl fmt::Display for RcString {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&self[..], f)
+    }
+}
+
+macro_rules! impl_eq_str {
+    ( $lhs:ty, $rhs:ty ) => {
+        impl<'a> PartialEq<$rhs> for $lhs {
+            fn eq(&self, rhs: &$rhs) -> bool { self[..] == rhs[..] }
+            fn ne(&self, rhs: &$rhs) -> bool { self[..] != rhs[..] }
+        }
+    }
+}
+
+impl_eq_str!{ RcString, RcString }
+impl_eq_str!{ RcString, String }
+impl_eq_str!{ RcString, str }
+impl_eq_str!{ RcString, &'a str }
+impl_eq_str!{ RcString, Cow<'a, str> }
+
+impl Eq for RcString {}
+
+impl PartialOrd for RcString {
+    fn partial_cmp(&self, rhs: &RcString) -> Option<Ordering> { self[..].partial_cmp(&rhs[..]) }
+
+    fn lt(&self, rhs: &RcString) -> bool { self[..] < rhs[..] }
+    fn le(&self, rhs: &RcString) -> bool { self[..] <= rhs[..] }
+    fn gt(&self, rhs: &RcString) -> bool { self[..] > rhs[..] }
+    fn ge(&self, rhs: &RcString) -> bool { self[..] >= rhs[..] }
+}
+
+impl Ord for RcString {
+    fn cmp(&self, rhs: &RcString) -> Ordering { self[..].cmp(&rhs[..]) }
+}
+
+impl<'a> From<&'a str> for RcString {
+    fn from(s: &str) -> RcString {
+        RcString::new(s.to_owned())
+    }
+}
+
+impl From<String> for RcString {
+    fn from(s: String) -> RcString {
+        RcString::new(s)
+    }
+}
+
+/// Represents a reference-counted view into a `Vec`.
+/// Subslices may be created which will share the underlying data buffer.
+#[derive(Clone)]
+pub struct RcVec<T> {
+    data: Rc<Vec<T>>,
+    start: usize,
+    end: usize,
 }
 
 impl<T> RcVec<T> {
@@ -144,6 +320,12 @@ impl<T: Clone> ops::DerefMut for RcVec<T> {
     }
 }
 
+impl<T: fmt::Debug> fmt::Debug for RcVec<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Debug::fmt(&self[..], f)
+    }
+}
+
 impl<T: Clone> Extend<T> for RcVec<T> {
     fn extend<I>(&mut self, iterable: I) where I: IntoIterator<Item=T> {
         self.make_mut().extend(iterable);
@@ -167,7 +349,7 @@ impl<'a, T> IntoIterator for &'a RcVec<T> {
     }
 }
 
-macro_rules! impl_eq {
+macro_rules! impl_eq_vec {
     ( $lhs:ty, $rhs:ty ) => {
         impl<'a, A, B> PartialEq<$rhs> for $lhs where A: PartialEq<B> {
             fn eq(&self, rhs: &$rhs) -> bool { self[..] == rhs[..] }
@@ -192,10 +374,10 @@ macro_rules! impl_eq_array {
     }
 }
 
-impl_eq!{ RcVec<A>, RcVec<B> }
-impl_eq!{ RcVec<A>, Vec<B> }
-impl_eq!{ RcVec<A>, &'a [B] }
-impl_eq!{ RcVec<A>, &'a mut [B] }
+impl_eq_vec!{ RcVec<A>, RcVec<B> }
+impl_eq_vec!{ RcVec<A>, Vec<B> }
+impl_eq_vec!{ RcVec<A>, [B] }
+impl_eq_vec!{ RcVec<A>, &'a [B] }
 
 impl_eq_array!{
     0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16
@@ -203,6 +385,19 @@ impl_eq_array!{
 }
 
 impl<T: Eq> Eq for RcVec<T> {}
+
+impl<T: PartialOrd> PartialOrd for RcVec<T> {
+    fn partial_cmp(&self, rhs: &RcVec<T>) -> Option<Ordering> { self[..].partial_cmp(&rhs[..]) }
+
+    fn lt(&self, rhs: &RcVec<T>) -> bool { self[..] < rhs[..] }
+    fn le(&self, rhs: &RcVec<T>) -> bool { self[..] <= rhs[..] }
+    fn gt(&self, rhs: &RcVec<T>) -> bool { self[..] > rhs[..] }
+    fn ge(&self, rhs: &RcVec<T>) -> bool { self[..] >= rhs[..] }
+}
+
+impl<T: Ord> Ord for RcVec<T> {
+    fn cmp(&self, rhs: &RcVec<T>) -> Ordering { self[..].cmp(&rhs[..]) }
+}
 
 impl<T> From<Vec<T>> for RcVec<T> {
     fn from(v: Vec<T>) -> RcVec<T> {
@@ -212,7 +407,33 @@ impl<T> From<Vec<T>> for RcVec<T> {
 
 #[cfg(test)]
 mod test {
-    use super::RcVec;
+    use super::{RcString, RcVec};
+
+    #[test]
+    fn test_rc_string() {
+        let a = RcString::from("foobar");
+        let mut b = a.slice(1..4);
+        let mut c = a.clone();
+
+        assert_eq!(a.data.as_ptr(), b.data.as_ptr());
+        assert_eq!(a, "foobar");
+        assert_eq!(b, "oob");
+        assert_eq!(b.is_empty(), false);
+        assert_eq!(b.len(), 3);
+
+        b.push('x');
+        assert_eq!(b, "oobx");
+
+        c.push_str("lol");
+        assert_eq!(c.into_string(), "foobarlol");
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_rc_string_error() {
+        let a = RcString::from("foo\u{2022}");
+        let _b = a.slice(2..4);
+    }
 
     #[test]
     fn test_rc_vec() {
