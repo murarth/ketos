@@ -1839,15 +1839,16 @@ fn fn_chars(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 /// `string` returns an argument converted into a string.
-fn fn_string(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
+fn fn_string(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0].take() {
         Value::Char(ch) => {
             let mut s = String::new();
             s.push(ch);
             Ok(s.into())
         }
+        Value::Name(name) => Ok(ctx.scope().with_name(name, |s| s.into())),
         v @ Value::String(_) => Ok(v),
-        ref v => Err(From::from(ExecError::expected("char or string", v)))
+        ref v => Err(From::from(ExecError::expected("char or string or name", v)))
     }
 }
 

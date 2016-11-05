@@ -849,6 +849,7 @@ fn test_chars() {
 fn test_string() {
     assert_eq!(eval(r#"(string #'a')"#).unwrap(), r#""a""#);
     assert_eq!(eval(r#"(string "foo")"#).unwrap(), r#""foo""#);
+    assert_eq!(eval(r#"(string 'bar)"#).unwrap(), r#""bar""#);
 }
 
 #[test]
