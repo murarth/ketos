@@ -1,6 +1,7 @@
 //! Implements name interning and containers using names as keys.
 
 use std::collections::HashMap;
+use std::error::Error as StdError;
 use std::fmt;
 use std::iter::FromIterator;
 use std::mem::replace;
@@ -274,6 +275,12 @@ pub fn display_names<'a, T: 'a>(names: &'a NameStore, t: &'a T) -> NameDisplayer
 impl<'a, T: NameDisplay> fmt::Display for NameDisplayer<'a, T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(self.1, f)
+    }
+}
+
+impl NameDisplay for Box<StdError> {
+    fn fmt(&self, _names: &NameStore, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
     }
 }
 

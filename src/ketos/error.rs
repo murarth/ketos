@@ -63,10 +63,17 @@ error_type!{
         ParseError(ParseError),
         /// Code execution breached configured restrictions
         RestrictError(RestrictError),
+        /// Customized error value implementing `std::error::Error`
+        Custom(Box<StdError>),
     }
 }
 
 impl Error {
+    /// Returns an `Error` value wrapping a custom error type.
+    pub fn custom<E: 'static + StdError>(e: E) -> Error {
+        Error::Custom(Box::new(e))
+    }
+
     /// Returns a string describing the nature of the error.
     pub fn description(&self) -> &'static str {
         match *self {
@@ -77,6 +84,7 @@ impl Error {
             Error::IoError(_) => "I/O error",
             Error::ParseError(_) => "parse error",
             Error::RestrictError(_) => "restriction error",
+            Error::Custom(_) => "error",
         }
     }
 }
@@ -84,5 +92,33 @@ impl Error {
 impl StdError for Error {
     fn description(&self) -> &str {
         self.description()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::error::Error as StdError;
+    use std::fmt;
+
+    use super::Error;
+
+    #[derive(Debug)]
+    struct E;
+
+    impl fmt::Display for E {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            f.write_str("an error occurred")
+        }
+    }
+
+    impl StdError for E {
+        fn description(&self) -> &str { "error" }
+    }
+
+    #[test]
+    fn test_custom_error() {
+        let e = Error::custom(E);
+        assert_eq!(e.description(), "error");
+        assert_eq!(e.to_string(), "an error occurred");
     }
 }
