@@ -17,7 +17,7 @@ use ketos::{
     CodeBuffer, MoreResult,
     Scope,
 };
-use linefeed::{Completion, Reader, Terminal};
+use linefeed::{Completion, Reader, ReadResult, Signal, Suffix, Terminal};
 
 fn main() {
     let status = run();
@@ -201,41 +201,53 @@ fn run_repl(interp: &Interpreter) {
         scope: interp.scope().clone(),
     }));
 
+    reader.set_report_signal(Signal::Interrupt, true);
+
     reader.set_prompt("ketos=> ");
     reader.set_word_break_chars(" \t\n#\"'(),:;@[\\]`{}");
     reader.set_string_chars("\"");
 
     reader.set_blink_matching_paren(true);
 
-    while let Ok(Some(mut line)) = reader.read_line() {
-        if line.chars().all(|c| c.is_whitespace()) {
-            continue;
-        }
+    while let Ok(res) = reader.read_line() {
+        match res {
+            ReadResult::Eof => break,
+            ReadResult::Input(mut line) => {
+                if line.chars().all(|c| c.is_whitespace()) {
+                    continue;
+                }
 
-        reader.add_history(line.clone());
-        line.push('\n');
+                reader.add_history(line.clone());
+                line.push('\n');
 
-        match buf.feed_compile(&interp, &line) {
-            Ok(MoreResult::Complete(code)) => {
-                reader.set_prompt("ketos=> ");
+                match buf.feed_compile(&interp, &line) {
+                    Ok(MoreResult::Complete(code)) => {
+                        reader.set_prompt("ketos=> ");
 
-                if !code.is_empty() {
-                    match interp.execute_program(code) {
-                        Ok(v) => interp.display_value(&v),
-                        Err(e) => display_error(&interp, &e)
+                        if !code.is_empty() {
+                            match interp.execute_program(code) {
+                                Ok(v) => interp.display_value(&v),
+                                Err(e) => display_error(&interp, &e)
+                            }
+                        }
+                    }
+                    Ok(MoreResult::More(more)) => {
+                        reader.set_prompt(&format!("ketos{}> ", more.as_char()));
+                    }
+                    Err(ref e) => {
+                        reader.set_prompt("ketos=> ");
+                        display_error(&interp, e);
                     }
                 }
+
+                interp.clear_codemap();
             }
-            Ok(MoreResult::More(more)) => {
-                reader.set_prompt(&format!("ketos{}> ", more.as_char()));
-            }
-            Err(ref e) => {
+            ReadResult::Signal(_) => {
+                buf.clear();
                 reader.set_prompt("ketos=> ");
-                display_error(&interp, e);
+                println!("^C");
             }
         }
-
-        interp.clear_codemap();
     }
 
     println!("");
@@ -255,7 +267,11 @@ impl<Term: Terminal> linefeed::Completer<Term> for Completer {
             // Indent when there's no word to complete
             let n = 2 - start % 2;
 
-            Some(vec![Completion::simple(repeat(' ').take(n).collect())])
+            Some(vec![Completion{
+                completion: repeat(' ').take(n).collect(),
+                display: None,
+                suffix: Suffix::None,
+            }])
         } else {
             complete_name(word, &self.scope).map(
                 |words| words.into_iter().map(Completion::simple).collect())
