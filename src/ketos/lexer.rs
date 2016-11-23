@@ -260,16 +260,19 @@ impl<'lex> Lexer<'lex> {
                     _ => Ok((Token::Comma, 1)),
                 },
                 '-' | '0' ... '9' => parse_number(&self.input[ind..]),
-                '"' => Ok(try!(parse_string(&self.input[ind..], lo))),
+                '"' => Ok(try!(parse_string(&self.input[ind..], self.code_offset + lo))),
                 '#' => match chars.next() {
                     Some((_, 'p')) => {
                         match chars.next() {
-                            Some((_, 'r')) => Ok(try!(parse_raw_path(&self.input[ind..], lo))),
-                            Some((_, '"')) => Ok(try!(parse_path(&self.input[ind..], lo))),
+                            Some((_, 'r')) => Ok(try!(parse_raw_path(&self.input[ind..],
+                                self.code_offset + lo))),
+                            Some((_, '"')) => Ok(try!(parse_path(&self.input[ind..],
+                                self.code_offset + lo))),
                             _ => Err(ParseErrorKind::InvalidToken)
                         }
                     }
-                    Some((_, '\'')) => Ok(try!(parse_char(&self.input[ind..], lo))),
+                    Some((_, '\'')) => Ok(try!(parse_char(&self.input[ind..],
+                        self.code_offset + lo))),
                     Some((_, '|')) => match consume_block_comment(ind, &mut chars) {
                         Ok(n) => {
                             self.cur_pos += n as u32;
@@ -282,7 +285,8 @@ impl<'lex> Lexer<'lex> {
                 },
                 'r' => match chars.next() {
                     Some((_, '"')) | Some((_, '#')) =>
-                        Ok(try!(parse_raw_string(&self.input[ind..], lo))),
+                        Ok(try!(parse_raw_string(&self.input[ind..],
+                            self.code_offset + lo))),
                     _ => parse_name(&self.input[ind..])
                 },
                 ':' => parse_keyword(&self.input[ind..]),
