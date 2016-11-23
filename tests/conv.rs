@@ -2,6 +2,9 @@
 
 extern crate ketos;
 
+use std::ffi::{OsStr, OsString};
+use std::path::{Path, PathBuf};
+
 use ketos::{ExecError, FromValue, FromValueRef, Value};
 
 fn from<T: FromValue>(v: Value) -> Result<T, ExecError> {
@@ -27,6 +30,11 @@ fn test_from_value() {
 
     assert_eq!(from::<(String, i32)>(into(("foo", 1))).unwrap(),
         ("foo".to_owned(), 1));
+
+    assert_eq!(from::<PathBuf>(into("foo")).unwrap(), PathBuf::from("foo"));
+    assert_eq!(from::<PathBuf>(into(Path::new("foo"))).unwrap(), PathBuf::from("foo"));
+    assert_eq!(from::<OsString>(into("foo")).unwrap(), OsString::from("foo"));
+    assert_eq!(from::<OsString>(into(Path::new("foo"))).unwrap(), OsString::from("foo"));
 }
 
 #[test]
@@ -37,6 +45,11 @@ fn test_from_value_ref() {
     assert_eq!(from_ref::<Vec<i32>>(&into(vec![1, 2, 3])).unwrap(), vec![1, 2, 3]);
 
     assert_eq!(from_ref::<(&str, i32)>(&into(("foo", 1))).unwrap(), ("foo", 1));
+
+    assert_eq!(from_ref::<&Path>(&into("foo")).unwrap(), Path::new("foo"));
+    assert_eq!(from_ref::<&Path>(&into(Path::new("foo"))).unwrap(), Path::new("foo"));
+    assert_eq!(from_ref::<&OsStr>(&into("foo")).unwrap(), OsStr::new("foo"));
+    assert_eq!(from_ref::<&OsStr>(&into(Path::new("foo"))).unwrap(), OsStr::new("foo"));
 }
 
 #[test]

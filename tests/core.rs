@@ -140,6 +140,11 @@ fn test_integer() {
 }
 
 #[test]
+fn test_path() {
+    assert_eq!(eval(r#"#p"foo""#).unwrap(), r#"#p"foo""#);
+}
+
+#[test]
 fn test_quasiquote() {
     assert_eq!(eval("`foo").unwrap(), "foo");
     assert_eq!(eval("``foo").unwrap(), "`foo");
@@ -263,6 +268,8 @@ fn test_format() {
     assert_eq!(eval_str(r#"(format "~s" 'foo)"#).unwrap(), "foo");
     assert_eq!(eval_str(r#"(format "~a" #'a')"#).unwrap(), "a");
     assert_eq!(eval_str(r#"(format "~s" #'a')"#).unwrap(), "#'a'");
+    assert_eq!(eval_str(r#"(format "~a" #p"foo")"#).unwrap(), "foo");
+    assert_eq!(eval_str(r#"(format "~s" #p"foo")"#).unwrap(), "#p\"foo\"");
 
     assert_eq!(eval_str(r#"(format "foo~c~c~c" #'b' #'a' #'r')"#).unwrap(), "foobar");
 
@@ -620,6 +627,8 @@ fn test_eq() {
     assert_eq!(eval(r#"(= "a" "b")"#).unwrap(), "false");
     assert_eq!(eval(r"(= #'a' #'a')").unwrap(), "true");
     assert_eq!(eval(r"(= #'a' #'b')").unwrap(), "false");
+    assert_eq!(eval(r#"(= #p"a" #p"a")"#).unwrap(), "true");
+    assert_eq!(eval(r#"(= #p"a" #p"b")"#).unwrap(), "false");
 
     assert_eq!(eval("(= 'a 'a)").unwrap(), "true");
     assert_eq!(eval("(= 'a 'b)").unwrap(), "false");
@@ -669,6 +678,7 @@ fn test_cmp() {
 
     assert_eq!(eval("(< #'a' #'b')").unwrap(), "true");
     assert_eq!(eval(r#"(< "a" "b")"#).unwrap(), "true");
+    assert_eq!(eval(r#"(< #p"a" #p"b")"#).unwrap(), "true");
 
     assert_eq!(eval("(< () '(0))").unwrap(), "true");
     assert_eq!(eval("(> '(0) ())").unwrap(), "true");
@@ -885,9 +895,12 @@ fn test_elt() {
 #[test]
 fn test_concat() {
     assert_eq!(eval("(concat '(1 2) () '(3 4))").unwrap(), "(1 2 3 4)");
+
     assert_eq!(eval(r#"(concat "foo" "" "bar")"#).unwrap(), r#""foobar""#);
     assert_eq!(eval(r#"(concat #'a' #'b')"#).unwrap(), r#""ab""#);
     assert_eq!(eval(r#"(concat "foo" #'b' #'a' #'r')"#).unwrap(), r#""foobar""#);
+
+    assert_eq!(eval(r#"(concat #p"foo" #p"bar")"#).unwrap(), r#"#p"foo/bar""#);
 }
 
 #[test]
@@ -1110,6 +1123,7 @@ fn test_type_of() {
     assert_eq!(eval("(type-of :a)").unwrap(), "keyword");
     assert_eq!(eval("(type-of #'a')").unwrap(), "char");
     assert_eq!(eval("(type-of \"a\")").unwrap(), "string");
+    assert_eq!(eval("(type-of #p\"a\")").unwrap(), "path");
     assert_eq!(eval("(type-of ''a)").unwrap(), "object");
     assert_eq!(eval("(type-of '(1))").unwrap(), "list");
     assert_eq!(eval("(type-of id)").unwrap(), "function");

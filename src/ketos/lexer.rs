@@ -26,6 +26,8 @@ pub enum Token<'lex> {
     Char(&'lex str),
     /// String literal
     String(&'lex str),
+    /// Path literal
+    Path(&'lex str),
     /// Identifier name
     Name(&'lex str),
     /// Identifier keyword
@@ -55,6 +57,7 @@ impl<'lex> Token<'lex> {
             Token::Name(_) => "name",
             Token::Char(_) => "char",
             Token::String(_) => "string",
+            Token::Path(_) => "path",
             Token::Keyword(_) => "keyword",
             Token::BackQuote => "`",
             Token::Comma => ",",
@@ -259,6 +262,13 @@ impl<'lex> Lexer<'lex> {
                 '-' | '0' ... '9' => parse_number(&self.input[ind..]),
                 '"' => Ok(try!(parse_string(&self.input[ind..], lo))),
                 '#' => match chars.next() {
+                    Some((_, 'p')) => {
+                        match chars.next() {
+                            Some((_, 'r')) => Ok(try!(parse_raw_path(&self.input[ind..], lo))),
+                            Some((_, '"')) => Ok(try!(parse_path(&self.input[ind..], lo))),
+                            _ => Err(ParseErrorKind::InvalidToken)
+                        }
+                    }
                     Some((_, '\'')) => Ok(try!(parse_char(&self.input[ind..], lo))),
                     Some((_, '|')) => match consume_block_comment(ind, &mut chars) {
                         Ok(n) => {
@@ -553,6 +563,16 @@ fn parse_number(input: &str) -> Result<(Token, usize), ParseErrorKind> {
     }
 }
 
+fn parse_path(input: &str, pos: BytePos) -> Result<(Token, usize), ParseError> {
+    let (_, size) = try!(string::parse_string(&input[2..], pos + 2));
+    Ok((Token::Path(&input[..size + 2]), size + 2))
+}
+
+fn parse_raw_path(input: &str, pos: BytePos) -> Result<(Token, usize), ParseError> {
+    let (_, size) = try!(string::parse_raw_string(&input[2..], pos + 2));
+    Ok((Token::Path(&input[..size + 2]), size + 2))
+}
+
 fn parse_char(input: &str, pos: BytePos) -> Result<(Token, usize), ParseError> {
     let (_, size) = try!(string::parse_char(input, pos));
     Ok((Token::Char(&input[..size]), size))
@@ -648,6 +668,14 @@ mod test {
              (sp(5, 10), Token::Char(r"#'\''")),
              (sp(11, 18), Token::Char(r"#'\x7f'")),
              (sp(19, 30), Token::Char(r"#'\u{1234}'"))]);
+
+        assert_eq!(tokens(r#"#p"foo" #p"bar""#),
+            [(sp(0, 7), Token::Path(r#"#p"foo""#)),
+             (sp(8, 15), Token::Path(r#"#p"bar""#))]);
+
+        assert_eq!(tokens(r##"#pr"foo\" #pr#"bar"#"##),
+            [(sp(0, 9), Token::Path(r#"#pr"foo\""#)),
+             (sp(10, 20), Token::Path(r##"#pr#"bar"#"##))]);
 
         assert_eq!(tokens(r###""a" r"\" r#"b"# r##"c"## "\x7f" "\u{1234}""###),
             [(sp(0, 3), Token::String(r#""a""#)),
@@ -785,5 +813,10 @@ mod test {
         assert_eq!(error("0x10/2"), Err(ParseErrorKind::InvalidLiteral));
         assert_eq!(error("10e1/2"), Err(ParseErrorKind::InvalidLiteral));
         assert_eq!(error("10/2e3"), Err(ParseErrorKind::InvalidLiteral));
+
+        assert_eq!(error("#p"), Err(ParseErrorKind::InvalidToken));
+        assert_eq!(error("#p x"), Err(ParseErrorKind::InvalidToken));
+        assert_eq!(error("#px"), Err(ParseErrorKind::InvalidToken));
+        assert_eq!(error("#pxyz"), Err(ParseErrorKind::InvalidToken));
     }
 }

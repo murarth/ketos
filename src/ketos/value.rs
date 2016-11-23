@@ -2,8 +2,10 @@
 
 use std::any::{Any, TypeId};
 use std::cmp::Ordering;
+use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::mem::{replace, transmute};
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use error::Error;
@@ -41,6 +43,8 @@ pub enum Value {
     Char(char),
     /// String
     String(RcString),
+    /// Path
+    Path(PathBuf),
     /// Quasiquoted value; quote depth **MUST NEVER be zero.**
     Quasiquote(Box<Value>, u32),
     /// Comma'd value; comma depth **MUST NEVER be zero.**
@@ -88,6 +92,7 @@ impl Value {
             (&Value::Keyword(a), &Value::Keyword(b)) => a.cmp(&b),
             (&Value::Char(a), &Value::Char(b)) => a.cmp(&b),
             (&Value::String(ref a), &Value::String(ref b)) => a.cmp(&b),
+            (&Value::Path(ref a), &Value::Path(ref b)) => a.cmp(&b),
             (&Value::Unit, &Value::List(_)) => Ordering::Less,
             (&Value::List(_), &Value::Unit) => Ordering::Greater,
             (&Value::List(ref a), &Value::List(ref b)) =>
@@ -195,6 +200,7 @@ impl Value {
             (&Value::Keyword(a), &Value::Keyword(b)) => a == b,
             (&Value::Char(a), &Value::Char(b)) => a == b,
             (&Value::String(ref a), &Value::String(ref b)) => a == b,
+            (&Value::Path(ref a), &Value::Path(ref b)) => a == b,
             (&Value::Quote(ref a, na), &Value::Quote(ref b, nb)) =>
                 na == nb && try!(a.is_equal(&b)),
             (&Value::Unit, &Value::List(_)) => false,
@@ -247,6 +253,7 @@ impl Value {
             (&Value::Keyword(a), &Value::Keyword(b)) => a == b,
             (&Value::Char(a), &Value::Char(b)) => a == b,
             (&Value::String(ref a), &Value::String(ref b)) => a == b,
+            (&Value::Path(ref a), &Value::Path(ref b)) => a == b,
             (&Value::Quasiquote(ref a, na), &Value::Quasiquote(ref b, nb)) =>
                 na == nb && a.is_identical(b),
             (&Value::Comma(ref a, na), &Value::Comma(ref b, nb)) =>
@@ -298,6 +305,7 @@ impl Value {
                 1 + s.fields.iter().map(|&(_, ref f)| f.size()).fold(0, |a, b| a + b),
             Value::StructDef(ref d) => 1 + d.fields.len(),
             Value::String(ref s) => 1 + s.len(),
+            Value::Path(ref p) => 1 + p.as_os_str().len(),
             Value::Comma(ref v, _) |
             Value::CommaAt(ref v, _) |
             Value::Quasiquote(ref v, _) |
@@ -363,6 +371,7 @@ impl Value {
             Value::Ratio(_) => "ratio",
             Value::Char(_) => "char",
             Value::String(_) => "string",
+            Value::Path(_) => "path",
             Value::Name(_) => "name",
             Value::Keyword(_) => "keyword",
             // XXX: Does this make sense?
@@ -631,6 +640,7 @@ impl NameDebug for Value {
             },
             Value::Char(ch) => write!(f, "#{:?}", ch),
             Value::String(ref s) => write!(f, "{:?}", s),
+            Value::Path(ref p) => write!(f, "#p{:?}", p),
             Value::Name(name) => write!(f, "{}", names.get(name)),
             Value::Keyword(name) => write!(f, ":{}", names.get(name)),
             Value::Quasiquote(ref v, depth) => {
@@ -729,6 +739,7 @@ impl NameDisplay for Value {
             },
             Value::Char(ch) => write!(f, "{}", ch),
             Value::String(ref s) => write!(f, "{}", s),
+            Value::Path(ref p) => write!(f, "{}", p.display()),
             Value::Foreign(ref v) => v.fmt_display(names, f),
             ref v => NameDebug::fmt(v, names, f),
         }
@@ -898,6 +909,26 @@ impl<'a> FromValueRef<'a> for &'a str {
     }
 }
 
+impl<'a> FromValueRef<'a> for &'a Path {
+    fn from_value_ref(v: &'a Value) -> Result<&'a Path, ExecError> {
+        match *v {
+            Value::String(ref s) => Ok(s.as_ref()),
+            Value::Path(ref p) => Ok(p),
+            ref v => Err(ExecError::expected("path", v))
+        }
+    }
+}
+
+impl<'a> FromValueRef<'a> for &'a OsStr {
+    fn from_value_ref(v: &'a Value) -> Result<&'a OsStr, ExecError> {
+        match *v {
+            Value::String(ref s) => Ok(s.as_ref()),
+            Value::Path(ref p) => Ok(p.as_ref()),
+            ref v => Err(ExecError::expected("path", v))
+        }
+    }
+}
+
 impl<'a> FromValueRef<'a> for &'a Integer {
     fn from_value_ref(v: &'a Value) -> Result<&'a Integer, ExecError> {
         match *v {
@@ -1005,6 +1036,22 @@ integer_from_value!{ u32 to_u32 }
 integer_from_value!{ u64 to_u64 }
 integer_from_value!{ usize to_usize }
 
+impl FromValue for PathBuf {
+    fn from_value(v: Value) -> Result<PathBuf, ExecError> {
+        match v {
+            Value::String(s) => Ok(PathBuf::from(s.into_string())),
+            Value::Path(p) => Ok(p),
+            ref v => Err(ExecError::expected("path", v))
+        }
+    }
+}
+
+impl FromValue for OsString {
+    fn from_value(v: Value) -> Result<OsString, ExecError> {
+        PathBuf::from_value(v).map(|p| p.into_os_string())
+    }
+}
+
 impl FromValue for Value {
     #[inline]
     fn from_value(v: Value) -> Result<Value, ExecError> {
@@ -1048,12 +1095,26 @@ value_from!{ char; c => Value::Char(c) }
 value_from!{ Integer; i => Value::Integer(i) }
 value_from!{ Ratio; r => Value::Ratio(r) }
 value_from!{ String; s => Value::String(RcString::new(s)) }
+value_from!{ PathBuf; p => Value::Path(p) }
+value_from!{ OsString; s => Value::Path(PathBuf::from(s)) }
 value_from!{ f32; f => Value::Float(f as f64) }
 value_from!{ f64; f => Value::Float(f) }
 
 impl<'a> From<&'a str> for Value {
     fn from(s: &str) -> Value {
         s.to_owned().into()
+    }
+}
+
+impl<'a> From<&'a Path> for Value {
+    fn from(s: &Path) -> Value {
+        s.to_owned().into()
+    }
+}
+
+impl<'a> From<&'a OsStr> for Value {
+    fn from(s: &OsStr) -> Value {
+        PathBuf::from(s).into()
     }
 }
 

@@ -252,6 +252,17 @@ ketos=> "\u{61}"
 "a"
 ```
 
+### Path
+
+At runtime, paths are encoded in operating system native format.
+However, in Ketos code, they may contain only UTF-8 and their syntax
+is identical to strings, aside from the `#p` prefix.
+
+```lisp
+ketos=> #p"foo"
+#p"foo"
+```
+
 ### Character
 
 Characters are unicode code points. Because Ketos uses the `'` token for

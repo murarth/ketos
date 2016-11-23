@@ -2,8 +2,10 @@
 
 use std::borrow::Cow;
 use std::cmp::Ordering;
+use std::ffi::OsStr;
 use std::fmt;
 use std::ops;
+use std::path::Path;
 use std::rc::Rc;
 use std::slice::Iter;
 
@@ -130,6 +132,24 @@ impl RcString {
 impl AsRef<str> for RcString {
     fn as_ref(&self) -> &str {
         &self.data[self.start..self.end]
+    }
+}
+
+impl AsRef<[u8]> for RcString {
+    fn as_ref(&self) -> &[u8] {
+        AsRef::<str>::as_ref(self).as_ref()
+    }
+}
+
+impl AsRef<Path> for RcString {
+    fn as_ref(&self) -> &Path {
+        AsRef::<str>::as_ref(self).as_ref()
+    }
+}
+
+impl AsRef<OsStr> for RcString {
+    fn as_ref(&self) -> &OsStr {
+        AsRef::<str>::as_ref(self).as_ref()
     }
 }
 

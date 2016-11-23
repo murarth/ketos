@@ -39,6 +39,8 @@ syn region ketosRawString start=+r\z(#*\)"+ end=+"\z1+
 syn region ketosString start=+"+ end=+"+ skip=+\\\\\|\\"+ contains=ketosStringEscape
 syn match ketosStringEscape "\\\(x[0-9a-fA-F]{2}\+\|u{[0-9a-fA-F]*}\)" contained
 
+syn match ketosPath "#p" nextgroup=ketosString
+
 syn region ketosCommentBlock    start="#|" end="|#" contains=ketosTodo,ketosCommentBlock,ketosCommentLine
 syn region ketosCommentLine     start=";"  end="$"  contains=ketosTodo
 syn region ketosDocCommentLine  start=";;" end="$"  contains=ketosTodo
@@ -63,8 +65,10 @@ hi! def link ketosFunc Keyword
 hi! def link ketosKey Keyword
 hi! def link ketosNumber Number
 hi! def link ketosOperator Keyword
+hi! def link ketosRawString String
 hi! def link ketosString String
 hi! def link ketosStringEscape Special
+hi! def link ketosPath Special
 hi! def link ketosTodo Todo
 
 let b:current_syntax = 'ketos'

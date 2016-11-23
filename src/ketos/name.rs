@@ -173,7 +173,7 @@ standard_names!{
     "false" => FALSE = 61,
     "true" => TRUE = 62,
     // End of names referring to standard values.
-    // The constant `NUM_STANDARD_VALUES` below should be one6 greater than
+    // The constant `NUM_STANDARD_VALUES` below should be one greater than
     // the value immediately above this comment.
 
     // Special operators follow; these are not represented as values in global
@@ -214,10 +214,11 @@ standard_names!{
     "name" => NAME = 93,
     "number" => NUMBER = 94,
     "function" => FUNCTION = 95,
+    "path" => PATH = 96,
 }
 
 /// Number of standard names
-pub const NUM_STANDARD_NAMES: u32 = 96;
+pub const NUM_STANDARD_NAMES: u32 = 97;
 
 /// Number of names, starting at `0`, which refer to system functions.
 pub const NUM_SYSTEM_FNS: usize = 61;

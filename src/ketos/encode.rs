@@ -4,7 +4,7 @@ use std::char::from_u32;
 use std::fmt;
 use std::fs::File;
 use std::io::{Cursor, Read, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str::from_utf8;
 
@@ -89,6 +89,8 @@ impl NameDisplay for DecodeError {
 /// Error in encoding bytecode file format
 #[derive(Debug)]
 pub enum EncodeError {
+    /// A `Path` value contains invalid UTF-8
+    InvalidUtf8,
     /// Integer overflow in encoding value
     Overflow,
     /// Attempt to encode a type that cannot be encoded
@@ -102,6 +104,7 @@ impl fmt::Display for EncodeError {
         use self::EncodeError::*;
 
         match *self {
+            InvalidUtf8 => f.write_str("invalid utf-8"),
             Overflow => f.write_str("integer overflow"),
             UnencodableType(ty) => write!(f, "cannot encode value of type `{}`", ty),
             UnencodableValue(v) => write!(f, "cannot encode value {}", v),
@@ -406,6 +409,7 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
                     .ok_or(DecodeError::InvalidChar(c))
             }
             STRING => self.read_string().map(|s| s.into()),
+            PATH => self.read_string().map(|s| PathBuf::from(s).into()),
             // XXX: Decoding struct values is not implemented
             STRUCT => return Err(DecodeError::InvalidType(STRUCT)),
             STRUCT_DEF => {
@@ -687,6 +691,10 @@ impl ValueEncoder {
                 self.write_u8(STRING);
                 try!(self.write_string(s));
             }
+            Value::Path(ref p) => {
+                self.write_u8(PATH);
+                try!(self.write_path(p));
+            }
             // TODO: Encode/decode struct values.
             // Modules could begin with a listing of all defined StructDefs,
             // which could be referenced by index thereafter.
@@ -836,6 +844,13 @@ impl ValueEncoder {
         Ok(())
     }
 
+    fn write_path(&mut self, p: &Path) -> Result<(), EncodeError> {
+        match p.to_str() {
+            Some(s) => self.write_string(s),
+            None => Err(EncodeError::InvalidUtf8)
+        }
+    }
+
     fn write_u8(&mut self, b: u8) {
         self.data.push(b);
     }
@@ -912,16 +927,17 @@ types!{
     KEYWORD = 11,
     CHAR = 12,
     STRING = 13,
-    STRUCT = 14,
-    STRUCT_DEF = 15,
-    QUASI_QUOTE = 16,
-    QUASI_QUOTE_ONE = 17,
-    COMMA = 18,
-    COMMA_ONE = 19,
-    COMMA_AT = 20,
-    COMMA_AT_ONE = 21,
-    QUOTE = 22,
-    QUOTE_ONE = 23,
-    LIST = 24,
-    LAMBDA = 25,
+    PATH = 14,
+    STRUCT = 15,
+    STRUCT_DEF = 16,
+    QUASI_QUOTE = 17,
+    QUASI_QUOTE_ONE = 18,
+    COMMA = 19,
+    COMMA_ONE = 20,
+    COMMA_AT = 21,
+    COMMA_AT_ONE = 22,
+    QUOTE = 23,
+    QUOTE_ONE = 24,
+    LIST = 25,
+    LAMBDA = 26,
 }

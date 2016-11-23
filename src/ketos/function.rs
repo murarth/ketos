@@ -4,6 +4,7 @@ use std::borrow::Cow::{self, Borrowed, Owned};
 use std::cmp::{max, Ordering};
 use std::f64;
 use std::fmt;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use num::{Float, Zero};
@@ -121,7 +122,7 @@ result in an error."),
     sys_fn!(fn_elt,         Exact(2),
 "Returns an element from a list, starting at zero index."),
     sys_fn!(fn_concat,      Min(1),
-"Concatenates a series of lists or strings and chars."),
+"Concatenates a series of sequences."),
     sys_fn!(fn_join,        Min(1),
 "Joins a series of lists or strings and chars using a separator value."),
     sys_fn!(fn_len,         Exact(1),
@@ -1115,6 +1116,7 @@ fn type_of(scope: &Scope, v: &Value) -> Name {
         Value::Keyword(_) => KEYWORD,
         Value::Char(_) => CHAR,
         Value::String(_) => STRING,
+        Value::Path(_) => PATH,
         Value::List(_) => LIST,
         Value::Function(_) => FUNCTION,
         Value::Lambda(_) => LAMBDA,
@@ -1337,6 +1339,7 @@ fn fn_concat(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0] {
         Value::Unit | Value::List(_) => concat_list(args),
         Value::Char(_) | Value::String(_) => concat_string(args),
+        Value::Path(_) => concat_path(args),
         ref v => Err(From::from(ExecError::expected("list or string", v)))
     }
 }
@@ -1372,6 +1375,22 @@ fn concat_string(args: &mut [Value]) -> Result<Value, Error> {
             Value::String(ref s) => res.push_str(s),
             ref v => return Err(From::from(ExecError::expected("char or string", v)))
         }
+    }
+
+    Ok(res.into())
+}
+
+fn concat_path(args: &mut [Value]) -> Result<Value, Error> {
+    if args.len() == 1 {
+        return Ok(args[0].take());
+    }
+
+    let mut res = PathBuf::new();
+
+    for arg in args {
+        let p = try!(<&Path>::from_value_ref(arg));
+
+        res.push(p);
     }
 
     Ok(res.into())

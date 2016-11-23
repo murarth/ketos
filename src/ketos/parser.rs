@@ -3,6 +3,7 @@
 use std::borrow::Cow::{self, Borrowed, Owned};
 use std::collections::HashMap;
 use std::fmt;
+use std::path::PathBuf;
 
 use error::Error;
 use exec::Context;
@@ -214,6 +215,8 @@ impl<'a, 'lex> Parser<'a, 'lex> {
                     .map(Value::Char).map_err(From::from),
                 Token::String(s) => parse_string(s)
                     .map(|s| s.into()).map_err(From::from),
+                Token::Path(p) => parse_path(p)
+                    .map(|p| p.into()).map_err(From::from),
                 Token::Name(name) => Ok(self.name_value(name)),
                 Token::Keyword(name) => Ok(Value::Keyword(self.add_name(name))),
                 Token::BackQuote => {
@@ -453,6 +456,15 @@ fn insert_doc_comment(mut items: Vec<Value>, doc: Option<(Span, &str)>)
 fn parse_char(s: &str) -> Result<char, ParseError> {
     let (ch, _) = try!(string::parse_char(s, 0));
     Ok(ch)
+}
+
+fn parse_path(s: &str) -> Result<PathBuf, ParseError> {
+    let (s, _) = if s.starts_with("#pr") {
+        try!(string::parse_raw_string(&s[2..], 0))
+    } else {
+        try!(string::parse_string(&s[2..], 0))
+    };
+    Ok(PathBuf::from(s).into())
 }
 
 fn parse_string(s: &str) -> Result<String, ParseError> {
