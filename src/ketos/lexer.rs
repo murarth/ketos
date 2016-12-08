@@ -354,6 +354,13 @@ impl<'lex> Lexer<'lex> {
         }
     }
 
+    /// Returns the current position within the input string.
+    ///
+    /// The next call to `next_token` will begin searching at this point.
+    pub fn current_position(&self) -> BytePos {
+        self.cur_pos
+    }
+
     fn span(&self, span: Span) -> Span {
         let Span{lo, hi} = span;
         Span{lo: self.code_offset + lo, hi: self.code_offset + hi}
@@ -822,5 +829,22 @@ mod test {
         assert_eq!(error("#p x"), Err(ParseErrorKind::InvalidToken));
         assert_eq!(error("#px"), Err(ParseErrorKind::InvalidToken));
         assert_eq!(error("#pxyz"), Err(ParseErrorKind::InvalidToken));
+    }
+
+    #[test]
+    fn test_position() {
+        let mut l = Lexer::new("foo bar baz ", 0);
+
+        assert_matches!(l.next_token().unwrap(), (_, Token::Name("foo")));
+        assert_eq!(l.current_position(), 3);
+
+        assert_matches!(l.next_token().unwrap(), (_, Token::Name("bar")));
+        assert_eq!(l.current_position(), 7);
+
+        assert_matches!(l.next_token().unwrap(), (_, Token::Name("baz")));
+        assert_eq!(l.current_position(), 11);
+
+        assert_matches!(l.next_token().unwrap(), (_, Token::End));
+        assert_eq!(l.current_position(), 12);
     }
 }

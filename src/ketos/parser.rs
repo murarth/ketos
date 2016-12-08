@@ -355,6 +355,11 @@ impl<'a, 'lex> Parser<'a, 'lex> {
         Ok(res)
     }
 
+    /// Returns a borrowed reference to the contained `Lexer`.
+    pub fn lexer(&self) -> &Lexer<'lex> {
+        &self.lexer
+    }
+
     /// Returns the the next token if it is a doc comment.
     /// Otherwise, `None` is returned and no token is consumed.
     fn read_doc_comment(&mut self)
@@ -539,21 +544,16 @@ fn strip_underscores(s: &str) -> Cow<str> {
 
 #[cfg(test)]
 mod test {
-    use std::rc::Rc;
-
     use super::{ParseError, ParseErrorKind, Parser};
     use error::Error;
-    use exec::Context;
+    use interpreter::Interpreter;
     use lexer::{Span, Lexer};
-    use restrict::RestrictConfig;
-    use scope::GlobalScope;
     use value::Value;
 
     fn parse(s: &str) -> Result<Value, ParseError> {
-        let scope = Rc::new(GlobalScope::default("main"));
-        let ctx = Context::new(scope, RestrictConfig::permissive());
+        let interp = Interpreter::new();
 
-        let mut p = Parser::new(&ctx, Lexer::new(s, 0));
+        let mut p = Parser::new(interp.context(), Lexer::new(s, 0));
         p.parse_single_expr().map_err(|e| {
             match e {
                 Error::ParseError(e) => e,
@@ -580,5 +580,17 @@ mod test {
             span: Span{lo: 5, hi: 6}, kind: ParseErrorKind::UnbalancedComma});
         assert_eq!(parse("`(foo ,,bar)").unwrap_err(), ParseError{
             span: Span{lo: 7, hi: 8}, kind: ParseErrorKind::UnbalancedComma});
+    }
+
+    #[test]
+    fn test_lexer_position() {
+        let interp = Interpreter::new();
+
+        let mut p = Parser::new(interp.context(),
+            Lexer::new("(foo 1 2 3) bar", 0));
+
+        p.parse_expr().unwrap();
+
+        assert_eq!(p.lexer().current_position(), 11);
     }
 }
