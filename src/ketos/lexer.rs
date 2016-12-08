@@ -180,7 +180,7 @@ impl CodeMap {
 
         let end = match self.files.get(n as usize + 1) {
             Some(f) => f.begin,
-            None => self.text.len() as u32
+            None => self.text.len() as BytePos
         };
 
         if span.hi > end {
@@ -223,7 +223,7 @@ impl Span {
 
     /// Returns a `Span` spanning a single char.
     pub fn one(pos: BytePos, ch: char) -> Span {
-        Span{lo: pos, hi: pos + ch.len_utf8() as u32}
+        Span{lo: pos, hi: pos + ch.len_utf8() as BytePos}
     }
 
     /// Returns a `Span` spanning a single byte.
@@ -275,7 +275,7 @@ impl<'lex> Lexer<'lex> {
                         self.code_offset + lo))),
                     Some((_, '|')) => match consume_block_comment(ind, &mut chars) {
                         Ok(n) => {
-                            self.cur_pos += n as u32;
+                            self.cur_pos += n as BytePos;
                             continue;
                         }
                         Err(k) => Err(k)
@@ -294,7 +294,7 @@ impl<'lex> Lexer<'lex> {
                     match chars.clone().next() {
                         Some((_, ';')) => Ok(parse_doc_comment(&self.input[ind..])),
                         _ => {
-                            self.cur_pos += consume_line_comment(ind, &mut chars) as u32;
+                            self.cur_pos += consume_line_comment(ind, &mut chars) as BytePos;
                             continue;
                         }
                     }
@@ -307,7 +307,7 @@ impl<'lex> Lexer<'lex> {
                     _ => Err(ParseErrorKind::InvalidChar('\r'))
                 },
                 ch if ch.is_whitespace() => {
-                    self.cur_pos += ch.len_utf8() as u32;
+                    self.cur_pos += ch.len_utf8() as BytePos;
                     continue;
                 }
                 _ if is_identifier(ch) => parse_name(&self.input[ind..]),
