@@ -94,7 +94,8 @@ fn run() -> i32 {
             return 1;
         }
     } else if !matches.free.is_empty() {
-        interp.set_args(&matches.free[1..]);
+        interp.set_args(&matches.free);
+
         if !run_file(&interp, Path::new(&matches.free[0])) && !interactive {
             return 1;
         }
