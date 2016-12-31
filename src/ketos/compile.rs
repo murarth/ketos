@@ -1380,6 +1380,9 @@ impl<'a> Compiler<'a> {
             Instruction::Apply(n) => {
                 self.stack_offset -= n + 1;
             }
+            Instruction::Append => {
+                self.stack_offset -= 1;
+            }
             Instruction::Eq |
             Instruction::NotEq => {
                 self.stack_offset -= 1;

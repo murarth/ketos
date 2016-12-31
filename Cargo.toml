@@ -10,7 +10,7 @@ keywords = [ "scripting", "extension", "functional", "language", "lisp" ]
 license = "MIT/Apache-2.0"
 readme = "README.md"
 
-version = "0.4.2"
+version = "0.4.3"
 authors = ["Murarth <murarth@gmail.com>"]
 
 [[bin]]
