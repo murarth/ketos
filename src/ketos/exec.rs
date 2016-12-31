@@ -674,8 +674,11 @@ impl Machine {
                     try!(self.call_const(frame, n, n_args)),
                 Call(n) => try!(self.call_function(frame, n)),
                 Apply(n) => try!(self.apply(frame, n)),
+                ApplyConst(n, n_args) => try!(self.apply_const(frame, n, n_args)),
+                ApplySelf(n) => try!(self.apply_self(frame, n)),
+                TailApplySelf(n) => try!(self.tail_apply_self(frame, n)),
                 CallSelf(n) => try!(self.call_self(frame, n)),
-                TailCall(n) => try!(self.tail_call(frame, n)),
+                TailCallSelf(n) => try!(self.tail_call(frame, n)),
                 Skip(n) => try!(self.skip_stack(n as usize)),
                 Return => {
                     match self.call_stack.pop() {
@@ -925,19 +928,45 @@ impl Machine {
         Ok(n_args)
     }
 
-    fn apply(&mut self, frame: &mut StackFrame, mut n_args: u32) -> Result<(), Error> {
+    /// Consumes value, which must be `Unit` or `List`,
+    /// and pushes each contained value to the top of the stack,
+    /// returning the number of values pushed.
+    fn expand_value(&mut self) -> Result<usize, Error> {
         let v = self.value.take();
 
         match v {
-            Value::Unit => (),
+            Value::Unit => Ok(0),
             Value::List(li) => {
-                n_args += li.len() as u32;
+                let n = li.len();
                 try!(self.push_iter(li.to_vec()));
+                Ok(n)
             }
             ref v => return Err(From::from(ExecError::expected("list", v)))
         }
+    }
 
-        self.call_function(frame, n_args)
+    fn apply(&mut self, frame: &mut StackFrame, n_args: u32) -> Result<(), Error> {
+        let n = try!(self.expand_value());
+
+        self.call_function(frame, n_args + n as u32)
+    }
+
+    fn apply_const(&mut self, frame: &mut StackFrame, n: u32, n_args: u32) -> Result<(), Error> {
+        let n_push = try!(self.expand_value());
+
+        self.call_const(frame, n, n_args + n_push as u32)
+    }
+
+    fn apply_self(&mut self, frame: &mut StackFrame, n_args: u32) -> Result<(), Error> {
+        let n = try!(self.expand_value());
+
+        self.call_self(frame, n_args + n as u32)
+    }
+
+    fn tail_apply_self(&mut self, frame: &mut StackFrame, n_args: u32) -> Result<(), Error> {
+        let n = try!(self.expand_value());
+
+        self.tail_call(frame, n_args + n as u32)
     }
 
     fn call_self(&mut self, frame: &mut StackFrame, n: u32) -> Result<(), Error> {

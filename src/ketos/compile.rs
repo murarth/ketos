@@ -608,6 +608,10 @@ impl<'a> Compiler<'a> {
             .map_err(|e| { self.extend_global_trace(); e })
     }
 
+    fn self_name(&self) -> Option<Name> {
+        self.self_name
+    }
+
     fn add_constant(&self, name: Name, value: Value) {
         self.scope().add_constant(name, value);
     }
@@ -1367,7 +1371,9 @@ impl<'a> Compiler<'a> {
             // to avoid duplicate get_system_fn call
             Instruction::CallSysArgs(_, n) |
             Instruction::CallSelf(n) |
-            Instruction::CallConst(_, n) => {
+            Instruction::CallConst(_, n) |
+            Instruction::ApplyConst(_, n) |
+            Instruction::ApplySelf(n) => {
                 self.stack_offset -= n;
             }
             Instruction::Call(n) |
@@ -1678,14 +1684,39 @@ static SYSTEM_OPERATORS: [Operator; NUM_SYSTEM_OPERATORS] = [
 /// ```
 fn op_apply(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     let last = args.len() - 1;
+    let n_args = last as u32 - 1;
+    let mut iter = args[..last].iter();
+    let mut apply_const = None;
+    let mut apply_self = false;
 
-    for arg in &args[..last] {
+    if let Value::Name(name) = args[0] {
+        // Skip the first value when pushing args to the stack
+        iter.next();
+
+        if compiler.self_name() == Some(name) {
+            apply_self = true;
+        } else if try!(compiler.load_local_name(name)) {
+            try!(compiler.push_instruction(Instruction::Push));
+        } else {
+            let c = compiler.add_const(Owned(Value::Name(name)));
+            apply_const = Some(c);
+        }
+    }
+
+    for arg in iter {
         try!(compiler.compile_value(arg));
         try!(compiler.push_instruction(Instruction::Push));
     }
 
     try!(compiler.compile_value(&args[last]));
-    try!(compiler.push_instruction(Instruction::Apply(last as u32 - 1)));
+
+    if let Some(c) = apply_const {
+        try!(compiler.push_instruction(Instruction::ApplyConst(c, n_args)));
+    } else if apply_self {
+        try!(compiler.push_instruction(Instruction::ApplySelf(n_args)));
+    } else {
+        try!(compiler.push_instruction(Instruction::Apply(n_args)));
+    }
 
     Ok(())
 }

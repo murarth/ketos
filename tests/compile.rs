@@ -194,7 +194,7 @@ fn test_call_self() {
 fn test_tail_recursion() {
     assert_eq!(lambda("(define (foo a) (foo a))").unwrap(), [
         LOAD_PUSH_0,
-        TAIL_CALL, 1,
+        TAIL_CALL_SELF, 1,
     ]);
 
     assert_eq!(lambda("(define (foo a)
@@ -205,20 +205,55 @@ fn test_tail_recursion() {
         CALL_CONST_0, 1,
         JUMP_IF_NOT, 8,
         CONST_PUSH_1,
-        TAIL_CALL, 1,
+        TAIL_CALL_SELF, 1,
         CONST_PUSH_2,
-        TAIL_CALL, 1,
+        TAIL_CALL_SELF, 1,
     ]);
 
     assert_eq!(lambda("(define (foo) (and a (foo)))").unwrap(), [
         GET_DEF, 0,
         JUMP_IF_NOT, 6,
-        TAIL_CALL, 0,
+        TAIL_CALL_SELF, 0,
         RETURN,
     ]);
 
     assert_eq!(lambda("(define (foo) (let ((a 1)) (foo)))").unwrap(), [
         CONST_PUSH_0,
-        TAIL_CALL, 0,
+        TAIL_CALL_SELF, 0,
+    ]);
+}
+
+#[test]
+fn test_tail_recursion_apply() {
+    assert_eq!(lambda("(define (foo a) (apply foo a))").unwrap(), [
+        LOAD_0,
+        TAIL_APPLY_SELF, 0,
+    ]);
+
+    assert_eq!(lambda("(define (foo a)
+                         (if (something a)
+                            (apply foo ())
+                            (apply foo ())))").unwrap(), [
+        LOAD_PUSH_0,
+        CALL_CONST_0, 1,
+        JUMP_IF_NOT, 8,
+        UNIT,
+        TAIL_APPLY_SELF, 0,
+        UNIT,
+        TAIL_APPLY_SELF, 0,
+    ]);
+
+    assert_eq!(lambda("(define (foo) (and a (apply foo ())))").unwrap(), [
+        GET_DEF, 0,
+        JUMP_IF_NOT, 7,
+        UNIT,
+        TAIL_APPLY_SELF, 0,
+        RETURN,
+    ]);
+
+    assert_eq!(lambda("(define (foo) (let ((a 1)) (apply foo ())))").unwrap(), [
+        CONST_PUSH_0,
+        UNIT,
+        TAIL_APPLY_SELF, 0,
     ]);
 }

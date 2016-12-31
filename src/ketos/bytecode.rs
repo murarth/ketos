@@ -27,7 +27,7 @@ use value::Value;
 /// change to the bytecode format. The version represents a `ketos` version
 /// number, e.g. `0x01_02_03_00` corresponds to version `1.2.3`.
 /// (The least significant 8 bits don't mean anything yet.)
-pub const BYTECODE_VERSION: u32 = 0x00_04_00_00;
+pub const BYTECODE_VERSION: u32 = 0x00_04_02_00;
 
 /// Maximum value of a short-encoded operand.
 pub const MAX_SHORT_OPERAND: u32 = 0x7f;
@@ -157,14 +157,25 @@ pub enum Instruction {
     CallConst(u32, u32),
     /// Call function on the stack with *n* arguments from the top of the stack
     Call(u32),
-    /// Call function on the stack with *n* stack arguments and additional
-    /// arguments from list value
+    /// Call function on the stack with *n* stack arguments,
+    /// plus additional arguments from list value
     Apply(u32),
+    /// Call const function with *n* stack arguments,
+    /// plus additional arguments from list value;
+    /// parameters are `(const, n_args)`.
+    ApplyConst(u32, u32),
+    /// Call current code object with *n* stack arguments,
+    /// plus additional arguments from list value;
+    /// does not perform a tail call
+    ApplySelf(u32),
+    /// Call current code object with *n* stack arguments,
+    /// plus additional arguments from list value
+    TailApplySelf(u32),
     /// Call current code object with *n* arguments from the top of the stack;
     /// this does not perform a tail call
     CallSelf(u32),
     /// Perform tail-recursive call with *n* arguments from the top of the stack
-    TailCall(u32),
+    TailCallSelf(u32),
     /// Remove *n* values from the top of the stack
     Skip(u32),
     /// Return value from function
@@ -299,14 +310,17 @@ opcodes!{
     CALL_CONST_7 = 111,
     CALL = 112,
     APPLY = 113,
-    CALL_SELF = 114,
-    TAIL_CALL = 115,
-    SKIP = 116,
-    SKIP_1 = 117,
-    SKIP_2 = 118,
-    SKIP_3 = 119,
-    SKIP_4 = 120,
-    RETURN = 121,
+    APPLY_CONST = 114,
+    APPLY_SELF = 115,
+    TAIL_APPLY_SELF = 116,
+    CALL_SELF = 117,
+    TAIL_CALL_SELF = 118,
+    SKIP = 119,
+    SKIP_1 = 120,
+    SKIP_2 = 121,
+    SKIP_3 = 122,
+    SKIP_4 = 123,
+    RETURN = 124,
 }
 
 impl Instruction {
@@ -431,8 +445,11 @@ impl Instruction {
             CALL_CONST_7 => CallConst(7, operand!()),
             CALL => Call(operand!()),
             APPLY => Apply(operand!()),
+            APPLY_CONST => ApplyConst(operand!(), operand!()),
+            APPLY_SELF => ApplySelf(operand!()),
+            TAIL_APPLY_SELF => TailApplySelf(operand!()),
             CALL_SELF => CallSelf(operand!()),
-            TAIL_CALL => TailCall(operand!()),
+            TAIL_CALL_SELF => TailCallSelf(operand!()),
             SKIP => Skip(operand!()),
             SKIP_1 => Skip(1),
             SKIP_2 => Skip(2),
@@ -584,8 +601,11 @@ impl Instruction {
             CallConst(n, n_args) => op!(CALL_CONST, n, n_args),
             Call(n) => op!(CALL, n),
             Apply(n) => op!(APPLY, n),
+            ApplyConst(n, n_args) => op!(APPLY_CONST, n, n_args),
+            ApplySelf(n) => op!(APPLY_SELF, n),
+            TailApplySelf(n) => op!(TAIL_APPLY_SELF, n),
             CallSelf(n) => op!(CALL_SELF, n),
-            TailCall(n) => op!(TAIL_CALL, n),
+            TailCallSelf(n) => op!(TAIL_CALL_SELF, n),
             Skip(1) => op!(SKIP_1),
             Skip(2) => op!(SKIP_2),
             Skip(3) => op!(SKIP_3),
@@ -1015,7 +1035,8 @@ fn merge_instructions(a: Instruction, b: Instruction) -> Option<Instruction> {
         (NotEq, Not) => Eq,
         (EqConst(n), Not) => NotEqConst(n),
         (NotEqConst(n), Not) => EqConst(n),
-        (CallSelf(n), Return) => TailCall(n),
+        (ApplySelf(n), Return) => TailApplySelf(n),
+        (CallSelf(n), Return) => TailCallSelf(n),
         (Skip(_), Return) => Return,
         _ => return None
     };
