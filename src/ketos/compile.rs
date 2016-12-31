@@ -107,7 +107,7 @@ impl fmt::Display for CompileError {
                 f.write_str("cannot define name of standard value or operator"),
             ConstantExists(_) =>
                 f.write_str("cannot define name occupied by a constant value"),
-            DuplicateExports => f.write_str("duplicate `exports` declaration"),
+            DuplicateExports => f.write_str("duplicate `export` declaration"),
             DuplicateModuleDoc => f.write_str("duplicate module doc comment"),
             DuplicateParameter(_) => f.write_str("duplicate parameter"),
             ExportError{..} => f.write_str("export name not found in module"),
