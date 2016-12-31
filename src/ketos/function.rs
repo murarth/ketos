@@ -129,7 +129,7 @@ result in an error."),
 "Returns the length of the given list or string.
 
 String length is in bytes rather than characters."),
-    sys_fn!(fn_slice,       Exact(3),
+    sys_fn!(fn_slice,       Range(2, 3),
 "Returns a subsequence of a list or string."),
     sys_fn!(fn_first,       Exact(1),
 "Returns the first element of the given list or string."),
@@ -1489,47 +1489,79 @@ fn fn_len(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 /// `slice` returns a subsequence of a list or string.
 fn fn_slice(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let begin = try!(usize::from_value_ref(&args[1]));
-    let end = try!(usize::from_value_ref(&args[2]));
 
-    if end < begin {
-        return Err(From::from(ExecError::InvalidSlice(begin, end)));
-    }
+    if args.len() == 2 {
+        match args[0] {
+            Value::Unit => {
+                if begin > 0 {
+                    Err(From::from(ExecError::OutOfBounds(begin)))
+                } else {
+                    Ok(Value::Unit)
+                }
+            }
+            Value::List(ref li) => {
+                let n = li.len();
+                if begin > n {
+                    Err(From::from(ExecError::OutOfBounds(begin)))
+                } else {
+                    Ok(li.slice(begin..).into())
+                }
+            }
+            Value::String(ref s) => {
+                let n = s.len();
+                if begin > n {
+                    Err(From::from(ExecError::OutOfBounds(begin)))
+                } else if !s.is_char_boundary(begin) {
+                    Err(From::from(ExecError::NotCharBoundary(begin)))
+                } else {
+                    Ok(s.slice(begin..).into())
+                }
+            }
+            ref v => Err(From::from(ExecError::expected("list or string", v)))
+        }
+    } else {
+        let end = try!(usize::from_value_ref(&args[2]));
 
-    match args[0] {
-        Value::Unit => {
-            if begin > 0 {
-                Err(From::from(ExecError::OutOfBounds(begin)))
-            } else if end > 0 {
-                Err(From::from(ExecError::OutOfBounds(end)))
-            } else {
-                Ok(Value::Unit)
-            }
+        if end < begin {
+            return Err(From::from(ExecError::InvalidSlice(begin, end)));
         }
-        Value::List(ref li) => {
-            let n = li.len();
-            if begin > n {
-                Err(From::from(ExecError::OutOfBounds(begin)))
-            } else if end > n {
-                Err(From::from(ExecError::OutOfBounds(end)))
-            } else {
-                Ok(li.slice(begin..end).into())
+
+        match args[0] {
+            Value::Unit => {
+                if begin > 0 {
+                    Err(From::from(ExecError::OutOfBounds(begin)))
+                } else if end > 0 {
+                    Err(From::from(ExecError::OutOfBounds(end)))
+                } else {
+                    Ok(Value::Unit)
+                }
             }
-        }
-        Value::String(ref s) => {
-            let n = s.len();
-            if begin > n {
-                Err(From::from(ExecError::OutOfBounds(begin)))
-            } else if end > n {
-                Err(From::from(ExecError::OutOfBounds(end)))
-            } else if !s.is_char_boundary(begin) {
-                Err(From::from(ExecError::NotCharBoundary(begin)))
-            } else if !s.is_char_boundary(end) {
-                Err(From::from(ExecError::NotCharBoundary(end)))
-            } else {
-                Ok(s.slice(begin..end).into())
+            Value::List(ref li) => {
+                let n = li.len();
+                if begin > n {
+                    Err(From::from(ExecError::OutOfBounds(begin)))
+                } else if end > n {
+                    Err(From::from(ExecError::OutOfBounds(end)))
+                } else {
+                    Ok(li.slice(begin..end).into())
+                }
             }
+            Value::String(ref s) => {
+                let n = s.len();
+                if begin > n {
+                    Err(From::from(ExecError::OutOfBounds(begin)))
+                } else if end > n {
+                    Err(From::from(ExecError::OutOfBounds(end)))
+                } else if !s.is_char_boundary(begin) {
+                    Err(From::from(ExecError::NotCharBoundary(begin)))
+                } else if !s.is_char_boundary(end) {
+                    Err(From::from(ExecError::NotCharBoundary(end)))
+                } else {
+                    Ok(s.slice(begin..end).into())
+                }
+            }
+            ref v => Err(From::from(ExecError::expected("list or string", v)))
         }
-        ref v => Err(From::from(ExecError::expected("list or string", v)))
     }
 }
 

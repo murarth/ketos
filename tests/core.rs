@@ -865,15 +865,23 @@ fn test_string() {
 #[test]
 fn test_slice() {
     assert_eq!(eval("(slice () 0 0)").unwrap(), "()");
+    assert_eq!(eval("(slice () 0)").unwrap(), "()");
     assert_matches!(eval("(slice () 0 1)").unwrap_err(),
+        Error::ExecError(ExecError::OutOfBounds(1)));
+    assert_matches!(eval("(slice () 1)").unwrap_err(),
         Error::ExecError(ExecError::OutOfBounds(1)));
 
     assert_eq!(eval("(slice '(1 2 3) 0 2)").unwrap(), "(1 2)");
     assert_eq!(eval("(slice '(1 2 3) 1 3)").unwrap(), "(2 3)");
+    assert_eq!(eval("(slice '(1 2 3) 1)").unwrap(), "(2 3)");
 
     assert_eq!(eval(r#"(slice "" 0 0)"#).unwrap(), r#""""#);
+    assert_eq!(eval(r#"(slice "" 0)"#).unwrap(), r#""""#);
     assert_eq!(eval(r#"(slice "foobar" 3 6)"#).unwrap(), r#""bar""#);
+    assert_eq!(eval(r#"(slice "foobar" 3)"#).unwrap(), r#""bar""#);
     assert_matches!(eval(r#"(slice "a\u{2022}" 1 2)"#).unwrap_err(),
+        Error::ExecError(ExecError::NotCharBoundary(2)));
+    assert_matches!(eval(r#"(slice "a\u{2022}" 2)"#).unwrap_err(),
         Error::ExecError(ExecError::NotCharBoundary(2)));
 }
 
