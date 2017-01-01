@@ -48,11 +48,18 @@ fn test_encode() {
     run(r#"
         (const foo 1)
         (define bar 2)
+
+        (const b #b"y halo")
+        (const p #p"thar")
         "#, |ctx| {
             assert_matches!(ctx.scope().get_named_constant("foo"),
                 Some(Value::Integer(ref i)) if i.to_u32() == Some(1));
             assert_matches!(ctx.scope().get_named_value("bar"),
                 Some(Value::Integer(ref i)) if i.to_u32() == Some(2));
+            assert_matches!(ctx.scope().get_named_constant("b"),
+                Some(Value::Bytes(ref b)) if b == b"y halo");
+            assert_matches!(ctx.scope().get_named_constant("p"),
+                Some(Value::Path(ref p)) if p == Path::new("thar"));
         }).unwrap();
 }
 

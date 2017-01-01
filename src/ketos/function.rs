@@ -10,6 +10,7 @@ use std::rc::Rc;
 use num::{Float, Zero};
 
 use bytecode::Code;
+use bytes::Bytes;
 use error::Error;
 use exec::{Context, ExecError};
 use integer::{Integer, Ratio};
@@ -120,13 +121,13 @@ result in an error."),
     sys_fn!(fn_append,      Min(1),
 "Append a series of elements to a given list."),
     sys_fn!(fn_elt,         Exact(2),
-"Returns an element from a list, starting at zero index."),
+"Returns an element from a sequence, starting at zero index."),
     sys_fn!(fn_concat,      Min(1),
 "Concatenates a series of sequences."),
     sys_fn!(fn_join,        Min(1),
 "Joins a series of lists or strings and chars using a separator value."),
     sys_fn!(fn_len,         Exact(1),
-"Returns the length of the given list or string.
+"Returns the length of the given sequence.
 
 String length is in bytes rather than characters."),
     sys_fn!(fn_slice,       Range(2, 3),
@@ -187,6 +188,8 @@ If the value is of type integer, the value returned will be a ratio."),
 "Returns a string transformed into a list of characters."),
     sys_fn!(fn_string,      Exact(1),
 "Returns an argument converted into a string."),
+    sys_fn!(fn_bytes,       Exact(1),
+"Returns an argument converted into a byte string."),
     sys_fn!(fn_id,          Exact(1),
 "Returns the unmodified value of the argument received."),
     sys_fn!(fn_is,          Exact(2),
@@ -1116,6 +1119,7 @@ fn type_of(scope: &Scope, v: &Value) -> Name {
         Value::Keyword(_) => KEYWORD,
         Value::Char(_) => CHAR,
         Value::String(_) => STRING,
+        Value::Bytes(_) => BYTES,
         Value::Path(_) => PATH,
         Value::List(_) => LIST,
         Value::Function(_) => FUNCTION,
@@ -1324,7 +1328,10 @@ fn fn_elt(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match *li {
         Value::List(ref li) => li.get(idx).cloned()
             .ok_or(From::from(ExecError::OutOfBounds(idx))),
-        ref v => Err(From::from(ExecError::expected("list", v)))
+        Value::Bytes(ref b) => b.get(idx).cloned()
+            .map(|b| b.into())
+            .ok_or(From::from(ExecError::OutOfBounds(idx))),
+        ref v => Err(From::from(ExecError::expected("indexable sequence", v)))
     }
 }
 
@@ -1339,6 +1346,7 @@ fn fn_concat(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0] {
         Value::Unit | Value::List(_) => concat_list(args),
         Value::Char(_) | Value::String(_) => concat_string(args),
+        Value::Bytes(_) => concat_bytes(args),
         Value::Path(_) => concat_path(args),
         ref v => Err(From::from(ExecError::expected("list or string", v)))
     }
@@ -1380,6 +1388,21 @@ fn concat_string(args: &mut [Value]) -> Result<Value, Error> {
     Ok(res.into())
 }
 
+fn concat_bytes(args: &mut [Value]) -> Result<Value, Error> {
+    if args.len() == 1 {
+        return Ok(args[0].take());
+    }
+
+    let mut res = Vec::new();
+
+    for arg in args {
+        let b = try!(<&[u8]>::from_value_ref(arg));
+        res.extend(b);
+    }
+
+    Ok(Bytes::new(res).into())
+}
+
 fn concat_path(args: &mut [Value]) -> Result<Value, Error> {
     if args.len() == 1 {
         return Ok(args[0].take());
@@ -1415,15 +1438,12 @@ fn fn_join(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
         }
         Value::String(ref s) if s.is_empty() => concat_string(rest),
         Value::String(ref s) => join_string(s, rest),
+        Value::Bytes(ref s) => join_bytes(s, rest),
         ref v => Err(From::from(ExecError::expected("list or string", v)))
     }
 }
 
 fn join_list(sep: &[Value], args: &mut [Value]) -> Result<Value, Error> {
-    if args.len() == 1 {
-        return Ok(args[0].take());
-    }
-
     let mut v = Vec::new();
 
     if let Some((first, rest)) = args.split_first_mut() {
@@ -1448,10 +1468,6 @@ fn join_list(sep: &[Value], args: &mut [Value]) -> Result<Value, Error> {
 }
 
 fn join_string(sep: &str, args: &mut [Value]) -> Result<Value, Error> {
-    if args.len() == 1 {
-        return Ok(args[0].take());
-    }
-
     let mut res = String::new();
 
     if let Some(value) = args.first() {
@@ -1474,13 +1490,33 @@ fn join_string(sep: &str, args: &mut [Value]) -> Result<Value, Error> {
     Ok(res.into())
 }
 
+fn join_bytes(sep: &Bytes, args: &mut [Value]) -> Result<Value, Error> {
+    let mut res = Vec::new();
+    let sep: &[u8] = sep;
+
+    if let Some(arg) = args.first() {
+        let b = try!(<&[u8]>::from_value_ref(arg));
+
+        res.extend(b);
+
+        for arg in &args[1..] {
+            res.extend(sep);
+            let b = try!(<&[u8]>::from_value_ref(arg));
+            res.extend(b);
+        }
+    }
+
+    Ok(Bytes::from(res).into())
+}
+
 /// `len` returns the length of the given list or string.
 fn fn_len(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let n = match args[0] {
         Value::Unit => 0,
         Value::List(ref li) => li.len(),
         Value::String(ref s) => s.len(),
-        ref v => return Err(From::from(ExecError::expected("list", v)))
+        Value::Bytes(ref b) => b.len(),
+        ref v => return Err(From::from(ExecError::expected("sequence", v)))
     };
 
     Ok(n.into())
@@ -1515,6 +1551,14 @@ fn fn_slice(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
                     Err(From::from(ExecError::NotCharBoundary(begin)))
                 } else {
                     Ok(s.slice(begin..).into())
+                }
+            }
+            Value::Bytes(ref b) => {
+                let n = b.len();
+                if begin > n {
+                    Err(From::from(ExecError::OutOfBounds(begin)))
+                } else {
+                    Ok(b.slice(begin..).into())
                 }
             }
             ref v => Err(From::from(ExecError::expected("list or string", v)))
@@ -1558,6 +1602,16 @@ fn fn_slice(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
                     Err(From::from(ExecError::NotCharBoundary(end)))
                 } else {
                     Ok(s.slice(begin..end).into())
+                }
+            }
+            Value::Bytes(ref b) => {
+                let n = b.len();
+                if begin > n {
+                    Err(From::from(ExecError::OutOfBounds(begin)))
+                } else if end > n {
+                    Err(From::from(ExecError::OutOfBounds(end)))
+                } else {
+                    Ok(b.slice(begin..end).into())
                 }
             }
             ref v => Err(From::from(ExecError::expected("list or string", v)))
@@ -1605,7 +1659,11 @@ pub fn first(v: &Value) -> Result<Value, Error> {
             Some(ch) => Ok(ch.into()),
             None => Err(From::from(ExecError::OutOfBounds(0)))
         },
-        ref v => Err(From::from(ExecError::expected("list", v)))
+        Value::Bytes(ref b) => match b.iter().next() {
+            Some(&b) => Ok(b.into()),
+            None => Err(From::from(ExecError::OutOfBounds(0)))
+        },
+        ref v => Err(From::from(ExecError::expected("sequence", v)))
     }
 }
 
@@ -1619,7 +1677,11 @@ pub fn last(v: &Value) -> Result<Value, Error> {
             Some(ch) => Ok(ch.into()),
             None => Err(From::from(ExecError::OutOfBounds(0)))
         },
-        ref v => Err(From::from(ExecError::expected("list", v)))
+        Value::Bytes(ref b) => match b.iter().next_back() {
+            Some(&b) => Ok(b.into()),
+            None => Err(From::from(ExecError::OutOfBounds(0)))
+        },
+        ref v => Err(From::from(ExecError::expected("sequence", v)))
     }
 }
 
@@ -1640,7 +1702,15 @@ pub fn init(v: &Value) -> Result<Value, Error> {
                 None => Err(From::from(ExecError::OutOfBounds(0)))
             }
         }
-        ref v => Err(From::from(ExecError::expected("list", v)))
+        Value::Bytes(ref b) => {
+            if b.is_empty() {
+                Err(From::from(ExecError::OutOfBounds(0)))
+            } else {
+                let len = b.len();
+                Ok(b.slice(..len - 1).into())
+            }
+        }
+        ref v => Err(From::from(ExecError::expected("sequence", v)))
     }
 }
 
@@ -1660,7 +1730,14 @@ pub fn tail(v: &Value) -> Result<Value, Error> {
                 None => Err(From::from(ExecError::OutOfBounds(0)))
             }
         }
-        ref v => Err(From::from(ExecError::expected("list", v)))
+        Value::Bytes(ref b) => {
+            if b.is_empty() {
+                Err(From::from(ExecError::OutOfBounds(0)))
+            } else {
+                Ok(b.slice(1..).into())
+            }
+        }
+        ref v => Err(From::from(ExecError::expected("sequence", v)))
     }
 }
 
@@ -1900,6 +1977,18 @@ fn fn_string(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
         Value::Name(name) => Ok(ctx.scope().with_name(name, |s| s.into())),
         v @ Value::String(_) => Ok(v),
         ref v => Err(From::from(ExecError::expected("char or string or name", v)))
+    }
+}
+
+/// `bytes` returns an argument converted into a byte string.
+fn fn_bytes(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
+    match args[0].take() {
+        Value::Unit => Ok(Bytes::from(Vec::new()).into()),
+        li @ Value::List(_) => <Vec<u8>>::from_value_ref(&li)
+            .map(|b| Bytes::from(b).into()).map_err(From::from),
+        Value::String(s) => Ok(Bytes::from(s.into_string()).into()),
+        v @ Value::Bytes(_) => Ok(v),
+        ref v => Err(From::from(ExecError::expected("bytes or string", v)))
     }
 }
 

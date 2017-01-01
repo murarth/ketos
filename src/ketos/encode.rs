@@ -11,6 +11,7 @@ use std::str::from_utf8;
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
 
 use bytecode::{BYTECODE_VERSION, Code};
+use bytes::Bytes;
 use error::Error;
 use exec::Context;
 use function::Lambda;
@@ -409,6 +410,7 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
                     .ok_or(DecodeError::InvalidChar(c))
             }
             STRING => self.read_string().map(|s| s.into()),
+            BYTES => self.read_byte_string().map(|s| s.into()),
             PATH => self.read_string().map(|s| PathBuf::from(s).into()),
             // XXX: Decoding struct values is not implemented
             STRUCT => return Err(DecodeError::InvalidType(STRUCT)),
@@ -558,6 +560,13 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
         from_utf8(b).map_err(|_| DecodeError::InvalidUtf8)
     }
 
+    fn read_byte_string(&mut self) -> Result<Bytes, DecodeError> {
+        let n = try!(self.read_uint());
+        let b = try!(self.read_bytes(n as usize));
+
+        Ok(Bytes::from(b))
+    }
+
     fn read_integer(&mut self, sign: Sign) -> Result<Integer, DecodeError> {
         let n = try!(self.read_uint());
         let b = try!(self.read_bytes(n as usize));
@@ -688,6 +697,10 @@ impl ValueEncoder {
             Value::String(ref s) => {
                 self.write_u8(STRING);
                 try!(self.write_string(s));
+            }
+            Value::Bytes(ref s) => {
+                self.write_u8(BYTES);
+                try!(self.write_byte_string(s));
             }
             Value::Path(ref p) => {
                 self.write_u8(PATH);
@@ -844,6 +857,12 @@ impl ValueEncoder {
         Ok(())
     }
 
+    fn write_byte_string(&mut self, b: &[u8]) -> Result<(), EncodeError> {
+        try!(self.write_len(b.len()));
+        self.write_bytes(b);
+        Ok(())
+    }
+
     fn write_path(&mut self, p: &Path) -> Result<(), EncodeError> {
         match p.to_str() {
             Some(s) => self.write_string(s),
@@ -927,17 +946,18 @@ types!{
     KEYWORD = 11,
     CHAR = 12,
     STRING = 13,
-    PATH = 14,
-    STRUCT = 15,
-    STRUCT_DEF = 16,
-    QUASI_QUOTE = 17,
-    QUASI_QUOTE_ONE = 18,
-    COMMA = 19,
-    COMMA_ONE = 20,
-    COMMA_AT = 21,
-    COMMA_AT_ONE = 22,
-    QUOTE = 23,
-    QUOTE_ONE = 24,
-    LIST = 25,
-    LAMBDA = 26,
+    BYTES = 14,
+    PATH = 15,
+    STRUCT = 16,
+    STRUCT_DEF = 17,
+    QUASI_QUOTE = 18,
+    QUASI_QUOTE_ONE = 19,
+    COMMA = 20,
+    COMMA_ONE = 21,
+    COMMA_AT = 22,
+    COMMA_AT_ONE = 23,
+    QUOTE = 24,
+    QUOTE_ONE = 25,
+    LIST = 26,
+    LAMBDA = 27,
 }

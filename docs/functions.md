@@ -93,6 +93,7 @@ The `zero` function tests whether given values are equal to zero.
 
 ## Other Functions
 
+* `bytes`, converts a string or list of integers into a byte string.
 * `id`, the identity function, returns its argument as-is.
 * `type-of` returns a name value indicating the type of its argument.
 * `is` returns whether the type of value matches the given type,

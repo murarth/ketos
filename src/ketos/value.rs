@@ -8,6 +8,7 @@ use std::mem::{replace, transmute};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
+use bytes::Bytes;
 use error::Error;
 use exec::{Context, ExecError};
 use function::{Function, Lambda};
@@ -43,6 +44,8 @@ pub enum Value {
     Char(char),
     /// String
     String(RcString),
+    /// Byte string
+    Bytes(Bytes),
     /// Path
     Path(PathBuf),
     /// Quasiquoted value; quote depth **MUST NEVER be zero.**
@@ -92,6 +95,7 @@ impl Value {
             (&Value::Keyword(a), &Value::Keyword(b)) => a.cmp(&b),
             (&Value::Char(a), &Value::Char(b)) => a.cmp(&b),
             (&Value::String(ref a), &Value::String(ref b)) => a.cmp(&b),
+            (&Value::Bytes(ref a), &Value::Bytes(ref b)) => a.cmp(&b),
             (&Value::Path(ref a), &Value::Path(ref b)) => a.cmp(&b),
             (&Value::Unit, &Value::List(_)) => Ordering::Less,
             (&Value::List(_), &Value::Unit) => Ordering::Greater,
@@ -198,6 +202,7 @@ impl Value {
             (&Value::Keyword(a), &Value::Keyword(b)) => a == b,
             (&Value::Char(a), &Value::Char(b)) => a == b,
             (&Value::String(ref a), &Value::String(ref b)) => a == b,
+            (&Value::Bytes(ref a), &Value::Bytes(ref b)) => a == b,
             (&Value::Path(ref a), &Value::Path(ref b)) => a == b,
             (&Value::Quote(ref a, na), &Value::Quote(ref b, nb)) =>
                 na == nb && try!(a.is_equal(&b)),
@@ -250,6 +255,7 @@ impl Value {
             (&Value::Keyword(a), &Value::Keyword(b)) => a == b,
             (&Value::Char(a), &Value::Char(b)) => a == b,
             (&Value::String(ref a), &Value::String(ref b)) => a == b,
+            (&Value::Bytes(ref a), &Value::Bytes(ref b)) => a == b,
             (&Value::Path(ref a), &Value::Path(ref b)) => a == b,
             (&Value::Quasiquote(ref a, na), &Value::Quasiquote(ref b, nb)) =>
                 na == nb && a.is_identical(b),
@@ -302,6 +308,7 @@ impl Value {
                 1 + s.fields.iter().map(|f| f.size()).fold(0, |a, b| a + b),
             Value::StructDef(ref d) => 1 + d.fields.len(),
             Value::String(ref s) => 1 + s.len(),
+            Value::Bytes(ref s) => 1 + s.len(),
             Value::Path(ref p) => 1 + p.as_os_str().len(),
             Value::Comma(ref v, _) |
             Value::CommaAt(ref v, _) |
@@ -368,6 +375,7 @@ impl Value {
             Value::Ratio(_) => "ratio",
             Value::Char(_) => "char",
             Value::String(_) => "string",
+            Value::Bytes(_) => "bytes",
             Value::Path(_) => "path",
             Value::Name(_) => "name",
             Value::Keyword(_) => "keyword",
@@ -637,6 +645,20 @@ impl NameDebug for Value {
             },
             Value::Char(ch) => write!(f, "#{:?}", ch),
             Value::String(ref s) => write!(f, "{:?}", s),
+            Value::Bytes(ref s) => {
+                try!(f.write_str("#b\""));
+
+                for &b in s {
+                    match b {
+                        b'\\' => try!(f.write_str(r"\\")),
+                        b'"' => try!(f.write_str("\\\"")),
+                        b if is_printable(b) => try!(write!(f, "{}", b as char)),
+                        b => try!(write!(f, "\\x{:02x}", b))
+                    }
+                }
+
+                f.write_str("\"")
+            }
             Value::Path(ref p) => write!(f, "#p{:?}", p),
             Value::Name(name) => write!(f, "{}", names.get(name)),
             Value::Keyword(name) => write!(f, ":{}", names.get(name)),
@@ -749,6 +771,10 @@ impl NameDisplay for Value {
 
 fn is_normal(f: f64) -> bool {
     !f.is_nan() && f.is_finite()
+}
+
+fn is_printable(b: u8) -> bool {
+    b >= 0x20 && b <= 0x7e
 }
 
 fn flip_ordering(ord: Ordering) -> Ordering {
@@ -935,6 +961,24 @@ impl<'a> FromValueRef<'a> for &'a [Value] {
     }
 }
 
+impl<'a> FromValueRef<'a> for &'a Bytes {
+    fn from_value_ref(v: &'a Value) -> Result<&'a Bytes, ExecError> {
+        match *v {
+            Value::Bytes(ref b) => Ok(b),
+            ref v => Err(ExecError::expected("bytes", v))
+        }
+    }
+}
+
+impl<'a> FromValueRef<'a> for &'a [u8] {
+    fn from_value_ref(v: &'a Value) -> Result<&'a [u8], ExecError> {
+        match *v {
+            Value::Bytes(ref b) => Ok(b.as_ref()),
+            ref v => Err(ExecError::expected("bytes", v))
+        }
+    }
+}
+
 impl<'a, T: FromValueRef<'a>> FromValueRef<'a> for Vec<T> {
     fn from_value_ref(v: &'a Value) -> Result<Vec<T>, ExecError> {
         match *v {
@@ -1000,6 +1044,7 @@ simple_from_value!{ char; "char"; Value::Char(ch) => ch }
 simple_from_value!{ f32; "float"; Value::Float(f) => f as f32 }
 simple_from_value!{ f64; "float"; Value::Float(f) => f }
 simple_from_value!{ String; "string"; Value::String(s) => s.into_string() }
+simple_from_value!{ Bytes; "bytes"; Value::Bytes(s) => s }
 simple_from_value!{ Integer; "integer"; Value::Integer(i) => i }
 simple_from_value!{ Ratio; "ratio"; Value::Ratio(r) => r }
 
@@ -1073,6 +1118,7 @@ value_from!{ char; c => Value::Char(c) }
 value_from!{ Integer; i => Value::Integer(i) }
 value_from!{ Ratio; r => Value::Ratio(r) }
 value_from!{ String; s => Value::String(RcString::new(s)) }
+value_from!{ Bytes; s => Value::Bytes(s) }
 value_from!{ PathBuf; p => Value::Path(p) }
 value_from!{ OsString; s => Value::Path(PathBuf::from(s)) }
 value_from!{ f32; f => Value::Float(f as f64) }

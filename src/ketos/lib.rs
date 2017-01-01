@@ -36,6 +36,7 @@ extern crate rand;
 
 pub use buffer::{CodeBuffer, More, MoreResult};
 pub use bytecode::Code;
+pub use bytes::Bytes;
 pub use completion::complete_name;
 pub use compile::CompileError;
 pub use encode::{DecodeError, EncodeError};
@@ -59,6 +60,7 @@ pub use value::{ForeignValue, FromValue, FromValueRef, Value};
 pub mod args;
 pub mod buffer;
 pub mod bytecode;
+pub mod bytes;
 pub mod completion;
 pub mod compile;
 mod const_fold;

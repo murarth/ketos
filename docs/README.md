@@ -252,6 +252,15 @@ ketos=> "\u{61}"
 "a"
 ```
 
+### Byte String
+
+Byte strings are non-encoded strings of bytes.
+
+```lisp
+ketos=> #b"foo"
+#b"foo"
+```
+
 ### Path
 
 At runtime, paths are encoded in operating system native format.

@@ -1,7 +1,7 @@
 " Vim syntax file
 " Language:    Ketos
 " Maintainer:  Murarth <murarth@gmail.com>
-" Last Change: December 27, 2015
+" Last Change: December 31, 2015
 " URL:         https://github.com/murarth/ketos
 
 " For vim-version 5.x: Clear all syntax items
@@ -18,7 +18,7 @@ syn keyword ketosBool true false
 
 syn match ketosChar "#'\([^']\|\\\(x[0-7][0-9a-fA-F]\|u{[0-9a-fA-F]*}\)\)'"
 
-syn keyword ketosFunc * + - .  .= / // /= < << <= = > >= >> ^ abs append
+syn keyword ketosFunc * + - .  .= / // /= < << <= = > >= >> ^ abs append bytes
 syn keyword ketosFunc ceil chars concat const denom elt first float floor
 syn keyword ketosFunc format fract id inf init int is is-instance join last len
 syn keyword ketosFunc list max min nan new not null numer panic print println

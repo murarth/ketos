@@ -5,7 +5,7 @@ extern crate ketos;
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 
-use ketos::{ExecError, FromValue, FromValueRef, Value};
+use ketos::{Bytes, ExecError, FromValue, FromValueRef, Value};
 
 fn from<T: FromValue>(v: Value) -> Result<T, ExecError> {
     T::from_value(v)
@@ -35,6 +35,7 @@ fn test_from_value() {
     assert_eq!(from::<PathBuf>(into(Path::new("foo"))).unwrap(), PathBuf::from("foo"));
     assert_eq!(from::<OsString>(into("foo")).unwrap(), OsString::from("foo"));
     assert_eq!(from::<OsString>(into(Path::new("foo"))).unwrap(), OsString::from("foo"));
+    assert_eq!(from::<Bytes>(into(Bytes::from("foo"))).unwrap(), Bytes::from("foo"));
 }
 
 #[test]
@@ -50,6 +51,8 @@ fn test_from_value_ref() {
     assert_eq!(from_ref::<&Path>(&into(Path::new("foo"))).unwrap(), Path::new("foo"));
     assert_eq!(from_ref::<&OsStr>(&into("foo")).unwrap(), OsStr::new("foo"));
     assert_eq!(from_ref::<&OsStr>(&into(Path::new("foo"))).unwrap(), OsStr::new("foo"));
+    assert_eq!(from_ref::<&Bytes>(&into(Bytes::from("foo"))).unwrap(), &Bytes::from("foo"));
+    assert_eq!(from_ref::<&[u8]>(&into(Bytes::from("foo"))).unwrap(), b"foo");
 }
 
 #[test]

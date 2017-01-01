@@ -280,6 +280,9 @@ fn test_format() {
     assert_eq!(eval_str(r#"(format "~s" #'a')"#).unwrap(), "#'a'");
     assert_eq!(eval_str(r#"(format "~a" #p"foo")"#).unwrap(), "foo");
     assert_eq!(eval_str(r#"(format "~s" #p"foo")"#).unwrap(), "#p\"foo\"");
+    assert_eq!(eval_str(r#"(format "~a" #b"foo")"#).unwrap(), r#"#b"foo""#);
+    assert_eq!(eval_str(r#"(format "~s" #b"foo")"#).unwrap(), r#"#b"foo""#);
+    assert_eq!(eval_str(r#"(format "~a" #b"foo\xff")"#).unwrap(), r#"#b"foo\xff""#);
 
     assert_eq!(eval_str(r#"(format "foo~c~c~c" #'b' #'a' #'r')"#).unwrap(), "foobar");
 
@@ -639,6 +642,8 @@ fn test_eq() {
     assert_eq!(eval(r"(= #'a' #'b')").unwrap(), "false");
     assert_eq!(eval(r#"(= #p"a" #p"a")"#).unwrap(), "true");
     assert_eq!(eval(r#"(= #p"a" #p"b")"#).unwrap(), "false");
+    assert_eq!(eval(r#"(= #b"a" #b"a")"#).unwrap(), "true");
+    assert_eq!(eval(r#"(= #b"a" #b"b")"#).unwrap(), "false");
 
     assert_eq!(eval("(= 'a 'a)").unwrap(), "true");
     assert_eq!(eval("(= 'a 'b)").unwrap(), "false");
@@ -689,6 +694,7 @@ fn test_cmp() {
     assert_eq!(eval("(< #'a' #'b')").unwrap(), "true");
     assert_eq!(eval(r#"(< "a" "b")"#).unwrap(), "true");
     assert_eq!(eval(r#"(< #p"a" #p"b")"#).unwrap(), "true");
+    assert_eq!(eval(r#"(< #b"a" #b"b")"#).unwrap(), "true");
 
     assert_eq!(eval("(< () '(0))").unwrap(), "true");
     assert_eq!(eval("(> '(0) ())").unwrap(), "true");
@@ -873,6 +879,15 @@ fn test_string() {
 }
 
 #[test]
+fn test_bytes() {
+    assert_eq!(eval(r#"(bytes ())"#).unwrap(), r#"#b"""#);
+    assert_eq!(eval(r#"(bytes '(97 98 99))"#).unwrap(), r#"#b"abc""#);
+    assert_eq!(eval(r#"(bytes '(#b'a' #b'b' #b'c'))"#).unwrap(), r#"#b"abc""#);
+    assert_eq!(eval(r#"(bytes "foo")"#).unwrap(), r#"#b"foo""#);
+    assert_eq!(eval(r#"(bytes #b"bar")"#).unwrap(), r#"#b"bar""#);
+}
+
+#[test]
 fn test_slice() {
     assert_eq!(eval("(slice () 0 0)").unwrap(), "()");
     assert_eq!(eval("(slice () 0)").unwrap(), "()");
@@ -904,6 +919,10 @@ fn test_append() {
 #[test]
 fn test_elt() {
     assert_eq!(eval("(elt '(1 2) 0)").unwrap(), "1");
+
+    assert_eq!(eval(r#"(elt #b"abc" 0)"#).unwrap(), "97");
+    assert_eq!(eval(r#"(elt #b"abc" 1)"#).unwrap(), "98");
+
     assert_matches!(eval("(elt '(1 2) 2)").unwrap_err(),
         Error::ExecError(ExecError::OutOfBounds(2)));
     assert_matches!(eval("(elt () -1)").unwrap_err(),
@@ -919,6 +938,8 @@ fn test_concat() {
     assert_eq!(eval(r#"(concat "foo" #'b' #'a' #'r')"#).unwrap(), r#""foobar""#);
 
     assert_eq!(eval(r#"(concat #p"foo" #p"bar")"#).unwrap(), r#"#p"foo/bar""#);
+
+    assert_eq!(eval(r#"(concat #b"foo" #b"bar")"#).unwrap(), r#"#b"foobar""#);
 }
 
 #[test]
@@ -931,6 +952,8 @@ fn test_join() {
     assert_eq!(eval(r#"(join #':' #'a' #'b')"#).unwrap(), r#""a:b""#);
     assert_eq!(eval(r#"(join ":" "foo" #'a' #'b' "bar")"#).unwrap(),
         r#""foo:a:b:bar""#);
+
+    assert_eq!(eval(r#"(join #b":" #b"foo" #b"" #b"bar")"#).unwrap(), r#"#b"foo::bar""#);
 }
 
 #[test]
@@ -940,6 +963,8 @@ fn test_len() {
 
     assert_eq!(eval(r#"(len "")"#).unwrap(), "0");
     assert_eq!(eval(r#"(len "foo")"#).unwrap(), "3");
+
+    assert_eq!(eval(r#"(len #b"foo")"#).unwrap(), "3");
 
     assert_matches!(eval("(len 123)").unwrap_err(),
         Error::ExecError(ExecError::TypeError{..}));
@@ -980,6 +1005,25 @@ fn test_str_fns() {
     assert_matches!(eval(r#"(init "")"#).unwrap_err(),
         Error::ExecError(ExecError::OutOfBounds(0)));
     assert_matches!(eval(r#"(tail "")"#).unwrap_err(),
+        Error::ExecError(ExecError::OutOfBounds(0)));
+}
+
+#[test]
+fn test_bytes_fns() {
+    assert_eq!(eval(r#"(first #b"abc")"#).unwrap(), r#"97"#);
+    assert_eq!(eval(r#"(last  #b"abc")"#).unwrap(), r#"99"#);
+    assert_eq!(eval(r#"(init  #b"abc")"#).unwrap(), r#"#b"ab""#);
+    assert_eq!(eval(r#"(tail  #b"abc")"#).unwrap(), r#"#b"bc""#);
+    assert_eq!(eval(r#"(init  #b"x")"#).unwrap(), r#"#b"""#);
+    assert_eq!(eval(r#"(tail  #b"x")"#).unwrap(), r#"#b"""#);
+
+    assert_matches!(eval(r#"(first #b"")"#).unwrap_err(),
+        Error::ExecError(ExecError::OutOfBounds(0)));
+    assert_matches!(eval(r#"(last #b"")"#).unwrap_err(),
+        Error::ExecError(ExecError::OutOfBounds(0)));
+    assert_matches!(eval(r#"(init #b"")"#).unwrap_err(),
+        Error::ExecError(ExecError::OutOfBounds(0)));
+    assert_matches!(eval(r#"(tail #b"")"#).unwrap_err(),
         Error::ExecError(ExecError::OutOfBounds(0)));
 }
 
@@ -1028,6 +1072,7 @@ fn test_int() {
     assert_eq!(eval("(int 123)").unwrap(), "123");
     assert_eq!(eval("(int 123.0)").unwrap(), "123");
     assert_eq!(eval("(int 123/1)").unwrap(), "123");
+
     assert_matches!(eval("(int (inf))").unwrap_err(),
         Error::ExecError(ExecError::Overflow));
     assert_matches!(eval("(int (nan))").unwrap_err(),
@@ -1111,6 +1156,9 @@ fn test_is() {
     assert_eq!(eval("(is 'unit ())").unwrap(), "true");
     assert_eq!(eval("(is 'name 'a)").unwrap(), "true");
     assert_eq!(eval("(is 'keyword :a)").unwrap(), "true");
+    assert_eq!(eval("(is 'string \"a\")").unwrap(), "true");
+    assert_eq!(eval("(is 'path #p\"a\")").unwrap(), "true");
+    assert_eq!(eval("(is 'bytes #b\"a\")").unwrap(), "true");
     assert_eq!(eval("(is 'function is)").unwrap(), "true");
     assert_eq!(eval("(is 'lambda (lambda () ()))").unwrap(), "true");
 
@@ -1142,6 +1190,7 @@ fn test_type_of() {
     assert_eq!(eval("(type-of #'a')").unwrap(), "char");
     assert_eq!(eval("(type-of \"a\")").unwrap(), "string");
     assert_eq!(eval("(type-of #p\"a\")").unwrap(), "path");
+    assert_eq!(eval("(type-of #b\"a\")").unwrap(), "bytes");
     assert_eq!(eval("(type-of ''a)").unwrap(), "object");
     assert_eq!(eval("(type-of '(1))").unwrap(), "list");
     assert_eq!(eval("(type-of id)").unwrap(), "function");

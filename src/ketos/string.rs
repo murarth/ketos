@@ -1,13 +1,32 @@
 //! Parses string tokens from input.
 
+use std::ascii::AsciiExt;
 use std::str::CharIndices;
 
 use lexer::{BytePos, Span};
 use parser::{ParseError, ParseErrorKind};
 
+/// Parses a byte constant
+pub fn parse_byte(s: &str, pos: BytePos) -> Result<(u8, usize), ParseError> {
+    let mut r = StringReader::new(s, pos, StringType::Single);
+    r.parse_byte()
+}
+
+/// Parses a byte string constant
+pub fn parse_byte_string(s: &str, pos: BytePos) -> Result<(Vec<u8>, usize), ParseError> {
+    let mut r = StringReader::new(s, pos, StringType::Normal);
+    r.parse_byte_string()
+}
+
+/// Parses a raw byte string constant
+pub fn parse_raw_byte_string(s: &str, pos: BytePos) -> Result<(Vec<u8>, usize), ParseError> {
+    let mut r = StringReader::new(s, pos, StringType::Raw);
+    r.parse_byte_string()
+}
+
 /// Parses a character constant
 pub fn parse_char(s: &str, pos: BytePos) -> Result<(char, usize), ParseError> {
-    let mut r = StringReader::new(s, pos, StringType::Char);
+    let mut r = StringReader::new(s, pos, StringType::Single);
     r.parse_char()
 }
 
@@ -25,7 +44,7 @@ pub fn parse_raw_string(s: &str, pos: BytePos) -> Result<(String, usize), ParseE
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum StringType {
-    Char,
+    Single,
     Normal,
     Raw,
 }
@@ -49,6 +68,30 @@ impl<'a> StringReader<'a> {
         }
     }
 
+    fn parse_byte(&mut self) -> Result<(u8, usize), ParseError> {
+        try!(self.expect('#', |slf, ch| ParseError::new(slf.span_one(),
+            ParseErrorKind::InvalidChar(ch))));
+        try!(self.expect('b', |slf, ch| ParseError::new(slf.span_one(),
+            ParseErrorKind::InvalidChar(ch))));
+        try!(self.expect('\'', |slf, ch| ParseError::new(slf.span_one(),
+            ParseErrorKind::InvalidChar(ch))));
+
+        let ch = match try!(self.consume_char()) {
+            '\'' => return Err(ParseError::new(self.span_one(),
+                ParseErrorKind::InvalidChar('\''))),
+            '\\' => try!(self.parse_byte_escape()),
+            ch if ch.is_ascii() => ch as u8,
+            ch => return Err(ParseError::new(self.span_one(),
+                ParseErrorKind::InvalidByte(ch)))
+        };
+
+        try!(self.expect('\'', |slf, _| ParseError::new(
+            slf.span_from(slf.start, 1),
+            ParseErrorKind::UnterminatedChar)));
+
+        Ok((ch, self.last_index + 1))
+    }
+
     fn parse_char(&mut self) -> Result<(char, usize), ParseError> {
         try!(self.expect('#', |slf, ch| ParseError::new(slf.span_one(),
             ParseErrorKind::InvalidChar(ch))));
@@ -69,23 +112,49 @@ impl<'a> StringReader<'a> {
         Ok((ch, self.last_index + 1))
     }
 
+    fn parse_byte_string(&mut self) -> Result<(Vec<u8>, usize), ParseError> {
+        let mut res = Vec::new();
+        let mut n_hash = 0;
+
+        if self.ty == StringType::Raw {
+            n_hash = try!(self.parse_raw_prefix());
+        } else {
+            try!(self.expect('"', |slf, ch| ParseError::new(slf.span_one(),
+                ParseErrorKind::InvalidChar(ch))));
+        }
+
+        loop {
+            match try!(self.consume_char()) {
+                '"' => {
+                    if n_hash == 0 || try!(self.check_end(n_hash)) {
+                        break;
+                    } else {
+                        res.push(b'"');
+                    }
+                }
+                '\\' if self.ty == StringType::Normal => {
+                    if let Some(ch) = try!(self.parse_byte_string_escape()) {
+                        res.push(ch);
+                    }
+                }
+                ch if ch.is_ascii() => {
+                    res.push(ch as u8);
+                }
+                ch => return Err(ParseError::new(self.span_one(),
+                    ParseErrorKind::InvalidByte(ch)))
+            }
+        }
+
+        Ok((res, self.last_index + 1))
+    }
+
     fn parse_string(&mut self) -> Result<(String, usize), ParseError> {
         let mut res = String::new();
 
         let mut n_hash = 0;
 
         if self.ty == StringType::Raw {
-            try!(self.expect('r', |slf, ch| ParseError::new(slf.span_one(),
-                ParseErrorKind::InvalidChar(ch))));
-
-            loop {
-                match try!(self.consume_char()) {
-                    '#' => n_hash += 1,
-                    '"' => break,
-                    ch => return Err(ParseError::new(self.span_one(),
-                        ParseErrorKind::InvalidChar(ch)))
-                }
-            }
+            n_hash = try!(self.parse_raw_prefix());
         } else {
             try!(self.expect('"', |slf, ch| ParseError::new(slf.span_one(),
                 ParseErrorKind::InvalidChar(ch))));
@@ -110,6 +179,24 @@ impl<'a> StringReader<'a> {
         }
 
         Ok((res, self.last_index + 1))
+    }
+
+    fn parse_raw_prefix(&mut self) -> Result<usize, ParseError> {
+        let mut n_hash = 0;
+
+        try!(self.expect('r', |slf, ch| ParseError::new(slf.span_one(),
+            ParseErrorKind::InvalidChar(ch))));
+
+        loop {
+            match try!(self.consume_char()) {
+                '#' => n_hash += 1,
+                '"' => break,
+                ch => return Err(ParseError::new(self.span_one(),
+                    ParseErrorKind::InvalidChar(ch)))
+            }
+        }
+
+        Ok(n_hash)
     }
 
     fn check_end(&mut self, n_hash: usize) -> Result<bool, ParseError> {
@@ -150,7 +237,7 @@ impl<'a> StringReader<'a> {
                 Ok(ch)
             }
             None => Err(ParseError::new(self.span_from(self.start, 1),
-                if self.ty == StringType::Char {
+                if self.ty == StringType::Single {
                     ParseErrorKind::UnterminatedChar
                 } else {
                     ParseErrorKind::UnterminatedString
@@ -168,6 +255,23 @@ impl<'a> StringReader<'a> {
         }
     }
 
+    fn parse_byte_escape(&mut self) -> Result<u8, ParseError> {
+        match try!(self.consume_char()) {
+            '\\' => Ok(b'\\'),
+            '\'' => Ok(b'\''),
+            '"' => Ok(b'"'),
+            '0' => Ok(b'\0'),
+            'n' => Ok(b'\n'),
+            'r' => Ok(b'\r'),
+            't' => Ok(b'\t'),
+            'u' => Err(ParseError::new(self.span_one(),
+                ParseErrorKind::InvalidByteEscape('u'))),
+            'x' => self.parse_hex_byte_escape(),
+            ch => Err(ParseError::new(self.span_one(),
+                ParseErrorKind::UnknownCharEscape(ch)))
+        }
+    }
+
     fn parse_char_escape(&mut self) -> Result<char, ParseError> {
         match try!(self.consume_char()) {
             '\\' => Ok('\\'),
@@ -178,9 +282,25 @@ impl<'a> StringReader<'a> {
             'r' => Ok('\r'),
             't' => Ok('\t'),
             'u' => self.parse_unicode(),
-            'x' => self.parse_byte(),
+            'x' => self.parse_hex_char_escape(),
             ch => Err(ParseError::new(self.span_one(),
                 ParseErrorKind::UnknownCharEscape(ch)))
+        }
+    }
+
+    fn parse_byte_string_escape(&mut self) -> Result<Option<u8>, ParseError> {
+        match try!(self.peek_char()) {
+            '\r' | '\n' => {
+                try!(self.consume_char());
+                loop {
+                    match try!(self.peek_char()) {
+                        ' ' | '\t' => { try!(self.consume_char()); },
+                        _ => break
+                    }
+                }
+                Ok(None)
+            }
+            _ => self.parse_byte_escape().map(Some)
         }
     }
 
@@ -200,7 +320,22 @@ impl<'a> StringReader<'a> {
         }
     }
 
-    fn parse_byte(&mut self) -> Result<char, ParseError> {
+    fn parse_hex_byte_escape(&mut self) -> Result<u8, ParseError> {
+        let a = match try!(self.consume_char()) {
+            ch if !ch.is_digit(16) => return Err(ParseError::new(
+                self.span_one(), ParseErrorKind::InvalidNumericEscape('x'))),
+            ch => ch
+        };
+        let b = match try!(self.consume_char()) {
+            ch if !ch.is_digit(16) => return Err(ParseError::new(
+                self.span_one(), ParseErrorKind::InvalidNumericEscape('x'))),
+            ch => ch
+        };
+
+        Ok(((a.to_digit(16).unwrap() << 4) | b.to_digit(16).unwrap()) as u8)
+    }
+
+    fn parse_hex_char_escape(&mut self) -> Result<char, ParseError> {
         let a = match try!(self.consume_char()) {
             ch if !ch.is_digit(16) => return Err(ParseError::new(
                 self.span_one(), ParseErrorKind::InvalidNumericEscape('x'))),
@@ -217,8 +352,7 @@ impl<'a> StringReader<'a> {
                 ParseErrorKind::InvalidNumericEscape('x')));
         }
 
-        Ok(::std::char::from_u32(
-            (a.to_digit(16).unwrap() << 4) | b.to_digit(16).unwrap()).unwrap())
+        Ok(((a.to_digit(16).unwrap() << 4) | b.to_digit(16).unwrap()) as u8 as char)
     }
 
     fn parse_unicode(&mut self) -> Result<char, ParseError> {
@@ -246,7 +380,7 @@ impl<'a> StringReader<'a> {
 
         ::std::char::from_u32(total)
             .ok_or_else(|| ParseError::new(
-                self.back_span(n_digits + 1, n_digits),
+                self.back_span(n_digits, n_digits),
                 ParseErrorKind::InvalidNumericEscape('u')))
     }
 
@@ -254,7 +388,7 @@ impl<'a> StringReader<'a> {
         match self.chars.clone().next() {
             Some((_, ch)) => Ok(ch),
             None => Err(ParseError::new(self.span_from(self.start, 1),
-                if self.ty == StringType::Char {
+                if self.ty == StringType::Single {
                     ParseErrorKind::UnterminatedChar
                 } else {
                     ParseErrorKind::UnterminatedString
@@ -268,7 +402,10 @@ impl<'a> StringReader<'a> {
     }
 
     fn span_one(&self) -> Span {
-        Span{lo: self.last_index as BytePos, hi: self.end_index as BytePos}
+        Span{
+            lo: self.start + self.last_index as BytePos,
+            hi: self.start + self.end_index as BytePos,
+        }
     }
 
     fn span_from(&self, start: BytePos, len: BytePos) -> Span {
@@ -281,8 +418,13 @@ mod test {
     use parser::ParseError;
     use super::{StringReader, StringType};
 
+    fn parse_bytes(s: &str) -> Result<Vec<u8>, ParseError> {
+        let mut r = StringReader::new(s, 0, StringType::Normal);
+        r.parse_byte_string().map(|r| r.0)
+    }
+
     fn parse_char(s: &str) -> Result<char, ParseError> {
-        let mut r = StringReader::new(s, 0, StringType::Char);
+        let mut r = StringReader::new(s, 0, StringType::Single);
         r.parse_char().map(|r| r.0)
     }
 
@@ -304,5 +446,12 @@ mod test {
         assert_eq!(parse_string(r#""foo""#, n).unwrap(), "foo");
         assert_eq!(parse_string(r#"r"foo""#, r).unwrap(), "foo");
         assert_eq!(parse_string(r##"r#""foo""#"##, r).unwrap(), r#""foo""#);
+    }
+
+    #[test]
+    fn test_errors() {
+        assert_eq!(parse_bytes(r#""abc\xff""#).unwrap(), b"abc\xff");
+
+        assert!(parse_bytes(r#""abc\u{ff}""#).is_err());
     }
 }

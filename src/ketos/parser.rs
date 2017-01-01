@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::path::PathBuf;
 
+use bytes::Bytes;
 use error::Error;
 use exec::Context;
 use integer::{Integer, Ratio};
@@ -66,6 +67,10 @@ pub enum ParseErrorKind {
     InvalidLiteral,
     /// Error in parsing token
     InvalidToken,
+    /// Invalid character in byte or byte string literal
+    InvalidByte(char),
+    /// Invalid escape sequence in byte or byte string literal
+    InvalidByteEscape(char),
     /// Invalid character in input
     InvalidChar(char),
     /// Invalid character in numeric escape sequence `\xNN` or `\u{NNNN}`
@@ -105,10 +110,14 @@ impl fmt::Display for ParseErrorKind {
             ParseErrorKind::DocCommentEof => f.write_str("doc comment at end-of-file"),
             ParseErrorKind::InvalidLiteral => f.write_str("invalid numeric literal"),
             ParseErrorKind::InvalidToken => f.write_str("invalid token"),
+            ParseErrorKind::InvalidByte(ch) =>
+                write!(f, "byte literal must be ASCII: {:?}", ch),
+            ParseErrorKind::InvalidByteEscape(ch) =>
+                write!(f, "invalid escape sequence in byte literal: {:?}", ch),
             ParseErrorKind::InvalidChar(ch) =>
                 write!(f, "invalid character: {:?}", ch),
             ParseErrorKind::InvalidNumericEscape(ch) =>
-                write!(f, "invalid character in {} escape sequence", ch),
+                write!(f, "invalid character in escape sequence: {:?}", ch),
             ParseErrorKind::LiteralParseError => f.write_str("literal parse error"),
             ParseErrorKind::MissingCloseParen => f.write_str("missing close paren"),
             ParseErrorKind::UnbalancedComma => f.write_str("unbalanced ` and ,"),
@@ -215,6 +224,10 @@ impl<'a, 'lex> Parser<'a, 'lex> {
                     .map(Value::Char).map_err(From::from),
                 Token::String(s) => parse_string(s)
                     .map(|s| s.into()).map_err(From::from),
+                Token::Byte(b) => parse_byte(b)
+                    .map(|v| v.into()).map_err(From::from),
+                Token::Bytes(b) => parse_bytes(b)
+                    .map(Value::Bytes).map_err(From::from),
                 Token::Path(p) => parse_path(p)
                     .map(|p| p.into()).map_err(From::from),
                 Token::Name(name) => Ok(self.name_value(name)),
@@ -458,9 +471,23 @@ fn insert_doc_comment(mut items: Vec<Value>, doc: Option<(Span, &str)>)
     Ok(items.into())
 }
 
+fn parse_byte(s: &str) -> Result<u8, ParseError> {
+    let (b, _) = try!(string::parse_byte(s, 0));
+    Ok(b)
+}
+
 fn parse_char(s: &str) -> Result<char, ParseError> {
     let (ch, _) = try!(string::parse_char(s, 0));
     Ok(ch)
+}
+
+fn parse_bytes(s: &str) -> Result<Bytes, ParseError> {
+    let (b, _) = if s.starts_with("#br") {
+        try!(string::parse_raw_byte_string(&s[2..], 0))
+    } else {
+        try!(string::parse_byte_string(&s[2..], 0))
+    };
+    Ok(Bytes::new(b))
 }
 
 fn parse_path(s: &str) -> Result<PathBuf, ParseError> {

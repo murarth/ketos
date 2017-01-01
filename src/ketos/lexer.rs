@@ -26,6 +26,10 @@ pub enum Token<'lex> {
     Char(&'lex str),
     /// String literal
     String(&'lex str),
+    /// Byte literal
+    Byte(&'lex str),
+    /// Byte string literal
+    Bytes(&'lex str),
     /// Path literal
     Path(&'lex str),
     /// Identifier name
@@ -57,6 +61,8 @@ impl<'lex> Token<'lex> {
             Token::Name(_) => "name",
             Token::Char(_) => "char",
             Token::String(_) => "string",
+            Token::Byte(_) => "byte",
+            Token::Bytes(_) => "bytes",
             Token::Path(_) => "path",
             Token::Keyword(_) => "keyword",
             Token::BackQuote => "`",
@@ -262,6 +268,17 @@ impl<'lex> Lexer<'lex> {
                 '-' | '0' ... '9' => parse_number(&self.input[ind..]),
                 '"' => Ok(try!(parse_string(&self.input[ind..], self.code_offset + lo))),
                 '#' => match chars.next() {
+                    Some((_, 'b')) => {
+                        match chars.next() {
+                            Some((_, 'r')) => Ok(try!(parse_raw_bytes(&self.input[ind..],
+                                self.code_offset + lo))),
+                            Some((_, '"')) => Ok(try!(parse_bytes(&self.input[ind..],
+                                self.code_offset + lo))),
+                            Some((_, '\'')) => Ok(try!(parse_byte(&self.input[ind..],
+                                self.code_offset + lo))),
+                            _ => Err(ParseErrorKind::InvalidToken)
+                        }
+                    }
                     Some((_, 'p')) => {
                         match chars.next() {
                             Some((_, 'r')) => Ok(try!(parse_raw_path(&self.input[ind..],
@@ -574,6 +591,21 @@ fn parse_number(input: &str) -> Result<(Token, usize), ParseErrorKind> {
     }
 }
 
+fn parse_byte(input: &str, pos: BytePos) -> Result<(Token, usize), ParseError> {
+    let (_, size) = try!(string::parse_byte(input, pos));
+    Ok((Token::Byte(&input[..size]), size))
+}
+
+fn parse_bytes(input: &str, pos: BytePos) -> Result<(Token, usize), ParseError> {
+    let (_, size) = try!(string::parse_byte_string(&input[2..], pos + 2));
+    Ok((Token::Bytes(&input[..size + 2]), size + 2))
+}
+
+fn parse_raw_bytes(input: &str, pos: BytePos) -> Result<(Token, usize), ParseError> {
+    let (_, size) = try!(string::parse_raw_byte_string(&input[2..], pos + 2));
+    Ok((Token::Bytes(&input[..size + 2]), size + 2))
+}
+
 fn parse_path(input: &str, pos: BytePos) -> Result<(Token, usize), ParseError> {
     let (_, size) = try!(string::parse_string(&input[2..], pos + 2));
     Ok((Token::Path(&input[..size + 2]), size + 2))
@@ -679,6 +711,15 @@ mod test {
              (sp(5, 10), Token::Char(r"#'\''")),
              (sp(11, 18), Token::Char(r"#'\x7f'")),
              (sp(19, 30), Token::Char(r"#'\u{1234}'"))]);
+
+        assert_eq!(tokens(r"#b'a' #b'\'' #b'\xff'"),
+            [(sp(0, 5), Token::Byte("#b'a'")),
+             (sp(6, 12), Token::Byte(r"#b'\''")),
+             (sp(13, 21), Token::Byte(r"#b'\xff'"))]);
+
+        assert_eq!(tokens(r#"#b"foo" #b"bar\xff""#),
+            [(sp(0, 7), Token::Bytes(r#"#b"foo""#)),
+             (sp(8, 19), Token::Bytes(r#"#b"bar\xff""#))]);
 
         assert_eq!(tokens(r#"#p"foo" #p"bar""#),
             [(sp(0, 7), Token::Path(r#"#p"foo""#)),
