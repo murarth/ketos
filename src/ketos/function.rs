@@ -90,6 +90,14 @@ result in an error."),
 
 Values of different types may not be compared. Attempts to do so will
 result in an error."),
+    sys_fn!(fn_weak_eq,     Min(2),
+"Returns whether the given arguments compare equal to one another.
+
+Comparing values of different types will yield `false`."),
+    sys_fn!(fn_weak_ne,     Min(2),
+"Returns whether the given arguments compare not equal to one another.
+
+Comparing values of different types will yield `true`."),
     sys_fn!(fn_lt,          Min(2),
 "Returns whether each argument compares less than each successive argument.
 
@@ -935,6 +943,26 @@ fn fn_ne(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     }
 
     Ok(r.into())
+}
+
+/// `eq` performs "weak" equality comparison of arguments.
+///
+/// Any case in which `=` would cause an error, `eq` instead returns `false`.
+fn fn_weak_eq(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
+    match fn_eq(ctx, args) {
+        Ok(v) => Ok(v),
+        Err(_) => Ok(false.into())
+    }
+}
+
+/// `ne` performs "weak" inequality comparison of arguments.
+///
+/// Any case in which `/=` would cause an error, `ne` instead returns `true`.
+fn fn_weak_ne(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
+    match fn_ne(ctx, args) {
+        Ok(v) => Ok(v),
+        Err(_) => Ok(true.into())
+    }
 }
 
 /// `<` returns whether each argument compares less than each successive argument.

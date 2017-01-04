@@ -682,6 +682,15 @@ fn test_ne() {
 }
 
 #[test]
+fn test_weak_eq() {
+    assert_eq!(eval("(eq 1 1)").unwrap(), "true");
+    assert_eq!(eval("(eq () 1)").unwrap(), "false");
+
+    assert_eq!(eval("(ne 1 1)").unwrap(), "false");
+    assert_eq!(eval("(ne () 1)").unwrap(), "true");
+}
+
+#[test]
 fn test_cmp() {
     assert_eq!(eval("(> 5 4 3 2 1)").unwrap(), "true");
     assert_eq!(eval("(> 5 4 3 2 3)").unwrap(), "false");

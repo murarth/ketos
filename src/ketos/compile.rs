@@ -1049,7 +1049,7 @@ impl<'a> Compiler<'a> {
     }
 
     /// Attempt to compile a function call into a more efficient series of
-    /// instructions; e.g. `(eq a b)` into the `Eq` instruction.
+    /// instructions; e.g. `(= a b)` into the `Eq` instruction.
     ///
     /// If specialized instructions cannot be generated, returns `Ok(false)`.
     fn specialize_call(&mut self, name: Name, args: &[Value]) -> Result<bool, Error> {
@@ -1405,7 +1405,7 @@ fn is_const_system_fn(name: Name) -> bool {
     match name {
         ADD | SUB | MUL | POW | DIV | FLOOR_DIV |
         REM | SHL | SHR |
-        EQ | NOT_EQ | LT | GT | LE | GE |
+        EQ | NOT_EQ | WEAK_EQ | WEAK_NE | LT | GT | LE | GE |
         ZERO | MIN | MAX |
         APPEND | ELT | CONCAT | JOIN | LEN | SLICE |
         FIRST | SECOND | LAST | INIT | TAIL | LIST | REVERSE |
