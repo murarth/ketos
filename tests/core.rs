@@ -142,6 +142,9 @@ fn test_integer() {
 #[test]
 fn test_path() {
     assert_eq!(eval(r#"#p"foo""#).unwrap(), r#"#p"foo""#);
+
+    assert_eq!(eval(r#"(path "foo")"#).unwrap(), r#"#p"foo""#);
+    assert_eq!(eval(r#"(path #p"bar")"#).unwrap(), r#"#p"bar""#);
 }
 
 #[test]

@@ -196,6 +196,8 @@ If the value is of type integer, the value returned will be a ratio."),
 "Returns a string transformed into a list of characters."),
     sys_fn!(fn_string,      Exact(1),
 "Returns an argument converted into a string."),
+    sys_fn!(fn_path,         Exact(1),
+"Returns an argument converted into a path."),
     sys_fn!(fn_bytes,       Exact(1),
 "Returns an argument converted into a byte string."),
     sys_fn!(fn_id,          Exact(1),
@@ -2005,6 +2007,15 @@ fn fn_string(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
         Value::Name(name) => Ok(ctx.scope().with_name(name, |s| s.into())),
         v @ Value::String(_) => Ok(v),
         ref v => Err(From::from(ExecError::expected("char or string or name", v)))
+    }
+}
+
+/// `path` returns an argument converted into a path.
+fn fn_path(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
+    match args[0].take() {
+        Value::String(s) => Ok(PathBuf::from(s.into_string()).into()),
+        v @ Value::Path(_) => Ok(v),
+        ref v => Err(From::from(ExecError::expected("string or path", v)))
     }
 }
 

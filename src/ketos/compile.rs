@@ -1411,7 +1411,7 @@ fn is_const_system_fn(name: Name) -> bool {
         FIRST | SECOND | LAST | INIT | TAIL | LIST | REVERSE |
         ABS | CEIL | FLOOR | ROUND | TRUNC | INT |
         FLOAT | INF | NAN | DENOM | FRACT | NUMER | RAT | RECIP |
-        CHARS | STRING | BYTES |
+        CHARS | STRING | PATH | BYTES |
         ID | IS | IS_INSTANCE | NULL | TYPE_OF |
         XOR | NOT
             => true,
