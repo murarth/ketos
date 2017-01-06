@@ -720,6 +720,46 @@ fn test_cmp() {
 
     assert_matches!(eval("(< 1.0 (nan))").unwrap_err(),
         Error::ExecError(ExecError::CompareNaN));
+    assert_matches!(eval("(< 1 (nan))").unwrap_err(),
+        Error::ExecError(ExecError::CompareNaN));
+    assert_matches!(eval("(< 1/2 (nan))").unwrap_err(),
+        Error::ExecError(ExecError::CompareNaN));
+}
+
+#[test]
+fn test_cmp_overflow() {
+    // Comparing ints too big to convert to float
+    assert_eq!(eval("(< 0.0         (^ 10 309))").unwrap(), "true");
+    assert_eq!(eval("(> 0.0         (^ -10 309))").unwrap(), "true");
+    assert_eq!(eval("(< 0.0         (rat (^ 10 309) 1))").unwrap(), "true");
+    assert_eq!(eval("(> 0.0         (rat (^ -10 309) 1))").unwrap(), "true");
+    // Comparing big ints to infinity
+    assert_eq!(eval("(> (inf)       (^ 10 309))").unwrap(), "true");
+    assert_eq!(eval("(> (inf)       (^ -10 309))").unwrap(), "true");
+    assert_eq!(eval("(> (inf)       (rat (^ 10 309) 1))").unwrap(), "true");
+    assert_eq!(eval("(> (inf)       (rat (^ -10 309) 1))").unwrap(), "true");
+    // Comparing big ints to negative infinity
+    assert_eq!(eval("(< (- (inf))   (^ 10 309))").unwrap(), "true");
+    assert_eq!(eval("(< (- (inf))   (^ -10 309))").unwrap(), "true");
+    assert_eq!(eval("(< (- (inf))   (rat (^ 10 309) 1))").unwrap(), "true");
+    assert_eq!(eval("(< (- (inf))   (rat (^ -10 309) 1))").unwrap(), "true");
+
+    // Now, all of those comparisons, in reverse.
+    // Comparing ints too big to convert to float
+    assert_eq!(eval("(> (^ 10 309)          0.0)").unwrap(), "true");
+    assert_eq!(eval("(< (^ -10 309)         0.0)").unwrap(), "true");
+    assert_eq!(eval("(> (rat (^ 10 309) 1)  0.0)").unwrap(), "true");
+    assert_eq!(eval("(< (rat (^ -10 309) 1) 0.0)").unwrap(), "true");
+    // Comparing big ints to infinity
+    assert_eq!(eval("(< (^ 10 309)          (inf))").unwrap(), "true");
+    assert_eq!(eval("(< (^ -10 309)         (inf))").unwrap(), "true");
+    assert_eq!(eval("(< (rat (^ 10 309) 1)  (inf))").unwrap(), "true");
+    assert_eq!(eval("(< (rat (^ -10 309) 1) (inf))").unwrap(), "true");
+    // Comparing big ints to negative infinity
+    assert_eq!(eval("(> (^ 10 309)          (- (inf)))").unwrap(), "true");
+    assert_eq!(eval("(> (^ -10 309)         (- (inf)))").unwrap(), "true");
+    assert_eq!(eval("(> (rat (^ 10 309) 1)  (- (inf)))").unwrap(), "true");
+    assert_eq!(eval("(> (rat (^ -10 309) 1) (- (inf)))").unwrap(), "true");
 }
 
 #[test]
@@ -1096,6 +1136,9 @@ fn test_float() {
     assert_eq!(eval("(float 123)").unwrap(), "123.0");
     assert_eq!(eval("(float 123.0)").unwrap(), "123.0");
     assert_eq!(eval("(float 123/1)").unwrap(), "123.0");
+
+    assert_matches!(eval("(float (^ 10 309))").unwrap_err(),
+        Error::ExecError(ExecError::Overflow));
 }
 
 #[test]

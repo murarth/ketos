@@ -430,9 +430,6 @@ fn value_is(scope: &Scope, a: &Value, ty: Name) -> bool {
     }
 }
 
-// TODO: Move these doc comments somewhere else.
-// An otherwise empty module with docs for functions and operators may suffice.
-
 fn coerce_numbers(lhs: Value, rhs: &Value) -> Result<(Value, Cow<Value>), ExecError> {
     let (lhs, rhs) = match (lhs, rhs) {
         (lhs @ Value::Float(_), rhs @ &Value::Float(_))
@@ -459,6 +456,9 @@ fn coerce_numbers(lhs: Value, rhs: &Value) -> Result<(Value, Cow<Value>), ExecEr
 
     Ok((lhs, rhs))
 }
+
+// TODO: Move these doc comments somewhere else.
+// An otherwise empty module with docs for functions and operators may suffice.
 
 /// `+` returns the sum of all arguments.
 ///

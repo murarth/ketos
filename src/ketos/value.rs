@@ -2,6 +2,7 @@
 
 use std::any::{Any, TypeId};
 use std::cmp::Ordering;
+use std::f64::{INFINITY, NEG_INFINITY};
 use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::mem::{replace, transmute};
@@ -113,25 +114,25 @@ impl Value {
             }
 
             // Coercible numeric comparisons
-            (&Value::Float(ref a), &Value::Integer(ref b)) => {
-                let b = try!(b.to_f64().ok_or(ExecError::Overflow));
-                try!(a.partial_cmp(&b).ok_or(ExecError::CompareNaN))
+            (&Value::Float(a), &Value::Integer(ref b)) => {
+                try!(coerce_compare_float(a, true,
+                    b.to_f64(), b.is_positive()))
             }
-            (&Value::Float(ref a), &Value::Ratio(ref b)) => {
-                let b = try!(b.to_f64().ok_or(ExecError::Overflow));
-                try!(a.partial_cmp(&b).ok_or(ExecError::CompareNaN))
+            (&Value::Float(a), &Value::Ratio(ref b)) => {
+                try!(coerce_compare_float(a, true,
+                    b.to_f64(), b.is_positive()))
             }
-            (&Value::Integer(ref a), &Value::Float(ref b)) => {
-                let a = try!(a.to_f64().ok_or(ExecError::Overflow));
-                try!(a.partial_cmp(b).ok_or(ExecError::CompareNaN))
+            (&Value::Integer(ref a), &Value::Float(b)) => {
+                try!(coerce_compare_float(b, false,
+                    a.to_f64(), a.is_positive()))
+            }
+            (&Value::Ratio(ref a), &Value::Float(b)) => {
+                try!(coerce_compare_float(b, false,
+                    a.to_f64(), a.is_positive()))
             }
             (&Value::Integer(ref a), &Value::Ratio(ref b)) => {
                 let a = Ratio::from_integer(a.clone());
                 a.cmp(b)
-            }
-            (&Value::Ratio(ref a), &Value::Float(ref b)) => {
-                let a = try!(a.to_f64().ok_or(ExecError::Overflow));
-                try!(a.partial_cmp(b).ok_or(ExecError::CompareNaN))
             }
             (&Value::Ratio(ref a), &Value::Integer(ref b)) => {
                 let b = Ratio::from_integer(b.clone());
@@ -179,20 +180,16 @@ impl Value {
             (&Value::Ratio(ref a), &Value::Ratio(ref b)) => a == b,
 
             (&Value::Float(a), &Value::Integer(ref b)) => {
-                let b = try!(b.to_f64().ok_or(ExecError::Overflow));
-                a == b
+                coerce_equal_float(a, b.to_f64())
             }
             (&Value::Float(a), &Value::Ratio(ref b)) => {
-                let b = try!(b.to_f64().ok_or(ExecError::Overflow));
-                a == b
+                coerce_equal_float(a, b.to_f64())
             }
             (&Value::Integer(ref a), &Value::Float(b)) => {
-                let a = try!(a.to_f64().ok_or(ExecError::Overflow));
-                a == b
+                coerce_equal_float(b, a.to_f64())
             }
             (&Value::Ratio(ref a), &Value::Float(b)) => {
-                let a = try!(a.to_f64().ok_or(ExecError::Overflow));
-                a == b
+                coerce_equal_float(b, a.to_f64())
             }
 
             (&Value::Integer(ref a), &Value::Ratio(ref b)) => a == b,
@@ -766,6 +763,40 @@ impl NameDisplay for Value {
             Value::Foreign(ref v) => v.fmt_display(names, f),
             ref v => NameDebug::fmt(v, names, f),
         }
+    }
+}
+
+fn coerce_compare_float(f: f64, is_lhs: bool, other: Option<f64>, is_pos: bool)
+        -> Result<Ordering, ExecError> {
+    let lt = if is_lhs { Ordering::Less } else { Ordering::Greater };
+    let gt = if is_lhs { Ordering::Greater } else { Ordering::Less };
+
+    let ord = match f {
+        f if f == INFINITY => gt,
+        f if f == NEG_INFINITY => lt,
+        f if f.is_nan() => return Err(ExecError::CompareNaN),
+        _ => match other {
+            Some(other) => {
+                let ord = try!(f.partial_cmp(&other).ok_or(ExecError::CompareNaN));
+                if is_lhs {
+                    ord
+                } else {
+                    flip_ordering(ord)
+                }
+            }
+            None if is_pos => lt,
+            None => gt
+        }
+    };
+
+    Ok(ord)
+}
+
+fn coerce_equal_float(f: f64, other: Option<f64>) -> bool {
+    if f.is_infinite() || f.is_nan() {
+        false
+    } else {
+        other.map_or(false, |other| f == other)
     }
 }
 
