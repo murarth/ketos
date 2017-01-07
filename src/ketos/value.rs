@@ -842,11 +842,10 @@ fn eq_value_slice(a: &[Value], b: &[Value]) -> Result<bool, ExecError> {
 }
 
 fn float_is_identical(a: f64, b: f64) -> bool {
-    if a.is_nan() {
-        b.is_nan()
-    } else {
-        a == b
-    }
+    let a: u64 = unsafe { transmute(a) };
+    let b: u64 = unsafe { transmute(b) };
+
+    a == b
 }
 
 fn list_is_identical(a: &[Value], b: &[Value]) -> bool {
