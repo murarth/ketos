@@ -60,13 +60,8 @@ pub enum CompileError {
         /// Imported name
         name: Name,
     },
-    /// Attempt to import name which already exists
-    ImportShadow{
-        /// Module name
-        module: Name,
-        /// Imported name
-        name: Name,
-    },
+    /// Attempt to import or define name which already exists
+    ImportShadow(Name),
     /// Invalid expression to function call
     InvalidCallExpression(&'static str),
     /// `,@expr` form outside of a list
@@ -113,7 +108,7 @@ impl fmt::Display for CompileError {
             ExportError{..} => f.write_str("export name not found in module"),
             ImportCycle(_) => f.write_str("import cycle detected"),
             ImportError{..} => f.write_str("import name not found in module"),
-            ImportShadow{..} => f.write_str("import shadows an existing name"),
+            ImportShadow(_) => f.write_str("shadowing an imported name"),
             InvalidCallExpression(ty) =>
                 write!(f, "invalid call expression of type `{}`", ty),
             InvalidCommaAt =>
@@ -152,9 +147,9 @@ impl NameDisplay for CompileError {
             ImportError{module, name} =>
                 write!(f, "cannot import name `{}`; not found in module `{}`",
                     names.get(name), names.get(module)),
-            ImportShadow{module, name} =>
-                write!(f, "importing `{}` from `{}` shadows an existing value",
-                    names.get(name), names.get(module)),
+            ImportShadow(name) =>
+                write!(f, "shadowing imported name: {}",
+                    names.get(name)),
             PrivacyError{module, name} =>
                 write!(f, "name `{}` in module `{}` is private",
                     names.get(name), names.get(module)),
@@ -1825,8 +1820,9 @@ fn op_define(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
             compiler.trace.pop();
             compiler.trace.push(TraceItem::Define(compiler.ctx.scope().name(), name));
 
-            let (doc, body) = try!(extract_doc_string(args));
             try!(test_define_name(compiler.scope(), name));
+            let (doc, body) = try!(extract_doc_string(args));
+
             let c = compiler.add_const(Owned(Value::Name(name)));
 
             let (lambda, captures) = try!(make_lambda(
@@ -2455,6 +2451,8 @@ fn test_define_name(scope: &GlobalScope, name: Name) -> Result<(), CompileError>
         Err(CompileError::CannotDefine(name))
     } else if scope.contains_constant(name) {
         Err(CompileError::ConstantExists(name))
+    } else if scope.is_imported(name) {
+        Err(CompileError::ImportShadow(name))
     } else {
         Ok(())
     }

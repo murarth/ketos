@@ -166,6 +166,7 @@ impl ModuleCode {
             values: scope.with_values(
                 |values| values.iter()
                     .filter(|&&(_, ref v)| is_lambda(v))
+                    .filter(|&&(name, _)| !scope.is_imported(name))
                     .map(|pair| pair.clone()).collect()),
             exports: scope.with_exports(|e| e.clone())
                 .unwrap_or_else(NameSetSlice::default),
