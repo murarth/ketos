@@ -144,13 +144,17 @@ pub struct ModuleCode {
 
 impl ModuleCode {
     /// Creates a `ModuleCode` from a series of code objects and a `Scope`.
-    pub fn new(code: Vec<Rc<Code>>, scope: &Scope) -> ModuleCode {
+    ///
+    /// Trivial code objects will be removed.
+    pub fn new(mut code: Vec<Rc<Code>>, scope: &Scope) -> ModuleCode {
         fn is_lambda(v: &Value) -> bool {
             match *v {
                 Value::Lambda(_) => true,
                 _ => false
             }
         }
+
+        code.retain(|code| !code.is_trivial());
 
         ModuleCode{
             code: code,

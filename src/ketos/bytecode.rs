@@ -622,6 +622,17 @@ impl Instruction {
         }
     }
 
+    /// Returns whether the `Instruction` is trivial;
+    /// that is, in valid top-level code, it does not produce any side effects.
+    pub fn is_trivial(&self) -> bool {
+        use self::Instruction::*;
+
+        match *self {
+            Unit | True | False | Const(_) | Return => true,
+            _ => false
+        }
+    }
+
     /// If the instruction is a jump instruction, returns the jump offset.
     /// Otherwise, returns `None`.
     pub fn jump_label(&self) -> Option<u32> {
@@ -754,6 +765,25 @@ impl Code {
     /// Returns whether the function accepts one or more keyword parameters.
     pub fn has_kw_params(&self) -> bool {
         self.flags & code_flags::PARAM_FLAGS_MASK == code_flags::HAS_KW_PARAMS
+    }
+
+    /// Returns whether all bytecode instructions can be executed without
+    /// side effects.
+    ///
+    /// Such a code object typically results from compilation of compile-time
+    /// operators.
+    pub fn is_trivial(&self) -> bool {
+        let mut r = CodeReader::new(&self.code, 0);
+        let end = self.code.len();
+
+        while r.offset() != end {
+            match r.read_instruction() {
+                Ok(instr) if instr.is_trivial() => (),
+                _ => return false
+            }
+        }
+
+        true
     }
 }
 
