@@ -250,6 +250,10 @@ impl<'a> Compiler<'a> {
         self.ctx.scope()
     }
 
+    fn is_top_level(&self) -> bool {
+        self.outer.is_empty() && self.cur_block == 0
+    }
+
     fn assemble_code(&mut self) -> Result<Box<[u8]>, CompileError> {
         let total = try!(self.write_jumps());
         let mut res = Vec::with_capacity(total);
@@ -1828,9 +1832,17 @@ fn op_define(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
             let (lambda, captures) = try!(make_lambda(
                 compiler, Some(name), &li[1..], body, doc));
 
-            let code_c = compiler.add_const(Owned(Value::Lambda(lambda)));
-            try!(compiler.load_lambda(code_c, &captures));
-            try!(compiler.push_instruction(Instruction::SetDef(c)));
+            if compiler.is_top_level() && captures.is_empty() {
+                // Add top-level, non-capturing lambdas to global scope immediately.
+                compiler.scope().add_value(name, Value::Lambda(lambda));
+                let c = compiler.add_const(Owned(Value::Name(name)));
+                try!(compiler.push_instruction(Instruction::Const(c)));
+            } else {
+                let code_c = compiler.add_const(Owned(Value::Lambda(lambda)));
+                try!(compiler.load_lambda(code_c, &captures));
+                try!(compiler.push_instruction(Instruction::SetDef(c)));
+            }
+
             Ok(())
         }
         ref v => {

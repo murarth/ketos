@@ -202,6 +202,16 @@ pub fn read_bytecode<R: Read>(r: &mut R, path: &Path, ctx: &Context)
         macros.push((name, code));
     }
 
+    let n_values = try!(dec.read_uint());
+    let mut values = Vec::with_capacity(n_values as usize);
+
+    for _ in 0..n_values {
+        let name = try!(dec.read_name(&names));
+        let value = try!(dec.read_value(&names));
+
+        values.push((name, value));
+    }
+
     let doc = try!(dec.read_string());
     let doc = if doc.is_empty() {
         None
@@ -229,6 +239,7 @@ pub fn read_bytecode<R: Read>(r: &mut R, path: &Path, ctx: &Context)
         code: exprs,
         constants: consts,
         macros: macros,
+        values: values,
         exports: exports.into_slice(),
         imports: imports,
         module_doc: doc,
@@ -275,6 +286,13 @@ pub fn write_bytecode<W: Write>(w: &mut W, path: &Path, module: &ModuleCode,
     for &(name, ref mac) in &module.macros {
         try!(body_enc.write_name(name, &mut names));
         try!(body_enc.write_code(mac, &mut names));
+    }
+
+    try!(body_enc.write_len(module.values.len()));
+
+    for &(name, ref value) in &module.values {
+        try!(body_enc.write_name(name, &mut names));
+        try!(body_enc.write_value(value, &mut names));
     }
 
     if let Some(ref doc) = module.module_doc {

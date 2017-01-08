@@ -1363,6 +1363,17 @@ fn test_define() {
 }
 
 #[test]
+fn test_const_define() {
+    // Test that a non-capturing lambda is available to macros at compile time
+    assert_eq!(run("
+        (macro (foo) `(do ,(bar)))
+        (define (bar) 123)
+        (foo)
+        ").unwrap(),
+        ["foo", "bar", "123"]);
+}
+
+#[test]
 fn test_lambda() {
     assert_eq!(eval("((lambda (n) n) 1)").unwrap(), "1");
     assert_eq!(eval("((lambda (:rest rest) rest) 1 2 3)").unwrap(), "(1 2 3)");

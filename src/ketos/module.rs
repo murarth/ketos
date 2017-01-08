@@ -134,6 +134,8 @@ pub struct ModuleCode {
     pub constants: Vec<(Name, Value)>,
     /// Decoded macro objects
     pub macros: Vec<(Name, Rc<Code>)>,
+    /// Global values generated at compile time
+    pub values: Vec<(Name, Value)>,
     /// Module doc strings
     pub module_doc: Option<String>,
     /// Doc strings
@@ -143,6 +145,13 @@ pub struct ModuleCode {
 impl ModuleCode {
     /// Creates a `ModuleCode` from a series of code objects and a `Scope`.
     pub fn new(code: Vec<Rc<Code>>, scope: &Scope) -> ModuleCode {
+        fn is_lambda(v: &Value) -> bool {
+            match *v {
+                Value::Lambda(_) => true,
+                _ => false
+            }
+        }
+
         ModuleCode{
             code: code,
             constants: scope.with_constants(
@@ -150,6 +159,10 @@ impl ModuleCode {
             macros: scope.with_macros(
                 |macros| macros.iter()
                     .map(|&(name, ref l)| (name, l.code.clone())).collect()),
+            values: scope.with_values(
+                |values| values.iter()
+                    .filter(|&&(_, ref v)| is_lambda(v))
+                    .map(|pair| pair.clone()).collect()),
             exports: scope.with_exports(|e| e.clone())
                 .unwrap_or_else(NameSetSlice::default),
             imports: scope.with_imports(|i| i.to_vec()),
@@ -170,6 +183,10 @@ impl ModuleCode {
         for (name, code) in self.macros {
             let mac = Lambda::new(code, ctx.scope());
             ctx.scope().add_macro(name, mac);
+        }
+
+        for (name, value) in self.values {
+            ctx.scope().add_value(name, value);
         }
 
         try!(process_imports(ctx, &self.imports));
@@ -519,14 +536,15 @@ fn load_module_from_file(ctx: Context, name: Name,
     let code = try!(exprs.iter()
         .map(|e| compile(&ctx, e).map(Rc::new)).collect::<Result<Vec<_>, _>>());
 
-    for code in &code {
-        try!(execute(&ctx, code.clone()));
-    }
-
     if let Some(code_path) = code_path {
-        try!(check_exports(ctx.scope(), name));
+        // Grab compile-time values before executing code
+        let mcode = ModuleCode::new(code.clone(), ctx.scope());
 
-        let mcode = ModuleCode::new(code, ctx.scope());
+        for code in &code {
+            try!(execute(&ctx, code.clone()));
+        }
+
+        try!(check_exports(ctx.scope(), name));
 
         let r = {
             let names = ctx.scope().borrow_names();
@@ -536,6 +554,12 @@ fn load_module_from_file(ctx: Context, name: Name,
         if let Err(e) = r {
             let _ = writeln!(stderr(), "failed to write compiled bytecode: {}", e);
         }
+    } else {
+        for code in &code {
+            try!(execute(&ctx, code.clone()));
+        }
+
+        try!(check_exports(ctx.scope(), name));
     }
 
     Ok(Module{

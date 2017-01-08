@@ -6,20 +6,20 @@ use ketos::name::standard_names;
 
 fn lambda(s: &str) -> Result<Vec<u8>, Error> {
     let interp = Interpreter::new();
-    let exprs = try!(interp.compile_exprs(s));
-    let code = exprs.last().unwrap();
+    let _exprs = try!(interp.compile_exprs(s));
 
-    match code.consts[1] {
-        Value::Lambda(ref l) => Ok(l.code.code.clone().into_vec()),
-        ref v => panic!("expected lambda; got {}", v.type_name())
+    match interp.scope().get_named_value("test") {
+        Some(Value::Lambda(ref l)) => Ok(l.code.code.clone().into_vec()),
+        Some(ref v) => panic!("expected lambda; got {}", v.type_name()),
+        None => panic!("missing `test` function")
     }
 }
 
 #[test]
 fn test_const() {
     assert_eq!(lambda("
-        (const foo (+ 1 2 3))
-        (define (bar) foo)
+        (const c (+ 1 2 3))
+        (define (test) c)
         ").unwrap(), [
             CONST_0,
             RETURN,
@@ -28,13 +28,13 @@ fn test_const() {
 
 #[test]
 fn test_const_if() {
-    assert_eq!(lambda("(define (foo a) (if true (+ a) (- a)))").unwrap(), [
+    assert_eq!(lambda("(define (test a) (if true (+ a) (- a)))").unwrap(), [
         LOAD_PUSH_0,
         CALL_SYS_ARGS, standard_names::ADD.get() as u8, 1,
         RETURN,
     ]);
 
-    assert_eq!(lambda("(define (foo a) (if false (+ a) (- a)))").unwrap(), [
+    assert_eq!(lambda("(define (test a) (if false (+ a) (- a)))").unwrap(), [
         LOAD_PUSH_0,
         CALL_SYS_ARGS, standard_names::SUB.get() as u8, 1,
         RETURN,
@@ -43,37 +43,37 @@ fn test_const_if() {
 
 #[test]
 fn test_const_fold() {
-    assert_eq!(lambda("(define (foo a) (+ a 0))").unwrap(), [
+    assert_eq!(lambda("(define (test a) (+ a 0))").unwrap(), [
         LOAD_PUSH_0,
         CALL_SYS_ARGS, standard_names::ADD.get() as u8, 1,
         RETURN,
     ]);
 
-    assert_eq!(lambda("(define (foo a) (+ 0 a))").unwrap(), [
+    assert_eq!(lambda("(define (test a) (+ 0 a))").unwrap(), [
         LOAD_PUSH_0,
         CALL_SYS_ARGS, standard_names::ADD.get() as u8, 1,
         RETURN,
     ]);
 
-    assert_eq!(lambda("(define (foo a) (- a 0))").unwrap(), [
+    assert_eq!(lambda("(define (test a) (- a 0))").unwrap(), [
         LOAD_PUSH_0,
         CALL_SYS_ARGS, standard_names::ADD.get() as u8, 1,
         RETURN,
     ]);
 
-    assert_eq!(lambda("(define (foo a) (- 0 a))").unwrap(), [
+    assert_eq!(lambda("(define (test a) (- 0 a))").unwrap(), [
         LOAD_PUSH_0,
         CALL_SYS_ARGS, standard_names::SUB.get() as u8, 1,
         RETURN,
     ]);
 
-    assert_eq!(lambda("(define (foo a) (// 1 a))").unwrap(), [
+    assert_eq!(lambda("(define (test a) (// 1 a))").unwrap(), [
         LOAD_PUSH_0,
         CALL_SYS_ARGS, standard_names::FLOOR_DIV.get() as u8, 1,
         RETURN,
     ]);
 
-    assert_eq!(lambda("(define (foo a) (// a 1))").unwrap(), [
+    assert_eq!(lambda("(define (test a) (// a 1))").unwrap(), [
         LOAD_PUSH_0,
         CALL_SYS, standard_names::FLOOR.get() as u8,
         RETURN,
@@ -82,7 +82,7 @@ fn test_const_fold() {
 
 #[test]
 fn test_dec() {
-    assert_eq!(lambda("(define (foo a) (- a 1))").unwrap(), [
+    assert_eq!(lambda("(define (test a) (- a 1))").unwrap(), [
         LOAD_0,
         DEC,
         RETURN,
@@ -90,20 +90,20 @@ fn test_dec() {
 
     assert_eq!(lambda("
         (const n 1)
-        (define (foo a) (- a n))
+        (define (test a) (- a n))
         ").unwrap(), [
             LOAD_0,
             DEC,
             RETURN,
         ]);
 
-    assert_eq!(lambda("(define (foo a) (+ a -1))").unwrap(), [
+    assert_eq!(lambda("(define (test a) (+ a -1))").unwrap(), [
         LOAD_0,
         DEC,
         RETURN,
     ]);
 
-    assert_eq!(lambda("(define (foo a) (+ -1 a))").unwrap(), [
+    assert_eq!(lambda("(define (test a) (+ -1 a))").unwrap(), [
         LOAD_0,
         DEC,
         RETURN,
@@ -112,7 +112,7 @@ fn test_dec() {
 
 #[test]
 fn test_inc() {
-    assert_eq!(lambda("(define (foo a) (+ a 1))").unwrap(), [
+    assert_eq!(lambda("(define (test a) (+ a 1))").unwrap(), [
         LOAD_0,
         INC,
         RETURN,
@@ -120,20 +120,20 @@ fn test_inc() {
 
     assert_eq!(lambda("
         (const n 1)
-        (define (foo a) (+ a n))
+        (define (test a) (+ a n))
         ").unwrap(), [
             LOAD_0,
             INC,
             RETURN,
         ]);
 
-    assert_eq!(lambda("(define (foo a) (+ 1 a))").unwrap(), [
+    assert_eq!(lambda("(define (test a) (+ 1 a))").unwrap(), [
         LOAD_0,
         INC,
         RETURN,
     ]);
 
-    assert_eq!(lambda("(define (foo a) (- a -1))").unwrap(), [
+    assert_eq!(lambda("(define (test a) (- a -1))").unwrap(), [
         LOAD_0,
         INC,
         RETURN,
@@ -142,7 +142,7 @@ fn test_inc() {
 
 #[test]
 fn test_if() {
-    assert_eq!(lambda("(define (foo a b c) (if a b c))").unwrap(), [
+    assert_eq!(lambda("(define (test a b c) (if a b c))").unwrap(), [
         LOAD_0,
         JUMP_IF_NOT, 5,
         LOAD_1,
@@ -151,7 +151,7 @@ fn test_if() {
         RETURN,
     ]);
 
-    assert_eq!(lambda("(define (foo a b c) (if (not a) b c))").unwrap(), [
+    assert_eq!(lambda("(define (test a b c) (if (not a) b c))").unwrap(), [
         LOAD_0,
         JUMP_IF, 5,
         LOAD_1,
@@ -163,7 +163,7 @@ fn test_if() {
 
 #[test]
 fn test_lambda() {
-    assert_eq!(lambda("(define (foo a b) (+ a b))").unwrap(), [
+    assert_eq!(lambda("(define (test a b) (+ a b))").unwrap(), [
         LOAD_PUSH_0,
         LOAD_PUSH_1,
         CALL_SYS_ARGS, standard_names::ADD.get() as u8, 2,
@@ -173,7 +173,7 @@ fn test_lambda() {
 
 #[test]
 fn test_call_self() {
-    assert_eq!(lambda("(define (foo a) (do (foo a) ()))").unwrap(), [
+    assert_eq!(lambda("(define (test a) (do (test a) ()))").unwrap(), [
         LOAD_PUSH_0,
         CALL_SELF, 1,
         UNIT,
@@ -181,7 +181,7 @@ fn test_call_self() {
     ]);
 
     // Prevents self-call in case one wants to do something tricky.
-    assert_eq!(lambda("(define (foo a) (do ((id foo) a) ()))").unwrap(), [
+    assert_eq!(lambda("(define (test a) (do ((id test) a) ()))").unwrap(), [
         GET_DEF_PUSH, 0,
         LOAD_PUSH_0,
         CALL, 1,
@@ -192,15 +192,15 @@ fn test_call_self() {
 
 #[test]
 fn test_tail_recursion() {
-    assert_eq!(lambda("(define (foo a) (foo a))").unwrap(), [
+    assert_eq!(lambda("(define (test a) (test a))").unwrap(), [
         LOAD_PUSH_0,
         TAIL_CALL_SELF, 1,
     ]);
 
-    assert_eq!(lambda("(define (foo a)
+    assert_eq!(lambda("(define (test a)
                          (if (something a)
-                            (foo 1)
-                            (foo 2)))").unwrap(), [
+                            (test 1)
+                            (test 2)))").unwrap(), [
         LOAD_PUSH_0,
         CALL_CONST_0, 1,
         JUMP_IF_NOT, 8,
@@ -210,14 +210,14 @@ fn test_tail_recursion() {
         TAIL_CALL_SELF, 1,
     ]);
 
-    assert_eq!(lambda("(define (foo) (and a (foo)))").unwrap(), [
+    assert_eq!(lambda("(define (test) (and a (test)))").unwrap(), [
         GET_DEF_0,
         JUMP_IF_NOT, 5,
         TAIL_CALL_SELF, 0,
         RETURN,
     ]);
 
-    assert_eq!(lambda("(define (foo) (let ((a 1)) (foo)))").unwrap(), [
+    assert_eq!(lambda("(define (test) (let ((a 1)) (test)))").unwrap(), [
         CONST_PUSH_0,
         TAIL_CALL_SELF, 0,
     ]);
@@ -225,15 +225,15 @@ fn test_tail_recursion() {
 
 #[test]
 fn test_tail_recursion_apply() {
-    assert_eq!(lambda("(define (foo a) (apply foo a))").unwrap(), [
+    assert_eq!(lambda("(define (test a) (apply test a))").unwrap(), [
         LOAD_0,
         TAIL_APPLY_SELF, 0,
     ]);
 
-    assert_eq!(lambda("(define (foo a)
+    assert_eq!(lambda("(define (test a)
                          (if (something a)
-                            (apply foo ())
-                            (apply foo ())))").unwrap(), [
+                            (apply test ())
+                            (apply test ())))").unwrap(), [
         LOAD_PUSH_0,
         CALL_CONST_0, 1,
         JUMP_IF_NOT, 8,
@@ -243,7 +243,7 @@ fn test_tail_recursion_apply() {
         TAIL_APPLY_SELF, 0,
     ]);
 
-    assert_eq!(lambda("(define (foo) (and a (apply foo ())))").unwrap(), [
+    assert_eq!(lambda("(define (test) (and a (apply test ())))").unwrap(), [
         GET_DEF_0,
         JUMP_IF_NOT, 6,
         UNIT,
@@ -251,7 +251,7 @@ fn test_tail_recursion_apply() {
         RETURN,
     ]);
 
-    assert_eq!(lambda("(define (foo) (let ((a 1)) (apply foo ())))").unwrap(), [
+    assert_eq!(lambda("(define (test) (let ((a 1)) (apply test ())))").unwrap(), [
         CONST_PUSH_0,
         UNIT,
         TAIL_APPLY_SELF, 0,
