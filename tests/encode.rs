@@ -4,15 +4,27 @@ extern crate ketos;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use ketos::{Context, Error, Interpreter, Value, run_code};
+use ketos::{
+    BuiltinModuleLoader, FileModuleLoader, ModuleLoader,
+    Context, Error, Interpreter, Value, run_code,
+};
 use ketos::encode::{read_bytecode, write_bytecode};
 use ketos::module::ModuleCode;
+
+fn new_interpreter() -> Interpreter {
+    let mut loader = FileModuleLoader::with_search_paths(vec![PathBuf::from("lib")]);
+
+    loader.set_read_bytecode(false);
+    loader.set_write_bytecode(false);
+
+    Interpreter::with_loader(Box::new(BuiltinModuleLoader.chain(loader)))
+}
 
 // Runs `F` twice; first, after compiling and executing input;
 // then, after encoding and decoding and loading the resulting ModuleCode.
 fn run<F>(input: &str, mut f: F) -> Result<(), Error>
         where F: FnMut(&Context) {
-    let interp = Interpreter::with_search_paths(vec![PathBuf::from("lib")]);
+    let interp = new_interpreter();
 
     let code: Vec<_> = try!(interp.compile_exprs(input))
         .into_iter().map(Rc::new).collect();
@@ -33,7 +45,7 @@ fn run<F>(input: &str, mut f: F) -> Result<(), Error>
         try!(write_bytecode(&mut buf, path, &mcode, &names));
     }
 
-    let sec_interp = Interpreter::with_search_paths(vec![PathBuf::from("lib")]);
+    let sec_interp = new_interpreter();
     let mcode = try!(read_bytecode(&mut &buf[..], path, sec_interp.context()));
 
     try!(mcode.load_in_context(sec_interp.context()));

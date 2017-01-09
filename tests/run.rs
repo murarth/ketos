@@ -1,12 +1,21 @@
 extern crate ketos;
 
-use ketos::{Error, Interpreter};
+use ketos::{
+    BuiltinModuleLoader, FileModuleLoader, ModuleLoader,
+    Error, Interpreter,
+};
 
 use std::fs::read_dir;
 use std::path::{Path, PathBuf};
 
 fn run_file(path: &Path) -> Result<(), Error> {
-    let interp = Interpreter::with_search_paths(vec![PathBuf::from("lib")]);
+    let mut loader = FileModuleLoader::with_search_paths(vec![PathBuf::from("lib")]);
+
+    loader.set_read_bytecode(false);
+    loader.set_write_bytecode(false);
+
+    let interp = Interpreter::with_loader(
+        Box::new(BuiltinModuleLoader.chain(loader)));
 
     interp.run_file(path)
 }
