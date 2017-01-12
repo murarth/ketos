@@ -749,7 +749,12 @@ impl<'a> Compiler<'a> {
                 self.set_trace_expr(value);
                 Err(From::from(CompileError::UnbalancedComma))
             }
-            Value::Comma(ref v, n) if n == depth => self.eval_constant(v),
+            Value::Comma(ref v, n) if n == depth => {
+                match try!(self.eval_constant(v)) {
+                    ConstResult::IsConstant => Ok(ConstResult::Constant((&**v).clone())),
+                    res => Ok(res)
+                }
+            }
             Value::Comma(ref v, n) => {
                 match try!(self.eval_constant_quasi_value(v, depth - n)) {
                     ConstResult::Constant(v) =>

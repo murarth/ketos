@@ -162,6 +162,10 @@ fn test_quasiquote() {
         "(foo 1 2 3 bar 4 5 6)");
     assert_eq!(eval("`(foo ,@(list 1 2 3) bar ,@(list 4 5 6) baz)").unwrap(),
         "(foo 1 2 3 bar 4 5 6 baz)");
+
+    assert_eq!(eval("`(foo ,1)").unwrap(), "(foo 1)");
+    assert_eq!(eval("``(foo ,,1)").unwrap(), "`(foo 1)");
+    assert_eq!(eval("```(foo ,,,1)").unwrap(), "``(foo 1)");
 }
 
 #[test]
