@@ -1,7 +1,7 @@
 " Vim syntax file
 " Language:    Ketos
 " Maintainer:  Murarth <murarth@gmail.com>
-" Last Change: December 31, 2015
+" Last Change: January 11, 2017
 " URL:         https://github.com/murarth/ketos
 
 " For vim-version 5.x: Clear all syntax items
@@ -16,9 +16,9 @@ syn match ketosAtom "'\k\+\>"
 
 syn keyword ketosBool true false
 
-syn match ketosChar "#'\([^']\|\\\(x[0-7][0-9a-fA-F]\|u{[0-9a-fA-F]*}\)\)'"
+syn match ketosChar "#'\([^'\\]\|\\\([0nrt"'\\]\|x[0-7][0-9a-fA-F]\|u{[0-9a-fA-F]*}\)\)'"
 
-syn keyword ketosFunc * + - .  .= / // /= < << <= = > >= >> ^ abs append bytes
+syn keyword ketosFunc * + - . .= / // /= < << <= = > >= >> ^ abs append bytes
 syn keyword ketosFunc ceil chars concat const denom elt first float floor
 syn keyword ketosFunc format fract id inf init int is is-instance join last len
 syn keyword ketosFunc list max min nan new not null numer panic print println
@@ -30,16 +30,20 @@ syn keyword ketosOperator macro or struct use
 
 syn match ketosKey ":\k\+\>"
 
-syn match ketosBinNumber "\<0b[_01]\+"
-syn match ketosOctNumber "\<0o[_0-7]\+"
-syn match ketosHexNumber "\<0x[_0-9a-fA-F]\+"
-syn match ketosNumber "\<-\?[_0-9]\+\(/[_0-9]\+\|\(\.[_0-9]*\)\?\([eE]-\?[_0-9]\+\)\?\)\?"
+syn match ketosBinNumber "\<0b[_01]\+\>"
+syn match ketosOctNumber "\<0o[_0-7]\+\>"
+syn match ketosHexNumber "\<0x[_0-9a-fA-F]\+\>"
+syn match ketosNumber "\<-\?[_0-9]\+\(/[_0-9]\+\|\(\.[_0-9]*\)\?\([eE]-\?[_0-9]\+\)\?\)\?\>"
 
 syn region ketosRawString start=+r\z(#*\)"+ end=+"\z1+
 syn region ketosString start=+"+ end=+"+ skip=+\\\\\|\\"+ contains=ketosStringEscape
-syn match ketosStringEscape "\\\(x[0-9a-fA-F]{2}\+\|u{[0-9a-fA-F]*}\)" contained
+syn match ketosStringEscape "\\\([0nrt"'\\]\|x[0-7][0-9a-fA-F]\|u{[0-9a-fA-F]*}\)" contained
 
-syn match ketosPath "#p" nextgroup=ketosString
+syn region ketosRawByteString start=+#br\z(#*\)"+ end=+"\z1+
+syn region ketosByteString start=+#b"+ end=+"+ skip=+\\\\\|\\"+ contains=ketosByteStringEscape
+syn match ketosByteStringEscape "\\\([0nrt"'\\]\|x[0-9a-fA-F][0-9a-fA-F]\)" contained
+
+syn match ketosPath "#p" nextgroup=ketosString,ketosRawString
 
 syn region ketosCommentBlock    start="#|" end="|#" contains=ketosTodo,ketosCommentBlock,ketosCommentLine
 syn region ketosCommentLine     start=";"  end="$"  contains=ketosTodo
@@ -68,6 +72,9 @@ hi! def link ketosOperator Keyword
 hi! def link ketosRawString String
 hi! def link ketosString String
 hi! def link ketosStringEscape Special
+hi! def link ketosRawByteString String
+hi! def link ketosByteString String
+hi! def link ketosByteStringEscape Special
 hi! def link ketosPath Special
 hi! def link ketosTodo Todo
 
