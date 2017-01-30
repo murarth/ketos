@@ -507,11 +507,13 @@ fn parse_name(input: &str) -> Result<(Token, usize), ParseErrorKind> {
 }
 
 fn parse_number(input: &str) -> Result<(Token, usize), ParseErrorKind> {
+    let mut digits = false;
     let mut dot = false;
     let mut exp = false;
     let mut exp_digit = false;
     let mut slash = false;
     let mut slash_digit = false;
+    let mut size = input.len();
 
     let (base, prefix_offset, rest) = if input.starts_with("0x") {
         (16, 2, &input[2..])
@@ -532,6 +534,8 @@ fn parse_number(input: &str) -> Result<(Token, usize), ParseErrorKind> {
     for (ind, ch) in rest.char_indices() {
         match ch {
             _ if ch.is_digit(base) => {
+                digits = true;
+
                 if exp {
                     exp_digit = true;
                 } else if slash {
@@ -565,29 +569,25 @@ fn parse_number(input: &str) -> Result<(Token, usize), ParseErrorKind> {
             }
             '_' => (),
             _ if !is_identifier(ch) => {
-                let end = prefix_offset + ind;
-                if dot || exp {
-                    return Ok((Token::Float(&input[..end]), end));
-                } else if slash {
-                    return Ok((Token::Ratio(&input[..end]), end));
-                } else {
-                    return Ok((Token::Integer(&input[..end], base), end));
-                }
+                size = prefix_offset + ind;
+                break;
             }
             _ => return Err(ParseErrorKind::InvalidLiteral)
         }
     }
 
-    if dot || exp {
-        Ok((Token::Float(input), input.len()))
+    if !digits {
+        Err(ParseErrorKind::InvalidLiteral)
+    } else if dot || exp {
+        Ok((Token::Float(&input[..size]), size))
     } else if slash {
         if !slash_digit {
             Err(ParseErrorKind::InvalidLiteral)
         } else {
-            Ok((Token::Ratio(input), input.len()))
+            Ok((Token::Ratio(&input[..size]), size))
         }
     } else {
-        Ok((Token::Integer(input, base), input.len()))
+        Ok((Token::Integer(&input[..size], base), size))
     }
 }
 
@@ -865,6 +865,11 @@ mod test {
         assert_eq!(error("0x10/2"), Err(ParseErrorKind::InvalidLiteral));
         assert_eq!(error("10e1/2"), Err(ParseErrorKind::InvalidLiteral));
         assert_eq!(error("10/2e3"), Err(ParseErrorKind::InvalidLiteral));
+
+        assert_eq!(error("1/"), Err(ParseErrorKind::InvalidLiteral));
+        assert_eq!(error("0b_"), Err(ParseErrorKind::InvalidLiteral));
+        assert_eq!(error("0o_"), Err(ParseErrorKind::InvalidLiteral));
+        assert_eq!(error("0x_"), Err(ParseErrorKind::InvalidLiteral));
 
         assert_eq!(error("#p"), Err(ParseErrorKind::InvalidToken));
         assert_eq!(error("#p x"), Err(ParseErrorKind::InvalidToken));
