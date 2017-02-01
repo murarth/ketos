@@ -22,8 +22,6 @@ ketos = "0.6"
 
 ## Building the REPL
 
-The Ketos REPL requires GNU Readline.
-
 Build and run tests:
 
     cargo test
