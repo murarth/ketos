@@ -11,9 +11,8 @@ branches:
 script:
     - cargo build --verbose
     - cargo test  --verbose
-    - cargo build --verbose --features serde
-    - cargo test  --verbose --features serde
-    - ( cd codegen-tests && cargo test --verbose )
+    - cargo build --verbose --features 'serde serde_derive'
+    - cargo test  --verbose --features 'serde serde_derive'
 
 after_success: |
     [ $TRAVIS_BRANCH = master ] &&

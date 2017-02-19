@@ -24,7 +24,9 @@
 //! the `enum` name, the variant name, and a list of any values contained
 //! in the variant.
 
-use serde::{Serialize, Serializer};
+use std::fmt;
+
+use serde::ser::{self, Serialize, Serializer};
 
 use exec::{ExecError, panic};
 use error::Error;
@@ -41,13 +43,9 @@ pub fn encode_value<T: Serialize>(scope: &Scope, value: &T) -> Result<Value, Err
     Ok(ser.value.expect("empty serializer"))
 }
 
-impl ::serde::ser::Error for ExecError {
-    fn custom<T: Into<String>>(msg: T) -> ExecError {
-        panic(msg.into())
-    }
-
-    fn invalid_value(msg: &str) -> ExecError {
-        panic(format!("invalid value: {}", msg))
+impl ser::Error for ExecError {
+    fn custom<T: fmt::Display>(msg: T) -> ExecError {
+        panic(msg.to_string())
     }
 }
 
@@ -56,6 +54,8 @@ struct VSerializer<'a> {
     value: Option<Value>,
     state: Vec<SerializeState>,
 }
+
+struct SubSerializer<'a, 'b: 'a>(&'a mut VSerializer<'b>);
 
 enum SerializeState {
     /// Enum value opened; waiting for variant name
@@ -244,269 +244,302 @@ impl<'a> VSerializer<'a> {
     }
 }
 
-impl<'a> Serializer for VSerializer<'a> {
+impl<'a, 'b: 'a> Serializer for &'a mut VSerializer<'b> {
+    type Ok = ();
     type Error = ExecError;
 
-    type SeqState = ();
-    type TupleState = ();
-    type TupleStructState = ();
-    type TupleVariantState = ();
-    type MapState = ();
-    type StructState = ();
-    type StructVariantState = ();
+    type SerializeSeq = SubSerializer<'a, 'b>;
+    type SerializeTuple = SubSerializer<'a, 'b>;
+    type SerializeTupleStruct = SubSerializer<'a, 'b>;
+    type SerializeTupleVariant = SubSerializer<'a, 'b>;
+    type SerializeMap = SubSerializer<'a, 'b>;
+    type SerializeStruct = SubSerializer<'a, 'b>;
+    type SerializeStructVariant = SubSerializer<'a, 'b>;
 
-    fn serialize_bool(&mut self, v: bool) -> Result<(), ExecError> {
+    fn serialize_bool(self, v: bool) -> Result<(), ExecError> {
         self.emit_value(v);
         Ok(())
     }
 
-    fn serialize_char(&mut self, v: char) -> Result<(), ExecError> {
+    fn serialize_char(self, v: char) -> Result<(), ExecError> {
         self.emit_value(v);
         Ok(())
     }
 
-    fn serialize_i8(&mut self, v: i8) -> Result<(), ExecError> {
+    fn serialize_i8(self, v: i8) -> Result<(), ExecError> {
         self.emit_value(v);
         Ok(())
     }
 
-    fn serialize_i16(&mut self, v: i16) -> Result<(), ExecError> {
+    fn serialize_i16(self, v: i16) -> Result<(), ExecError> {
         self.emit_value(v);
         Ok(())
     }
 
-    fn serialize_i32(&mut self, v: i32) -> Result<(), ExecError> {
+    fn serialize_i32(self, v: i32) -> Result<(), ExecError> {
         self.emit_value(v);
         Ok(())
     }
 
-    fn serialize_i64(&mut self, v: i64) -> Result<(), ExecError> {
+    fn serialize_i64(self, v: i64) -> Result<(), ExecError> {
         self.emit_value(v);
         Ok(())
     }
 
-    fn serialize_isize(&mut self, v: isize) -> Result<(), ExecError> {
+    fn serialize_u8(self, v: u8) -> Result<(), ExecError> {
         self.emit_value(v);
         Ok(())
     }
 
-    fn serialize_u8(&mut self, v: u8) -> Result<(), ExecError> {
+    fn serialize_u16(self, v: u16) -> Result<(), ExecError> {
         self.emit_value(v);
         Ok(())
     }
 
-    fn serialize_u16(&mut self, v: u16) -> Result<(), ExecError> {
+    fn serialize_u32(self, v: u32) -> Result<(), ExecError> {
         self.emit_value(v);
         Ok(())
     }
 
-    fn serialize_u32(&mut self, v: u32) -> Result<(), ExecError> {
+    fn serialize_u64(self, v: u64) -> Result<(), ExecError> {
         self.emit_value(v);
         Ok(())
     }
 
-    fn serialize_u64(&mut self, v: u64) -> Result<(), ExecError> {
+    fn serialize_f32(self, v: f32) -> Result<(), ExecError> {
         self.emit_value(v);
         Ok(())
     }
 
-    fn serialize_usize(&mut self, v: usize) -> Result<(), ExecError> {
+    fn serialize_f64(self, v: f64) -> Result<(), ExecError> {
         self.emit_value(v);
         Ok(())
     }
 
-    fn serialize_f32(&mut self, v: f32) -> Result<(), ExecError> {
-        self.emit_value(v);
-        Ok(())
-    }
-
-    fn serialize_f64(&mut self, v: f64) -> Result<(), ExecError> {
-        self.emit_value(v);
-        Ok(())
-    }
-
-    fn serialize_str(&mut self, v: &str) -> Result<(), ExecError> {
+    fn serialize_str(self, v: &str) -> Result<(), ExecError> {
         self.emit_str(v);
         Ok(())
     }
 
-    fn serialize_bytes(&mut self, v: &[u8]) -> Result<(), ExecError> {
-        let mut state = try!(self.serialize_seq(Some(v.len())));
+    fn serialize_bytes(self, v: &[u8]) -> Result<(), ExecError> {
+        use serde::ser::SerializeSeq;
+
+        let mut ser = try!(self.serialize_seq(Some(v.len())));
 
         for b in v {
-            try!(self.serialize_seq_elt(&mut state, *b));
+            try!(ser.serialize_element(b));
         }
 
-        self.serialize_seq_end(state)
+        ser.end()
     }
 
-    fn serialize_unit(&mut self) -> Result<(), ExecError> {
+    fn serialize_unit(self) -> Result<(), ExecError> {
         self.emit_value(());
         Ok(())
     }
 
-    fn serialize_unit_struct(&mut self, name: &'static str) -> Result<(), ExecError> {
+    fn serialize_unit_struct(self, name: &'static str) -> Result<(), ExecError> {
         self.emit_unit_struct(name);
         Ok(())
     }
 
-    fn serialize_unit_variant(&mut self, name: &'static str,
+    fn serialize_unit_variant(self, name: &'static str,
             _index: usize, variant: &'static str) -> Result<(), ExecError> {
         self.emit_unit_variant(name, variant);
         Ok(())
     }
 
-    fn serialize_none(&mut self) -> Result<(), ExecError> {
+    fn serialize_none(self) -> Result<(), ExecError> {
         self.emit_none();
         Ok(())
     }
 
-    fn serialize_some<V: Serialize>(&mut self, value: V) -> Result<(), ExecError> {
-        value.serialize(self)
-    }
-
-    fn serialize_seq_fixed_size(&mut self, len: usize) -> Result<(), ExecError> {
-        self.serialize_seq(Some(len))
-    }
-
-    fn serialize_seq(&mut self, len: Option<usize>) -> Result<(), ExecError> {
-        self.begin_seq(len.unwrap_or(0));
-        Ok(())
-    }
-
-    fn serialize_seq_elt<V: Serialize>(&mut self, _state: &mut (), value: V)
+    fn serialize_some<V: ?Sized + Serialize>(self, value: &V)
             -> Result<(), ExecError> {
         value.serialize(self)
     }
 
-    fn serialize_seq_end(&mut self, _state: ()) -> Result<(), ExecError> {
-        self.end_seq();
-        Ok(())
+    fn serialize_seq(self, len: Option<usize>)
+            -> Result<SubSerializer<'a, 'b>, ExecError> {
+        self.begin_seq(len.unwrap_or(0));
+        Ok(SubSerializer(self))
     }
 
-    fn serialize_tuple(&mut self, len: usize) -> Result<(), ExecError> {
+    fn serialize_seq_fixed_size(self, len: usize)
+            -> Result<SubSerializer<'a, 'b>, ExecError> {
         self.serialize_seq(Some(len))
     }
 
-    fn serialize_tuple_elt<T>(&mut self, state: &mut (), value: T)
-            -> Result<(), ExecError> where T: Serialize {
-        self.serialize_seq_elt(state, value)
+    fn serialize_tuple(self, len: usize)
+            -> Result<SubSerializer<'a, 'b>, ExecError> {
+        self.serialize_seq(Some(len))
     }
 
-    fn serialize_tuple_end(&mut self, state: ()) -> Result<(), ExecError> {
-        self.serialize_seq_end(state)
+    fn serialize_map(self, len: Option<usize>)
+            -> Result<SubSerializer<'a, 'b>, ExecError> {
+        self.serialize_seq(len)
     }
 
-    fn serialize_map(&mut self, len: Option<usize>) -> Result<(), ExecError> {
-        self.begin_seq(len.unwrap_or(0));
-        Ok(())
-    }
-
-    fn serialize_map_key<T>(&mut self, _state: &mut (), key: T)
-            -> Result<(), ExecError> where T: Serialize {
-        self.emit_map_key();
-        key.serialize(self)
-    }
-
-    fn serialize_map_value<T>(&mut self, _state: &mut (), value: T)
-            -> Result<(), ExecError> where T: Serialize {
-        value.serialize(self)
-    }
-
-    fn serialize_map_end(&mut self, _state: ()) -> Result<(), ExecError> {
-        self.end_seq();
-        Ok(())
-    }
-
-    fn serialize_struct(&mut self, name: &'static str, len: usize)
-            -> Result<(), ExecError> {
+    fn serialize_struct(self, name: &'static str, len: usize)
+            -> Result<SubSerializer<'a, 'b>, ExecError> {
         self.begin_struct(name, len);
-        Ok(())
+        Ok(SubSerializer(self))
     }
 
-    fn serialize_struct_elt<T>(&mut self, _state: &mut (),
-            name: &'static str, value: T)
-            -> Result<(), ExecError> where T: Serialize {
-        self.field_name(name);
-        value.serialize(self)
+    fn serialize_newtype_struct<T: ?Sized + Serialize>(self,
+            name: &'static str, value: &T) -> Result<(), ExecError> {
+        use serde::ser::SerializeTupleStruct;
+
+        let mut ser = try!(self.serialize_tuple_struct(name, 1));
+
+        try!(ser.serialize_field(value));
+        ser.end()
     }
 
-    fn serialize_struct_end(&mut self, _state: ()) -> Result<(), ExecError> {
-        self.end_struct();
-        Ok(())
-    }
-
-    fn serialize_newtype_struct<T>(&mut self, name: &'static str, value: T)
-            -> Result<(), ExecError> where T: Serialize {
-        let mut state = try!(self.serialize_tuple_struct(name, 1));
-
-        try!(self.serialize_tuple_struct_elt(&mut state, value));
-
-        self.serialize_tuple_struct_end(state)
-    }
-
-    fn serialize_tuple_struct(&mut self, name: &'static str, len: usize)
-            -> Result<(), ExecError> {
+    fn serialize_tuple_struct(self, name: &'static str, len: usize)
+            -> Result<SubSerializer<'a, 'b>, ExecError> {
         self.begin_tuple_struct(name, len);
-        Ok(())
+        Ok(SubSerializer(self))
     }
 
-    fn serialize_tuple_struct_elt<T>(&mut self, _state: &mut (), value: T)
-            -> Result<(), ExecError> where T: Serialize {
-        value.serialize(self)
-    }
-
-    fn serialize_tuple_struct_end(&mut self, _state: ()) -> Result<(), ExecError> {
-        self.end_seq();
-        self.end_seq();
-        Ok(())
-    }
-
-    fn serialize_newtype_variant<T>(&mut self, name: &'static str,
-            index: usize, variant: &'static str, value: T)
-            -> Result<(), ExecError> where T: Serialize {
-        let mut state = try!(self.serialize_tuple_variant(name, index, variant, 1));
-
-        try!(self.serialize_tuple_variant_elt(&mut state, value));
-
-        self.serialize_tuple_variant_end(state)
-    }
-
-    fn serialize_tuple_variant(&mut self, name: &'static str,
-            _index: usize, variant: &'static str, len: usize)
+    fn serialize_newtype_variant<T: ?Sized + Serialize>(self, name: &'static str,
+            index: usize, variant: &'static str, value: &T)
             -> Result<(), ExecError> {
+        use serde::ser::SerializeTupleVariant;
+
+        let mut ser = try!(self.serialize_tuple_variant(name, index, variant, 1));
+
+        try!(ser.serialize_field(value));
+        ser.end()
+    }
+
+    fn serialize_tuple_variant(self, name: &'static str,
+            _index: usize, variant: &'static str, len: usize)
+            -> Result<SubSerializer<'a, 'b>, ExecError> {
         self.begin_enum(name);
         self.enum_variant(variant, len);
-        Ok(())
+        Ok(SubSerializer(self))
     }
 
-    fn serialize_tuple_variant_elt<T>(&mut self, _state: &mut (), value: T)
-            -> Result<(), ExecError> where T: Serialize {
-        value.serialize(self)
-    }
-
-    fn serialize_tuple_variant_end(&mut self, _state: ()) -> Result<(), ExecError> {
-        self.end_enum();
-        Ok(())
-    }
-
-    fn serialize_struct_variant(&mut self, name: &'static str,
+    fn serialize_struct_variant(self, name: &'static str,
             _index: usize, variant: &'static str, len: usize)
-            -> Result<(), ExecError> {
+            -> Result<SubSerializer<'a, 'b>, ExecError> {
         self.begin_enum(name);
         self.struct_variant(variant, len);
+        Ok(SubSerializer(self))
+    }
+}
+
+impl<'a, 'b: 'a> ser::SerializeSeq for SubSerializer<'a, 'b> {
+    type Ok = ();
+    type Error = ExecError;
+
+    fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T)
+            -> Result<(), ExecError> {
+        value.serialize(&mut *self.0)
+    }
+
+    fn end(self) -> Result<(), ExecError> {
+        self.0.end_seq();
         Ok(())
     }
+}
 
-    fn serialize_struct_variant_elt<T>(&mut self, _state: &mut (),
-            key: &'static str, value: T)
-            -> Result<(), ExecError> where T: Serialize {
-        self.field_name(key);
-        value.serialize(self)
+impl<'a, 'b: 'a> ser::SerializeTuple for SubSerializer<'a, 'b> {
+    type Ok = ();
+    type Error = ExecError;
+
+    fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T)
+            -> Result<(), ExecError> {
+        value.serialize(&mut *self.0)
     }
 
-    fn serialize_struct_variant_end(&mut self, _state: ()) -> Result<(), ExecError> {
-        self.end_struct();
+    fn end(self) -> Result<(), ExecError> {
+        self.0.end_seq();
+        Ok(())
+    }
+}
+
+impl<'a, 'b: 'a> ser::SerializeTupleStruct for SubSerializer<'a, 'b> {
+    type Ok = ();
+    type Error = ExecError;
+
+    fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T)
+            -> Result<(), ExecError> {
+        value.serialize(&mut *self.0)
+    }
+
+    fn end(self) -> Result<(), ExecError> {
+        self.0.end_seq();
+        self.0.end_seq();
+        Ok(())
+    }
+}
+
+impl<'a, 'b: 'a> ser::SerializeTupleVariant for SubSerializer<'a, 'b> {
+    type Ok = ();
+    type Error = ExecError;
+
+    fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T)
+            -> Result<(), ExecError> {
+        value.serialize(&mut *self.0)
+    }
+
+    fn end(self) -> Result<(), ExecError> {
+        self.0.end_enum();
+        Ok(())
+    }
+}
+
+impl<'a, 'b: 'a> ser::SerializeMap for SubSerializer<'a, 'b> {
+    type Ok = ();
+    type Error = ExecError;
+
+    fn serialize_key<T: ?Sized + Serialize>(&mut self, value: &T)
+            -> Result<(), ExecError> {
+        self.0.emit_map_key();
+        value.serialize(&mut *self.0)
+    }
+
+    fn serialize_value<T: ?Sized + Serialize>(&mut self, value: &T)
+            -> Result<(), ExecError> {
+        value.serialize(&mut *self.0)
+    }
+
+    fn end(self) -> Result<(), ExecError> {
+        self.0.end_seq();
+        Ok(())
+    }
+}
+
+impl<'a, 'b: 'a> ser::SerializeStruct for SubSerializer<'a, 'b> {
+    type Ok = ();
+    type Error = ExecError;
+
+    fn serialize_field<T: ?Sized + Serialize>(&mut self, name: &'static str, value: &T)
+            -> Result<(), ExecError> {
+        self.0.field_name(name);
+        value.serialize(&mut *self.0)
+    }
+
+    fn end(self) -> Result<(), ExecError> {
+        self.0.end_struct();
+        Ok(())
+    }
+}
+
+impl<'a, 'b: 'a> ser::SerializeStructVariant for SubSerializer<'a, 'b> {
+    type Ok = ();
+    type Error = ExecError;
+
+    fn serialize_field<T: ?Sized + Serialize>(&mut self, name: &'static str, value: &T)
+            -> Result<(), ExecError> {
+        self.0.field_name(name);
+        value.serialize(&mut *self.0)
+    }
+
+    fn end(self) -> Result<(), ExecError> {
+        self.0.end_struct();
         Ok(())
     }
 }

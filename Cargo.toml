@@ -28,7 +28,9 @@ getopts = "0.2"
 linefeed = "0.2"
 num = "0.1.32"
 rand = "0.3"
-serde = { version = "0.8", optional = true }
+serde = { version = "0.9", optional = true }
+# Used only in `value_encode` test
+serde_derive = { version = "0.9", optional = true }
 
 [dev-dependencies]
 assert_matches = "1.0"

@@ -1,5 +1,8 @@
+#![cfg(all(feature = "serde", feature = "serde_derive"))]
+
 extern crate ketos;
 extern crate serde;
+#[macro_use] extern crate serde_derive;
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -39,12 +42,13 @@ macro_rules! test {
 }
 
 fn interp(code: &str) -> Result<Interpreter, Error> {
-    let mut loader = FileModuleLoader::with_search_paths(vec![PathBuf::from("../lib")]);
+    let mut loader = FileModuleLoader::with_search_paths(vec![PathBuf::from("lib")]);
 
     loader.set_read_bytecode(false);
     loader.set_write_bytecode(false);
 
-    let interp = Interpreter::with_loader( Box::new(BuiltinModuleLoader.chain(loader)));
+    let interp = Interpreter::with_loader(
+        Box::new(BuiltinModuleLoader.chain(loader)));
 
     try!(interp.run_code("(use test (assert-eq))", None));
     try!(interp.run_code(code, None));
@@ -232,6 +236,7 @@ fn test_error() {
     assert!(de!(StructA => "0").is_err());
     assert!(de!(StructA => "()").is_err());
     assert!(de!(StructA => "(StructA)").is_err());
+    assert!(de!(StructA => "(StructA ())").is_err());
     assert!(de!(StructA => "(StructA () ())").is_err());
     assert!(de!(StructA => "(StructB (:a ()))").is_err());
     assert!(de!(StructA => "(StructB (:a () :b () :c ()))").is_err());
@@ -249,5 +254,4 @@ fn test_error() {
     assert!(de!(BTreeMap<u32, u32> => "((0 1) (1))").is_err());
     assert!(de!(BTreeMap<u32, u32> => "((0 1) (1 2 3))").is_err());
     assert!(de!(Vec<u32> => "(1 2 ())").is_err());
-    assert!(de!(OptStruct => "(OptStruct ())").is_err());
 }
