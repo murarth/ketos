@@ -6,7 +6,7 @@ use std::fmt;
 use std::iter::FromIterator;
 use std::mem::replace;
 use std::rc::Rc;
-use std::slice::Iter;
+use std::slice;
 use std::sync::Arc;
 
 use function::{SystemFn, SYSTEM_FNS};
@@ -394,7 +394,7 @@ impl<'a> NameOutputConversion<'a> {
 #[derive(Clone, Debug)]
 pub struct NameStore {
     /// Name string representation mapped to name values.
-    names: Vec<String>,
+    names: Vec<Box<str>>,
 }
 
 impl NameStore {
@@ -410,18 +410,18 @@ impl NameStore {
     pub fn add(&mut self, name: &str) -> Name {
         if let Some(name) = get_standard_name_for(name) {
             name
-        } else if let Some(pos) = self.names.iter().position(|n| n == name) {
+        } else if let Some(pos) = self.iter().position(|n| n == name) {
             Name(pos as u32 + NUM_STANDARD_NAMES)
         } else {
             let n = self.names.len();
-            self.names.push(name.to_owned());
+            self.names.push(name.to_owned().into_boxed_str());
             Name(n as u32 + NUM_STANDARD_NAMES)
         }
     }
 
     /// Returns the `Name` value of a given string, if it exists.
     pub fn get_name(&self, name: &str) -> Option<Name> {
-        if let Some(pos) = self.names.iter().position(|n| n == name) {
+        if let Some(pos) = self.iter().position(|n| n == name) {
             Some(Name(pos as u32 + NUM_STANDARD_NAMES))
         } else {
             None
@@ -441,8 +441,47 @@ impl NameStore {
     }
 
     /// Iterates over all stored names.
-    pub fn iter(&self) -> Iter<String> {
-        self.names.iter()
+    pub fn iter(&self) -> NameIter {
+        NameIter(self.names.iter())
+    }
+}
+
+/// Iterator over names stored in a `NameStore`.
+pub struct NameIter<'a>(slice::Iter<'a, Box<str>>);
+
+impl<'a> Iterator for NameIter<'a> {
+    type Item = &'a str;
+
+    fn next(&mut self) -> Option<&'a str> {
+        self.0.next().map(|s| &s[..])
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.0.size_hint()
+    }
+
+    fn count(self) -> usize {
+        self.0.count()
+    }
+
+    fn last(self) -> Option<&'a str> {
+        self.0.last().map(|s| &s[..])
+    }
+
+    fn nth(&mut self, n: usize) -> Option<&'a str> {
+        self.0.nth(n).map(|s| &s[..])
+    }
+}
+
+impl<'a> DoubleEndedIterator for NameIter<'a> {
+    fn next_back(&mut self) -> Option<&'a str> {
+        self.0.next_back().map(|s| &s[..])
+    }
+}
+
+impl<'a> ExactSizeIterator for NameIter<'a> {
+    fn len(&self) -> usize {
+        self.0.len()
     }
 }
 
@@ -491,7 +530,7 @@ impl<T> NameMap<T> {
     }
 
     /// Returns an iterator over names and values.
-    pub fn iter(&self) -> Iter<(Name, T)> {
+    pub fn iter(&self) -> slice::Iter<(Name, T)> {
         self.values.iter()
     }
 
@@ -526,9 +565,9 @@ impl<T> FromIterator<(Name, T)> for NameMap<T> {
 
 impl<'a, T> IntoIterator for &'a NameMap<T> {
     type Item = &'a (Name, T);
-    type IntoIter = Iter<'a, (Name, T)>;
+    type IntoIter = slice::Iter<'a, (Name, T)>;
 
-    fn into_iter(self) -> Iter<'a, (Name, T)> {
+    fn into_iter(self) -> slice::Iter<'a, (Name, T)> {
         self.iter()
     }
 }
@@ -586,7 +625,7 @@ impl<T> NameMapSlice<T> {
     }
 
     /// Returns an iterator over names and values.
-    pub fn iter(&self) -> Iter<(Name, T)> {
+    pub fn iter(&self) -> slice::Iter<(Name, T)> {
         self.values.iter()
     }
 
@@ -609,9 +648,9 @@ impl<T> FromIterator<(Name, T)> for NameMapSlice<T> {
 
 impl<'a, T> IntoIterator for &'a NameMapSlice<T> {
     type Item = &'a (Name, T);
-    type IntoIter = Iter<'a, (Name, T)>;
+    type IntoIter = slice::Iter<'a, (Name, T)>;
 
-    fn into_iter(self) -> Iter<'a, (Name, T)> {
+    fn into_iter(self) -> slice::Iter<'a, (Name, T)> {
         self.iter()
     }
 }
@@ -737,7 +776,7 @@ impl<'a> IntoIterator for &'a NameSetSlice {
 }
 
 /// Iterates over names in a `NameSet` or `NameSetSlice`.
-pub struct SetIter<'a>(Iter<'a, (Name, ())>);
+pub struct SetIter<'a>(slice::Iter<'a, (Name, ())>);
 
 impl<'a> Iterator for SetIter<'a> {
     type Item = Name;
