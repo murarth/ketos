@@ -6,7 +6,6 @@ use std::cmp::max;
 use std::f64;
 use std::fmt;
 use std::iter::repeat;
-use std::mem::transmute;
 use std::str::CharIndices;
 
 use num::ToPrimitive;
@@ -1613,27 +1612,9 @@ fn pad_str(buf: &mut String, s: &str, min_col: u32, col_inc: u32,
     }
 }
 
-// Waiting on stabilization of `ascii` feature
-fn make_ascii_lowercase(s: &mut str) {
-    let bytes: &mut [u8] = unsafe { transmute(s) };
-
-    for b in bytes {
-        *b = b.to_ascii_lowercase();
-    }
-}
-
-// Waiting on stabilization of `ascii` feature
-fn make_ascii_uppercase(s: &mut str) {
-    let bytes: &mut [u8] = unsafe { transmute(s) };
-
-    for b in bytes {
-        *b = b.to_ascii_uppercase();
-    }
-}
-
 fn make_lowercase(s: &mut String, start: usize) {
     if s[start..].is_ascii() {
-        make_ascii_lowercase(&mut s[start..]);
+        s[start..].make_ascii_lowercase();
     } else {
         let lower = s[start..].to_lowercase();
         s.truncate(start);
@@ -1643,7 +1624,7 @@ fn make_lowercase(s: &mut String, start: usize) {
 
 fn make_uppercase(s: &mut String, start: usize) {
     if s[start..].is_ascii() {
-        make_ascii_uppercase(&mut s[start..]);
+        s[start..].make_ascii_uppercase();
     } else {
         let upper = s[start..].to_uppercase();
         s.truncate(start);
@@ -1675,7 +1656,7 @@ fn make_first_uppercase(s: &mut String, start: usize) {
     };
 
     if ch.is_ascii() {
-        make_ascii_uppercase(&mut s[ind..ind + 1]);
+        s[ind..ind + 1].make_ascii_uppercase();
     } else {
         // Removing and inserting is slow, but what alternative do we have?
         let ch = s.remove(ind);
