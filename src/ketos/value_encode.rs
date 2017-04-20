@@ -344,7 +344,7 @@ impl<'a, 'b: 'a> Serializer for &'a mut VSerializer<'b> {
     }
 
     fn serialize_unit_variant(self, name: &'static str,
-            _index: usize, variant: &'static str) -> Result<(), ExecError> {
+            _index: u32, variant: &'static str) -> Result<(), ExecError> {
         self.emit_unit_variant(name, variant);
         Ok(())
     }
@@ -363,11 +363,6 @@ impl<'a, 'b: 'a> Serializer for &'a mut VSerializer<'b> {
             -> Result<SubSerializer<'a, 'b>, ExecError> {
         self.begin_seq(len.unwrap_or(0));
         Ok(SubSerializer(self))
-    }
-
-    fn serialize_seq_fixed_size(self, len: usize)
-            -> Result<SubSerializer<'a, 'b>, ExecError> {
-        self.serialize_seq(Some(len))
     }
 
     fn serialize_tuple(self, len: usize)
@@ -403,7 +398,7 @@ impl<'a, 'b: 'a> Serializer for &'a mut VSerializer<'b> {
     }
 
     fn serialize_newtype_variant<T: ?Sized + Serialize>(self, name: &'static str,
-            index: usize, variant: &'static str, value: &T)
+            index: u32, variant: &'static str, value: &T)
             -> Result<(), ExecError> {
         use serde::ser::SerializeTupleVariant;
 
@@ -414,7 +409,7 @@ impl<'a, 'b: 'a> Serializer for &'a mut VSerializer<'b> {
     }
 
     fn serialize_tuple_variant(self, name: &'static str,
-            _index: usize, variant: &'static str, len: usize)
+            _index: u32, variant: &'static str, len: usize)
             -> Result<SubSerializer<'a, 'b>, ExecError> {
         self.begin_enum(name);
         self.enum_variant(variant, len);
@@ -422,7 +417,7 @@ impl<'a, 'b: 'a> Serializer for &'a mut VSerializer<'b> {
     }
 
     fn serialize_struct_variant(self, name: &'static str,
-            _index: usize, variant: &'static str, len: usize)
+            _index: u32, variant: &'static str, len: usize)
             -> Result<SubSerializer<'a, 'b>, ExecError> {
         self.begin_enum(name);
         self.struct_variant(variant, len);
