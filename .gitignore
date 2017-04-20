@@ -1,3 +1,3 @@
 target
 *.ketc
-codegen-tests/Cargo.lock
+Cargo.lock
