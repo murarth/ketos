@@ -1,0 +1,25 @@
+[package]
+name = "ketos_derive"
+version = "0.1.0"
+authors = ["Murarth <murarth@gmail.com>"]
+
+description = "Derive traits for Ketos scripting language"
+
+documentation = "https://docs.rs/ketos_derive/"
+homepage = "https://github.com/murarth/ketos"
+repository = "https://github.com/murarth/ketos"
+
+keywords = ["ketos", "derive"]
+license = "MIT/Apache-2.0"
+readme = "README.md"
+
+[lib]
+name = "ketos_derive"
+proc-macro = true
+
+[dependencies]
+quote = "0.3"
+syn = "0.11"
+
+[dev-dependencies]
+ketos = { version = "*", path = ".." }

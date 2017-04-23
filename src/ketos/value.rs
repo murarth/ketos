@@ -883,38 +883,6 @@ macro_rules! integer_from_ref {
     }
 }
 
-/// Generates conversion trait implementations for the given type.
-///
-/// ```ignore
-/// foreign_type_conversions!{ MyType => "my-type" }
-/// ```
-#[macro_export]
-macro_rules! foreign_type_conversions {
-    ( $ty:ty => $name:expr ) => {
-        impl<'a> $crate::value::FromValueRef<'a> for &'a $ty {
-            fn from_value_ref(v: &'a $crate::value::Value)
-                    -> Result<&'a $ty, $crate::exec::ExecError> {
-                match *v {
-                    $crate::value::Value::Foreign(ref v) => {
-                        if let Some(v) = v.downcast_ref::<$ty>() {
-                            return Ok(v);
-                        }
-                    }
-                    _ => ()
-                }
-
-                Err($crate::exec::ExecError::expected($name, v))
-            }
-        }
-
-        impl From<$ty> for $crate::value::Value {
-            fn from(v: $ty) -> $crate::value::Value {
-                $crate::value::Value::new_foreign(v)
-            }
-        }
-    }
-}
-
 simple_from_ref!{ (); Value::Unit => (); "unit" }
 simple_from_ref!{ bool; Value::Bool(b) => b; "bool" }
 simple_from_ref!{ char; Value::Char(ch) => ch; "char" }

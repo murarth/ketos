@@ -1,14 +1,15 @@
 //! Demonstrates interoperation -- calling methods on Rust values from Ketos
 
 #[macro_use] extern crate ketos;
+#[macro_use] extern crate ketos_derive;
 
 use std::cell::Cell;
 use std::rc::Rc;
 
-use ketos::{Error, ForeignValue, Interpreter, Value};
+use ketos::{Error, Interpreter, Value};
 
 /// A simple structure that says "Hello."
-#[derive(Debug)]
+#[derive(Debug, ForeignValue, FromValueRef)]
 pub struct Hello {
     who: String,
 }
@@ -25,16 +26,8 @@ impl Hello {
     }
 }
 
-impl ForeignValue for Hello {
-    fn type_name(&self) -> &'static str { "Hello" }
-}
-
-// Implements `FromValueRef` for Hello.
-// This implementation is used by the `ketos_fn!` generated wrappers.
-foreign_type_conversions!{Hello => "Hello"}
-
 /// Contains an internal counter
-#[derive(Debug)]
+#[derive(Debug, ForeignValue, FromValueRef)]
 pub struct Counter {
     // Sharing a value with Ketos means we can only access it through `&self`.
     // Mutation of values is possible through internally mutable containers,
@@ -55,12 +48,6 @@ impl Counter {
         old
     }
 }
-
-impl ForeignValue for Counter {
-    fn type_name(&self) -> &'static str { "Counter" }
-}
-
-foreign_type_conversions!{Counter => "Counter"}
 
 // Ketos wrapper for `Hello::say_hello`
 fn say_hello(hello: &Hello) -> Result<String, Error> {

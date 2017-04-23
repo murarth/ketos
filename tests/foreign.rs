@@ -1,12 +1,13 @@
 #[macro_use] extern crate assert_matches;
 
 #[macro_use] extern crate ketos;
+#[macro_use] extern crate ketos_derive;
 
 use std::cmp::Ordering;
 
 use ketos::{Context, ExecError, Error, ForeignValue, Interpreter, Value};
 
-#[derive(Debug, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, FromValueRef, IntoValue)]
 pub struct MyType {
     a: i32,
 }
@@ -32,10 +33,8 @@ impl ketos::ForeignValue for MyType {
         }
     }
 
-    fn type_name(&self) -> &'static str { "my-type" }
+    fn type_name(&self) -> &'static str { "MyType" }
 }
-
-foreign_type_conversions!{ MyType => "my-type" }
 
 fn eval(interp: &Interpreter, input: &str) -> Result<String, Error> {
     let v = try!(interp.run_single_expr(input, None));
@@ -46,12 +45,11 @@ fn eval(interp: &Interpreter, input: &str) -> Result<String, Error> {
 fn test_foreign_value() {
     let interp = Interpreter::new();
 
-    interp.scope().add_named_value(
-        "my-value", Value::new_foreign(MyType{a: 123}));
+    interp.scope().add_named_value("my-value", MyType{a: 123}.into());
 
     assert_eq!(eval(&interp, "my-value").unwrap(), "MyType { a: 123 }");
-    assert_eq!(eval(&interp, "(type-of my-value)").unwrap(), "my-type");
-    assert_eq!(eval(&interp, "(is 'my-type my-value)").unwrap(), "true");
+    assert_eq!(eval(&interp, "(type-of my-value)").unwrap(), "MyType");
+    assert_eq!(eval(&interp, "(is 'MyType my-value)").unwrap(), "true");
 }
 
 fn reflect_args(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
@@ -106,4 +104,22 @@ fn test_foreign_fn() {
 
     assert_matches!(eval(&interp, "(add-pairs '(1 2 0) '(3 4))").unwrap_err(),
         Error::ExecError(ExecError::TypeError{..}));
+}
+
+#[test]
+fn test_compare_foreign_value() {
+    let interp = Interpreter::new();
+    let scope = interp.scope();
+
+    ketos_fn!{ scope => "new-my-type" => fn new_my_type(a: i32) -> MyType }
+
+    assert_eq!(eval(&interp, "(= (new-my-type 1) (new-my-type 1))").unwrap(), "true");
+    assert_eq!(eval(&interp, "(/= (new-my-type 1) (new-my-type 1))").unwrap(), "false");
+    assert_eq!(eval(&interp, "(= (new-my-type 1) (new-my-type 2))").unwrap(), "false");
+    assert_eq!(eval(&interp, "(/= (new-my-type 1) (new-my-type 2))").unwrap(), "true");
+
+    assert_eq!(eval(&interp, "(< (new-my-type 1) (new-my-type 2))").unwrap(), "true");
+    assert_eq!(eval(&interp, "(> (new-my-type 1) (new-my-type 2))").unwrap(), "false");
+    assert_eq!(eval(&interp, "(< (new-my-type 2) (new-my-type 1))").unwrap(), "false");
+    assert_eq!(eval(&interp, "(> (new-my-type 2) (new-my-type 1))").unwrap(), "true");
 }

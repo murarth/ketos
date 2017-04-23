@@ -13,6 +13,8 @@ script:
     - cargo test  --verbose
     - cargo build --verbose --features 'serde serde_derive'
     - cargo test  --verbose --features 'serde serde_derive'
+    - ( cd ketos_derive && cargo build --verbose )
+    - ( cd ketos_derive && cargo test  --verbose )
 
 after_success: |
     [ $TRAVIS_BRANCH = master ] &&
