@@ -22,4 +22,4 @@ quote = "0.3"
 syn = "0.11"
 
 [dev-dependencies]
-ketos = { version = "*", path = ".." }
+ketos = { version = "0.9", path = ".." }
