@@ -1247,8 +1247,12 @@ impl Machine {
     fn get_stack_top(&self, n: u32) -> Result<&Value, ExecError> {
         let len = self.stack.len();
 
-        self.stack.get(len - 1 - n as usize)
-            .ok_or(ExecError::InvalidStack(len as u32))
+        if n as usize <= len {
+            self.stack.get(len - 1 - n as usize)
+                .ok_or(ExecError::InvalidStack(len as u32))
+        } else {
+            Err(ExecError::InvalidStack(n))
+        }
     }
 
     fn load_push(&mut self, n: u32) -> Result<(), Error> {
