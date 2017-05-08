@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `ForeignFn` struct in crate `ketos`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, ForeignFn">
+
+    <title>ketos::value::ForeignFn - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc struct">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../index.html'>ketos</a>::<wbr><a href='index.html'>value</a></p><script>window.sidebarCurrent = {name: 'ForeignFn', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../index.html'>ketos</a>::<wbr><a href='index.html'>value</a>::<wbr><a class="struct" href=''>ForeignFn</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/ketos/value.rs.html#556-559' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct ForeignFn&lt;F&gt; { /* fields omitted */ }</pre><div class='docblock'><p>Represents a foreign value that contains a callable function or closure</p>
+</div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><span class='in-band'><code>impl&lt;F&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html" title="trait core::fmt::Debug">Debug</a> for <a class="struct" href="../../ketos/value/struct.ForeignFn.html" title="struct ketos::value::ForeignFn">ForeignFn</a>&lt;F&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/ketos/value.rs.html#561-565' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt' class="method"><span id='fmt.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, f: &amp;mut <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html" title="struct core::fmt::Formatter">Formatter</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/core/fmt/type.Result.html" title="type core::fmt::Result">Result</a></code></span></h4>
+<div class='docblock'><p>Formats the value using the given formatter.</p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl&lt;F&gt; <a class="trait" href="../../ketos/value/trait.ForeignValue.html" title="trait ketos::value::ForeignValue">ForeignValue</a> for <a class="struct" href="../../ketos/value/struct.ForeignFn.html" title="struct ketos::value::ForeignFn">ForeignFn</a>&lt;F&gt; <span class="where fmt-newline">where F: <a class="trait" href="https://doc.rust-lang.org/nightly/core/any/trait.Any.html" title="trait core::any::Any">Any</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/trait.Fn.html" title="trait core::ops::Fn">Fn</a>(&amp;<a class="struct" href="../../ketos/exec/struct.Context.html" title="struct ketos::exec::Context">Context</a>, <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;mut [</a><a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>, <a class="enum" href="../../ketos/error/enum.Error.html" title="enum ketos::error::Error">Error</a>&gt;</span></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/ketos/value.rs.html#567-582' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.compare_to' class="method"><span id='compare_to.v' class='invisible'><code>fn <a href='../../ketos/value/trait.ForeignValue.html#method.compare_to' class='fnname'>compare_to</a>(&amp;self, _rhs: &amp;<a class="trait" href="../../ketos/value/trait.ForeignValue.html" title="trait ketos::value::ForeignValue">ForeignValue</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="enum" href="https://doc.rust-lang.org/nightly/core/cmp/enum.Ordering.html" title="enum core::cmp::Ordering">Ordering</a>, <a class="enum" href="../../ketos/exec/enum.ExecError.html" title="enum ketos::exec::ExecError">ExecError</a>&gt;</code></span></h4>
+<div class='docblock'><p>Performs ordered comparison between two values of a foreign type. <a href="../../ketos/value/trait.ForeignValue.html#method.compare_to">Read more</a></p>
+</div><h4 id='method.fmt_debug' class="method"><span id='fmt_debug.v' class='invisible'><code>fn <a href='../../ketos/value/trait.ForeignValue.html#method.fmt_debug' class='fnname'>fmt_debug</a>(&amp;self, names: &amp;<a class="struct" href="../../ketos/name/struct.NameStore.html" title="struct ketos::name::NameStore">NameStore</a>, f: &amp;mut <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html" title="struct core::fmt::Formatter">Formatter</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/core/fmt/type.Result.html" title="type core::fmt::Result">Result</a></code></span></h4>
+<div class='docblock'><p>Format the value in debugging mode. <a href="../../ketos/value/trait.ForeignValue.html#method.fmt_debug">Read more</a></p>
+</div><h4 id='method.type_name' class="method"><span id='type_name.v' class='invisible'><code>fn <a href='../../ketos/value/trait.ForeignValue.html#tymethod.type_name' class='fnname'>type_name</a>(&amp;self) -&gt; &amp;'static <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a></code></span></h4>
+<div class='docblock'><p>Return the value&#39;s type name.</p>
+</div><h4 id='method.call_value' class="method"><span id='call_value.v' class='invisible'><code>fn <a href='../../ketos/value/trait.ForeignValue.html#method.call_value' class='fnname'>call_value</a>(&amp;self, ctx: &amp;<a class="struct" href="../../ketos/exec/struct.Context.html" title="struct ketos::exec::Context">Context</a>, args: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;mut [</a><a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>, <a class="enum" href="../../ketos/error/enum.Error.html" title="enum ketos::error::Error">Error</a>&gt;</code></span></h4>
+<div class='docblock'><p>Calls the value as a function. <a href="../../ketos/value/trait.ForeignValue.html#method.call_value">Read more</a></p>
+</div><h4 id='method.compare_to_value' class="method"><span id='compare_to_value.v' class='invisible'><code>fn <a href='../../ketos/value/trait.ForeignValue.html#method.compare_to_value' class='fnname'>compare_to_value</a>(&amp;self, rhs: &amp;<a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="enum" href="https://doc.rust-lang.org/nightly/core/cmp/enum.Ordering.html" title="enum core::cmp::Ordering">Ordering</a>, <a class="enum" href="../../ketos/exec/enum.ExecError.html" title="enum ketos::exec::ExecError">ExecError</a>&gt;</code></span></h4>
+<div class='docblock'><p>Performs ordered comparison between two values. <a href="../../ketos/value/trait.ForeignValue.html#method.compare_to_value">Read more</a></p>
+</div><h4 id='method.is_identical_to' class="method"><span id='is_identical_to.v' class='invisible'><code>fn <a href='../../ketos/value/trait.ForeignValue.html#method.is_identical_to' class='fnname'>is_identical_to</a>(&amp;self, rhs: &amp;<a class="trait" href="../../ketos/value/trait.ForeignValue.html" title="trait ketos::value::ForeignValue">ForeignValue</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+<div class='docblock'><p>Returns whether the two values are identical. This concept is the same as equality, except in the case of floating point values, where two <code>NaN</code> values are considered identical. <a href="../../ketos/value/trait.ForeignValue.html#method.is_identical_to">Read more</a></p>
+</div><h4 id='method.is_equal_to' class="method"><span id='is_equal_to.v' class='invisible'><code>fn <a href='../../ketos/value/trait.ForeignValue.html#method.is_equal_to' class='fnname'>is_equal_to</a>(&amp;self, rhs: &amp;<a class="trait" href="../../ketos/value/trait.ForeignValue.html" title="trait ketos::value::ForeignValue">ForeignValue</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>, <a class="enum" href="../../ketos/exec/enum.ExecError.html" title="enum ketos::exec::ExecError">ExecError</a>&gt;</code></span></h4>
+<div class='docblock'><p>Tests for equality between two values of a foreign type. <a href="../../ketos/value/trait.ForeignValue.html#method.is_equal_to">Read more</a></p>
+</div><h4 id='method.is_equal_to_value' class="method"><span id='is_equal_to_value.v' class='invisible'><code>fn <a href='../../ketos/value/trait.ForeignValue.html#method.is_equal_to_value' class='fnname'>is_equal_to_value</a>(&amp;self, rhs: &amp;<a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>, <a class="enum" href="../../ketos/exec/enum.ExecError.html" title="enum ketos::exec::ExecError">ExecError</a>&gt;</code></span></h4>
+<div class='docblock'><p>Tests for equality between two values. <a href="../../ketos/value/trait.ForeignValue.html#method.is_equal_to_value">Read more</a></p>
+</div><h4 id='method.fmt_display' class="method"><span id='fmt_display.v' class='invisible'><code>fn <a href='../../ketos/value/trait.ForeignValue.html#method.fmt_display' class='fnname'>fmt_display</a>(&amp;self, names: &amp;<a class="struct" href="../../ketos/name/struct.NameStore.html" title="struct ketos::name::NameStore">NameStore</a>, f: &amp;mut <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html" title="struct core::fmt::Formatter">Formatter</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/core/fmt/type.Result.html" title="type core::fmt::Result">Result</a></code></span></h4>
+<div class='docblock'><p>Format the value in display mode. <a href="../../ketos/value/trait.ForeignValue.html#method.fmt_display">Read more</a></p>
+</div><h4 id='method.is_type' class="method"><span id='is_type.v' class='invisible'><code>fn <a href='../../ketos/value/trait.ForeignValue.html#method.is_type' class='fnname'>is_type</a>(&amp;self, name: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+<div class='docblock'><p>Returns whether this value is of the named type. <a href="../../ketos/value/trait.ForeignValue.html#method.is_type">Read more</a></p>
+</div><h4 id='method.size' class="method"><span id='size.v' class='invisible'><code>fn <a href='../../ketos/value/trait.ForeignValue.html#method.size' class='fnname'>size</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a></code></span></h4>
+<div class='docblock'><p>Returns an estimate of the memory held by this value. <a href="../../ketos/value/trait.ForeignValue.html#method.size">Read more</a></p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "ketos";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

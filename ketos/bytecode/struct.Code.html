@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Code` struct in crate `ketos`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Code">
+
+    <title>ketos::bytecode::Code - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc struct">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../index.html'>ketos</a>::<wbr><a href='index.html'>bytecode</a></p><script>window.sidebarCurrent = {name: 'Code', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../index.html'>ketos</a>::<wbr><a href='index.html'>bytecode</a>::<wbr><a class="struct" href=''>Code</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/ketos/bytecode.rs.html#721-742' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct Code {
+    pub name: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>&gt;,
+    pub consts: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">[</a><a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>&gt;,
+    pub code: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">[</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>&gt;,
+    pub kw_params: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">[</a><a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>&gt;,
+    pub n_params: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>,
+    pub req_params: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>,
+    pub flags: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>,
+    pub doc: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/collections/string/struct.String.html" title="struct collections::string::String">String</a>&gt;,
+}</pre><div class='docblock'><p>Represents a compiled bytecode function or expression.</p>
+</div><h2 class='fields'>Fields</h2><span id='structfield.name' class="structfield">
+                           <span id='name.v' class='invisible'>
+                           <code>name: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>&gt;</code>
+                           </span></span><div class='docblock'><p>Code object name, if present; top-level expressions and lambda code
+values do not have a name.</p>
+</div><span id='structfield.consts' class="structfield">
+                           <span id='consts.v' class='invisible'>
+                           <code>consts: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">[</a><a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>&gt;</code>
+                           </span></span><div class='docblock'><p>Const values referenced in bytecode</p>
+</div><span id='structfield.code' class="structfield">
+                           <span id='code.v' class='invisible'>
+                           <code>code: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">[</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>&gt;</code>
+                           </span></span><div class='docblock'><p>Function body bytecode</p>
+</div><span id='structfield.kw_params' class="structfield">
+                           <span id='kw_params.v' class='invisible'>
+                           <code>kw_params: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">[</a><a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>&gt;</code>
+                           </span></span><div class='docblock'><p>Names of keyword parameters accepted in the order in which they are
+expected.</p>
+</div><span id='structfield.n_params' class="structfield">
+                           <span id='n_params.v' class='invisible'>
+                           <code>n_params: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a></code>
+                           </span></span><div class='docblock'><p>Number of positional parameters accepted; this includes optional
+parameters, but excludes keyword and rest parameters, if accepted.
+Optional parameter values may be <code>Unbound</code>.</p>
+</div><span id='structfield.req_params' class="structfield">
+                           <span id='req_params.v' class='invisible'>
+                           <code>req_params: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a></code>
+                           </span></span><div class='docblock'><p>Number of positional parameters which must not be <code>Unbound</code>.</p>
+</div><span id='structfield.flags' class="structfield">
+                           <span id='flags.v' class='invisible'>
+                           <code>flags: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a></code>
+                           </span></span><div class='docblock'><p>Miscellaneous flags; see <code>code_flags</code> for bit flag values.</p>
+</div><span id='structfield.doc' class="structfield">
+                           <span id='doc.v' class='invisible'>
+                           <code>doc: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/collections/string/struct.String.html" title="struct collections::string::String">String</a>&gt;</code>
+                           </span></span><div class='docblock'><p>Optional documentation string</p>
+</div><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class="struct" href="../../ketos/bytecode/struct.Code.html" title="struct ketos::bytecode::Code">Code</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/ketos/bytecode.rs.html#744-788' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.arity' class="method"><span id='arity.v' class='invisible'><code>fn <a href='#method.arity' class='fnname'>arity</a>(&amp;self) -&gt; <a class="enum" href="../../ketos/function/enum.Arity.html" title="enum ketos::function::Arity">Arity</a></code></span></h4>
+<div class='docblock'><p>Returns the computed arity of the compiled function.</p>
+</div><h4 id='method.has_rest_params' class="method"><span id='has_rest_params.v' class='invisible'><code>fn <a href='#method.has_rest_params' class='fnname'>has_rest_params</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+<div class='docblock'><p>Returns whether the function accepts a rest parameter.</p>
+</div><h4 id='method.has_kw_params' class="method"><span id='has_kw_params.v' class='invisible'><code>fn <a href='#method.has_kw_params' class='fnname'>has_kw_params</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+<div class='docblock'><p>Returns whether the function accepts one or more keyword parameters.</p>
+</div><h4 id='method.is_trivial' class="method"><span id='is_trivial.v' class='invisible'><code>fn <a href='#method.is_trivial' class='fnname'>is_trivial</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+<div class='docblock'><p>Returns whether all bytecode instructions can be executed without
+side effects.</p>
+
+<p>Such a code object typically results from compilation of compile-time
+operators.</p>
+</div></div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html" title="trait core::clone::Clone">Clone</a> for <a class="struct" href="../../ketos/bytecode/struct.Code.html" title="struct ketos::bytecode::Code">Code</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/ketos/bytecode.rs.html#720' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.clone' class="method"><span id='clone.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone' class='fnname'>clone</a>(&amp;self) -&gt; <a class="struct" href="../../ketos/bytecode/struct.Code.html" title="struct ketos::bytecode::Code">Code</a></code></span></h4>
+<div class='docblock'><p>Returns a copy of the value. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone">Read more</a></p>
+</div><h4 id='method.clone_from' class="method"><span id='clone_from.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from' class='fnname'>clone_from</a>(&amp;mut self, source: &amp;Self)</code><div class='since' title='Stable since Rust version 1.0.0'>1.0.0</div></span></h4>
+<div class='docblock'><p>Performs copy-assignment from <code>source</code>. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from">Read more</a></p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html" title="trait core::fmt::Debug">Debug</a> for <a class="struct" href="../../ketos/bytecode/struct.Code.html" title="struct ketos::bytecode::Code">Code</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/ketos/bytecode.rs.html#720' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt' class="method"><span id='fmt.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, __arg_0: &amp;mut <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html" title="struct core::fmt::Formatter">Formatter</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/core/fmt/type.Result.html" title="type core::fmt::Result">Result</a></code></span></h4>
+<div class='docblock'><p>Formats the value using the given formatter.</p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "ketos";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

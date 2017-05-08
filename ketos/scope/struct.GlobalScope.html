@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `GlobalScope` struct in crate `ketos`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, GlobalScope">
+
+    <title>ketos::scope::GlobalScope - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc struct">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../index.html'>ketos</a>::<wbr><a href='index.html'>scope</a></p><script>window.sidebarCurrent = {name: 'GlobalScope', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../index.html'>ketos</a>::<wbr><a href='index.html'>scope</a>::<wbr><a class="struct" href=''>GlobalScope</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/ketos/scope.rs.html#16-23' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct GlobalScope { /* fields omitted */ }</pre><div class='docblock'><p>Represents the global namespace of an execution context.</p>
+</div><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class="struct" href="../../ketos/scope/struct.GlobalScope.html" title="struct ketos::scope::GlobalScope">GlobalScope</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/ketos/scope.rs.html#69-390' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.new' class="method"><span id='new.v' class='invisible'><code>fn <a href='#method.new' class='fnname'>new</a>(name: <a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; names: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/rc/struct.Rc.html" title="struct alloc::rc::Rc">Rc</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/core/cell/struct.RefCell.html" title="struct core::cell::RefCell">RefCell</a>&lt;<a class="struct" href="../../ketos/name/struct.NameStore.html" title="struct ketos::name::NameStore">NameStore</a>&gt;&gt;,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; codemap: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/rc/struct.Rc.html" title="struct alloc::rc::Rc">Rc</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/core/cell/struct.RefCell.html" title="struct core::cell::RefCell">RefCell</a>&lt;<a class="struct" href="../../ketos/lexer/struct.CodeMap.html" title="struct ketos::lexer::CodeMap">CodeMap</a>&gt;&gt;,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; registry: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/rc/struct.Rc.html" title="struct alloc::rc::Rc">Rc</a>&lt;<a class="struct" href="../../ketos/module/struct.ModuleRegistry.html" title="struct ketos::module::ModuleRegistry">ModuleRegistry</a>&gt;,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; io: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/rc/struct.Rc.html" title="struct alloc::rc::Rc">Rc</a>&lt;<a class="struct" href="../../ketos/io/struct.GlobalIo.html" title="struct ketos::io::GlobalIo">GlobalIo</a>&gt;)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -&gt; <a class="struct" href="../../ketos/scope/struct.GlobalScope.html" title="struct ketos::scope::GlobalScope">GlobalScope</a></code></span></h4>
+<div class='docblock'><p>Creates a new global scope.</p>
+</div><h4 id='method.default' class="method"><span id='default.v' class='invisible'><code>fn <a href='#method.default' class='fnname'>default</a>(name: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="struct" href="../../ketos/scope/struct.GlobalScope.html" title="struct ketos::scope::GlobalScope">GlobalScope</a></code></span></h4>
+<div class='docblock'><p>Creates a new global scope with the given name and default environment.</p>
+</div><h4 id='method.new_using' class="method"><span id='new_using.v' class='invisible'><code>fn <a href='#method.new_using' class='fnname'>new_using</a>(name: <a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>, scope: &amp;<a class="type" href="../../ketos/scope/type.Scope.html" title="type ketos::scope::Scope">Scope</a>) -&gt; <a class="type" href="../../ketos/scope/type.Scope.html" title="type ketos::scope::Scope">Scope</a></code></span></h4>
+<div class='docblock'><p>Creates a new global scope using the shared data from the given scope.</p>
+</div><h4 id='method.clone_scope' class="method"><span id='clone_scope.v' class='invisible'><code>fn <a href='#method.clone_scope' class='fnname'>clone_scope</a>(&amp;self) -&gt; <a class="type" href="../../ketos/scope/type.Scope.html" title="type ketos::scope::Scope">Scope</a></code></span></h4>
+<div class='docblock'><p>Creates a semi-&quot;deep&quot; clone of the <code>GlobalScope</code> object.</p>
+
+<p>All constants, macros, and values will be cloned into the new scope.</p>
+
+<p>Other data will be shared between this scope and the new scope.</p>
+</div><h4 id='method.add_constant' class="method"><span id='add_constant.v' class='invisible'><code>fn <a href='#method.add_constant' class='fnname'>add_constant</a>(&amp;self, name: <a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>, value: <a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>)</code></span></h4>
+<div class='docblock'><p>Adds a named constant value to the scope.</p>
+</div><h4 id='method.add_doc_string' class="method"><span id='add_doc_string.v' class='invisible'><code>fn <a href='#method.add_doc_string' class='fnname'>add_doc_string</a>(&amp;self, name: <a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>, doc: <a class="struct" href="https://doc.rust-lang.org/nightly/collections/string/struct.String.html" title="struct collections::string::String">String</a>)</code></span></h4>
+<div class='docblock'><p>Adds a docstring for the named constant or value.</p>
+</div><h4 id='method.add_macro' class="method"><span id='add_macro.v' class='invisible'><code>fn <a href='#method.add_macro' class='fnname'>add_macro</a>(&amp;self, name: <a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>, lambda: <a class="struct" href="../../ketos/function/struct.Lambda.html" title="struct ketos::function::Lambda">Lambda</a>)</code></span></h4>
+<div class='docblock'><p>Adds a macro function to the global scope.</p>
+</div><h4 id='method.add_name' class="method"><span id='add_name.v' class='invisible'><code>fn <a href='#method.add_name' class='fnname'>add_name</a>(&amp;self, name: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a></code></span></h4>
+<div class='docblock'><p>Adds a string representation to the contained <code>NameStore</code>.</p>
+</div><h4 id='method.add_imports' class="method"><span id='add_imports.v' class='invisible'><code>fn <a href='#method.add_imports' class='fnname'>add_imports</a>(&amp;self, imports: <a class="struct" href="../../ketos/scope/struct.ImportSet.html" title="struct ketos::scope::ImportSet">ImportSet</a>)</code></span></h4>
+<div class='docblock'><p>Adds a set of imports to the given scope.</p>
+</div><h4 id='method.add_value' class="method"><span id='add_value.v' class='invisible'><code>fn <a href='#method.add_value' class='fnname'>add_value</a>(&amp;self, name: <a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>, value: <a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>)</code></span></h4>
+<div class='docblock'><p>Adds a value to the global scope.</p>
+</div><h4 id='method.add_named_value' class="method"><span id='add_named_value.v' class='invisible'><code>fn <a href='#method.add_named_value' class='fnname'>add_named_value</a>(&amp;self, name: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>, value: <a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>)</code></span></h4>
+<div class='docblock'><p>Adds a value with the given name to the global scope.</p>
+</div><h4 id='method.add_value_with_name' class="method"><span id='add_value_with_name.v' class='invisible'><code>fn <a href='#method.add_value_with_name' class='fnname'>add_value_with_name</a>&lt;F&gt;(&amp;self, name: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>, f: F) <span class="where fmt-newline">where F: <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/trait.FnOnce.html" title="trait core::ops::FnOnce">FnOnce</a>(<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>) -&gt; <a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a></span></code></span></h4>
+<div class='docblock'><p>Adds a value to the global scope. The <code>Name</code> value for the given
+string representation is passed to the given closure to create the value.</p>
+</div><h4 id='method.borrow_codemap' class="method"><span id='borrow_codemap.v' class='invisible'><code>fn <a href='#method.borrow_codemap' class='fnname'>borrow_codemap</a>(&amp;self) -&gt; <a class="struct" href="https://doc.rust-lang.org/nightly/core/cell/struct.Ref.html" title="struct core::cell::Ref">Ref</a>&lt;<a class="struct" href="../../ketos/lexer/struct.CodeMap.html" title="struct ketos::lexer::CodeMap">CodeMap</a>&gt;</code></span></h4>
+<div class='docblock'><p>Borrows a reference to the contained <code>CodeMap</code>.</p>
+</div><h4 id='method.borrow_codemap_mut' class="method"><span id='borrow_codemap_mut.v' class='invisible'><code>fn <a href='#method.borrow_codemap_mut' class='fnname'>borrow_codemap_mut</a>(&amp;self) -&gt; <a class="struct" href="https://doc.rust-lang.org/nightly/core/cell/struct.RefMut.html" title="struct core::cell::RefMut">RefMut</a>&lt;<a class="struct" href="../../ketos/lexer/struct.CodeMap.html" title="struct ketos::lexer::CodeMap">CodeMap</a>&gt;</code></span></h4>
+<div class='docblock'><p>Borrows a mutable reference to the contained <code>CodeMap</code>.</p>
+</div><h4 id='method.borrow_names' class="method"><span id='borrow_names.v' class='invisible'><code>fn <a href='#method.borrow_names' class='fnname'>borrow_names</a>(&amp;self) -&gt; <a class="struct" href="https://doc.rust-lang.org/nightly/core/cell/struct.Ref.html" title="struct core::cell::Ref">Ref</a>&lt;<a class="struct" href="../../ketos/name/struct.NameStore.html" title="struct ketos::name::NameStore">NameStore</a>&gt;</code></span></h4>
+<div class='docblock'><p>Borrows a reference to the contained <code>NameStore</code>.</p>
+</div><h4 id='method.borrow_names_mut' class="method"><span id='borrow_names_mut.v' class='invisible'><code>fn <a href='#method.borrow_names_mut' class='fnname'>borrow_names_mut</a>(&amp;self) -&gt; <a class="struct" href="https://doc.rust-lang.org/nightly/core/cell/struct.RefMut.html" title="struct core::cell::RefMut">RefMut</a>&lt;<a class="struct" href="../../ketos/name/struct.NameStore.html" title="struct ketos::name::NameStore">NameStore</a>&gt;</code></span></h4>
+<div class='docblock'><p>Borrows a mutable reference to the contained <code>NameStore</code>.</p>
+</div><h4 id='method.num_constants' class="method"><span id='num_constants.v' class='invisible'><code>fn <a href='#method.num_constants' class='fnname'>num_constants</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a></code></span></h4>
+<div class='docblock'><p>Returns the number of contained constants.</p>
+</div><h4 id='method.num_macros' class="method"><span id='num_macros.v' class='invisible'><code>fn <a href='#method.num_macros' class='fnname'>num_macros</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a></code></span></h4>
+<div class='docblock'><p>Returns the number of contained macros.</p>
+</div><h4 id='method.num_values' class="method"><span id='num_values.v' class='invisible'><code>fn <a href='#method.num_values' class='fnname'>num_values</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a></code></span></h4>
+<div class='docblock'><p>Returns the number of contained values.</p>
+</div><h4 id='method.codemap' class="method"><span id='codemap.v' class='invisible'><code>fn <a href='#method.codemap' class='fnname'>codemap</a>(&amp;self) -&gt; &amp;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/rc/struct.Rc.html" title="struct alloc::rc::Rc">Rc</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/core/cell/struct.RefCell.html" title="struct core::cell::RefCell">RefCell</a>&lt;<a class="struct" href="../../ketos/lexer/struct.CodeMap.html" title="struct ketos::lexer::CodeMap">CodeMap</a>&gt;&gt;</code></span></h4>
+<div class='docblock'><p>Returns a borrowed reference to the contained <code>CodeMap</code>.</p>
+</div><h4 id='method.get_constant' class="method"><span id='get_constant.v' class='invisible'><code>fn <a href='#method.get_constant' class='fnname'>get_constant</a>(&amp;self, name: <a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>&gt;</code></span></h4>
+<div class='docblock'><p>Returns a named constant value, if present.</p>
+</div><h4 id='method.get_named_constant' class="method"><span id='get_named_constant.v' class='invisible'><code>fn <a href='#method.get_named_constant' class='fnname'>get_named_constant</a>(&amp;self, name: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>&gt;</code></span></h4>
+<div class='docblock'><p>Returns a named constant value, if present.</p>
+</div><h4 id='method.io' class="method"><span id='io.v' class='invisible'><code>fn <a href='#method.io' class='fnname'>io</a>(&amp;self) -&gt; &amp;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/rc/struct.Rc.html" title="struct alloc::rc::Rc">Rc</a>&lt;<a class="struct" href="../../ketos/io/struct.GlobalIo.html" title="struct ketos::io::GlobalIo">GlobalIo</a>&gt;</code></span></h4>
+<div class='docblock'><p>Returns a borrowed reference to the contained <code>GlobalIo</code>.</p>
+</div><h4 id='method.modules' class="method"><span id='modules.v' class='invisible'><code>fn <a href='#method.modules' class='fnname'>modules</a>(&amp;self) -&gt; &amp;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/rc/struct.Rc.html" title="struct alloc::rc::Rc">Rc</a>&lt;<a class="struct" href="../../ketos/module/struct.ModuleRegistry.html" title="struct ketos::module::ModuleRegistry">ModuleRegistry</a>&gt;</code></span></h4>
+<div class='docblock'><p>Returns a borrowed reference to the contained <code>ModuleRegistry</code>.</p>
+</div><h4 id='method.name' class="method"><span id='name.v' class='invisible'><code>fn <a href='#method.name' class='fnname'>name</a>(&amp;self) -&gt; <a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a></code></span></h4>
+<div class='docblock'><p>Returns the scope&#39;s name.</p>
+</div><h4 id='method.names' class="method"><span id='names.v' class='invisible'><code>fn <a href='#method.names' class='fnname'>names</a>(&amp;self) -&gt; &amp;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/rc/struct.Rc.html" title="struct alloc::rc::Rc">Rc</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/core/cell/struct.RefCell.html" title="struct core::cell::RefCell">RefCell</a>&lt;<a class="struct" href="../../ketos/name/struct.NameStore.html" title="struct ketos::name::NameStore">NameStore</a>&gt;&gt;</code></span></h4>
+<div class='docblock'><p>Returns a borrowed reference to the contained <code>NameStore</code>.</p>
+</div><h4 id='method.contains_name' class="method"><span id='contains_name.v' class='invisible'><code>fn <a href='#method.contains_name' class='fnname'>contains_name</a>(&amp;self, name: <a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+<div class='docblock'><p>Returns whether the scope contains a given exportable name.</p>
+</div><h4 id='method.contains_constant' class="method"><span id='contains_constant.v' class='invisible'><code>fn <a href='#method.contains_constant' class='fnname'>contains_constant</a>(&amp;self, name: <a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+<div class='docblock'><p>Returns whether the scope contains a constant for the given name.</p>
+</div><h4 id='method.contains_macro' class="method"><span id='contains_macro.v' class='invisible'><code>fn <a href='#method.contains_macro' class='fnname'>contains_macro</a>(&amp;self, name: <a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+<div class='docblock'><p>Returns whether the scope contains a macro for the given name.</p>
+</div><h4 id='method.contains_value' class="method"><span id='contains_value.v' class='invisible'><code>fn <a href='#method.contains_value' class='fnname'>contains_value</a>(&amp;self, name: <a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+<div class='docblock'><p>Returns whether the scope contains a value for the given name.</p>
+</div><h4 id='method.get_macro' class="method"><span id='get_macro.v' class='invisible'><code>fn <a href='#method.get_macro' class='fnname'>get_macro</a>(&amp;self, name: <a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="../../ketos/function/struct.Lambda.html" title="struct ketos::function::Lambda">Lambda</a>&gt;</code></span></h4>
+<div class='docblock'><p>Returns a macro function for the given name, if present.</p>
+</div><h4 id='method.get_named_macro' class="method"><span id='get_named_macro.v' class='invisible'><code>fn <a href='#method.get_named_macro' class='fnname'>get_named_macro</a>(&amp;self, name: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="../../ketos/function/struct.Lambda.html" title="struct ketos::function::Lambda">Lambda</a>&gt;</code></span></h4>
+<div class='docblock'><p>Returns a macro function for the given name, if present.</p>
+</div><h4 id='method.get_named_value' class="method"><span id='get_named_value.v' class='invisible'><code>fn <a href='#method.get_named_value' class='fnname'>get_named_value</a>(&amp;self, name: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>&gt;</code></span></h4>
+<div class='docblock'><p>Returns a <code>Value</code> for the given name, if present.</p>
+</div><h4 id='method.get_value' class="method"><span id='get_value.v' class='invisible'><code>fn <a href='#method.get_value' class='fnname'>get_value</a>(&amp;self, name: <a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>&gt;</code></span></h4>
+<div class='docblock'><p>Returns a <code>Value</code> for the given name, if present.</p>
+</div><h4 id='method.import_all' class="method"><span id='import_all.v' class='invisible'><code>fn <a href='#method.import_all' class='fnname'>import_all</a>(&amp;self, other: &amp;<a class="struct" href="../../ketos/scope/struct.GlobalScope.html" title="struct ketos::scope::GlobalScope">GlobalScope</a>) -&gt; <a class="struct" href="https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html" title="struct collections::vec::Vec">Vec</a>&lt;<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>&gt;</code></span></h4>
+<div class='docblock'><p>Clones all exported values from a scope into this scope.</p>
+</div><h4 id='method.is_exported' class="method"><span id='is_exported.v' class='invisible'><code>fn <a href='#method.is_exported' class='fnname'>is_exported</a>(&amp;self, name: <a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+<div class='docblock'><p>Returns whether the given name has been exported in this scope.</p>
+</div><h4 id='method.is_imported' class="method"><span id='is_imported.v' class='invisible'><code>fn <a href='#method.is_imported' class='fnname'>is_imported</a>(&amp;self, name: <a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+<div class='docblock'><p>Returns whether the given name is imported from another module.</p>
+</div><h4 id='method.set_exports' class="method"><span id='set_exports.v' class='invisible'><code>fn <a href='#method.set_exports' class='fnname'>set_exports</a>(&amp;self, names: <a class="struct" href="../../ketos/name/struct.NameSetSlice.html" title="struct ketos::name::NameSetSlice">NameSetSlice</a>)</code></span></h4>
+<div class='docblock'><p>Assigns a set of exported names for this scope.</p>
+</div><h4 id='method.with_doc' class="method"><span id='with_doc.v' class='invisible'><code>fn <a href='#method.with_doc' class='fnname'>with_doc</a>&lt;F, R&gt;(&amp;self, name: <a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>, f: F) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;R&gt; <span class="where fmt-newline">where F: <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/trait.FnOnce.html" title="trait core::ops::FnOnce">FnOnce</a>(&amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; R</span></code></span></h4>
+<div class='docblock'><p>Calls a closure with a borrowed reference to the named documentation,
+if present.</p>
+
+<h1 id='note' class='section-header'><a href='#note'>Note</a></h1>
+<p>When a function is declared with a docstring, that docstring is stored
+in the compiled <code>Code</code> object rather than the <code>GlobalScope</code>.</p>
+</div><h4 id='method.with_docs' class="method"><span id='with_docs.v' class='invisible'><code>fn <a href='#method.with_docs' class='fnname'>with_docs</a>&lt;F, R&gt;(&amp;self, f: F) -&gt; R <span class="where fmt-newline">where F: <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/trait.FnOnce.html" title="trait core::ops::FnOnce">FnOnce</a>(&amp;<a class="struct" href="../../ketos/name/struct.NameMap.html" title="struct ketos::name::NameMap">NameMap</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/collections/string/struct.String.html" title="struct collections::string::String">String</a>&gt;) -&gt; R</span></code></span></h4>
+<div class='docblock'><p>Calls a closure with a borrowed reference to the contained docstrings.</p>
+</div><h4 id='method.with_docs_mut' class="method"><span id='with_docs_mut.v' class='invisible'><code>fn <a href='#method.with_docs_mut' class='fnname'>with_docs_mut</a>&lt;F, R&gt;(&amp;self, f: F) -&gt; R <span class="where fmt-newline">where F: <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/trait.FnOnce.html" title="trait core::ops::FnOnce">FnOnce</a>(&amp;mut <a class="struct" href="../../ketos/name/struct.NameMap.html" title="struct ketos::name::NameMap">NameMap</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/collections/string/struct.String.html" title="struct collections::string::String">String</a>&gt;) -&gt; R</span></code></span></h4>
+<div class='docblock'><p>Calls a closure with a mutable reference to the contained docstrings.</p>
+</div><h4 id='method.with_module_doc' class="method"><span id='with_module_doc.v' class='invisible'><code>fn <a href='#method.with_module_doc' class='fnname'>with_module_doc</a>&lt;F, R&gt;(&amp;self, f: F) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;R&gt; <span class="where fmt-newline">where F: <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/trait.FnOnce.html" title="trait core::ops::FnOnce">FnOnce</a>(&amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; R</span></code></span></h4>
+<div class='docblock'><p>Calls a closure with an optional reference to the module docstring.</p>
+</div><h4 id='method.with_module_doc_mut' class="method"><span id='with_module_doc_mut.v' class='invisible'><code>fn <a href='#method.with_module_doc_mut' class='fnname'>with_module_doc_mut</a>&lt;F, R&gt;(&amp;self, f: F) -&gt; R <span class="where fmt-newline">where F: <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/trait.FnOnce.html" title="trait core::ops::FnOnce">FnOnce</a>(&amp;mut <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/collections/string/struct.String.html" title="struct collections::string::String">String</a>&gt;) -&gt; R</span></code></span></h4>
+<div class='docblock'><p>Calls a closure with a mutable reference to the module docstring.</p>
+</div><h4 id='method.with_name' class="method"><span id='with_name.v' class='invisible'><code>fn <a href='#method.with_name' class='fnname'>with_name</a>&lt;F, R&gt;(&amp;self, name: <a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>, f: F) -&gt; R <span class="where fmt-newline">where F: <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/trait.FnOnce.html" title="trait core::ops::FnOnce">FnOnce</a>(&amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; R</span></code></span></h4>
+<div class='docblock'><p>Calls a closure with the borrowed string representation of a name.</p>
+</div><h4 id='method.with_exports' class="method"><span id='with_exports.v' class='invisible'><code>fn <a href='#method.with_exports' class='fnname'>with_exports</a>&lt;F, R&gt;(&amp;self, f: F) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;R&gt; <span class="where fmt-newline">where F: <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/trait.FnOnce.html" title="trait core::ops::FnOnce">FnOnce</a>(&amp;<a class="struct" href="../../ketos/name/struct.NameSetSlice.html" title="struct ketos::name::NameSetSlice">NameSetSlice</a>) -&gt; R</span></code></span></h4>
+<div class='docblock'><p>Calls a closure with the set of exported names.</p>
+</div><h4 id='method.with_imports' class="method"><span id='with_imports.v' class='invisible'><code>fn <a href='#method.with_imports' class='fnname'>with_imports</a>&lt;F, R&gt;(&amp;self, f: F) -&gt; R <span class="where fmt-newline">where F: <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/trait.FnOnce.html" title="trait core::ops::FnOnce">FnOnce</a>(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[</a><a class="struct" href="../../ketos/scope/struct.ImportSet.html" title="struct ketos::scope::ImportSet">ImportSet</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>) -&gt; R</span></code></span></h4>
+<div class='docblock'><p>Calls a closure with the set of imported values.</p>
+</div><h4 id='method.with_constants' class="method"><span id='with_constants.v' class='invisible'><code>fn <a href='#method.with_constants' class='fnname'>with_constants</a>&lt;F, R&gt;(&amp;self, f: F) -&gt; R <span class="where fmt-newline">where F: <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/trait.FnOnce.html" title="trait core::ops::FnOnce">FnOnce</a>(&amp;<a class="struct" href="../../ketos/name/struct.NameMap.html" title="struct ketos::name::NameMap">NameMap</a>&lt;<a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>&gt;) -&gt; R</span></code></span></h4>
+<div class='docblock'><p>Calls a closure with the set of defined constants.</p>
+</div><h4 id='method.with_macros' class="method"><span id='with_macros.v' class='invisible'><code>fn <a href='#method.with_macros' class='fnname'>with_macros</a>&lt;F, R&gt;(&amp;self, f: F) -&gt; R <span class="where fmt-newline">where F: <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/trait.FnOnce.html" title="trait core::ops::FnOnce">FnOnce</a>(&amp;<a class="struct" href="../../ketos/name/struct.NameMap.html" title="struct ketos::name::NameMap">NameMap</a>&lt;<a class="struct" href="../../ketos/function/struct.Lambda.html" title="struct ketos::function::Lambda">Lambda</a>&gt;) -&gt; R</span></code></span></h4>
+<div class='docblock'><p>Calls a closure with the set of defined macros.</p>
+</div><h4 id='method.with_values' class="method"><span id='with_values.v' class='invisible'><code>fn <a href='#method.with_values' class='fnname'>with_values</a>&lt;F, R&gt;(&amp;self, f: F) -&gt; R <span class="where fmt-newline">where F: <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/trait.FnOnce.html" title="trait core::ops::FnOnce">FnOnce</a>(&amp;<a class="struct" href="../../ketos/name/struct.NameMap.html" title="struct ketos::name::NameMap">NameMap</a>&lt;<a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>&gt;) -&gt; R</span></code></span></h4>
+<div class='docblock'><p>Calls a closure with the set of defined values.</p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "ketos";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

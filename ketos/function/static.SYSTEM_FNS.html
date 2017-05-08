@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `SYSTEM_FNS` static in crate `ketos`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, SYSTEM_FNS">
+
+    <title>ketos::function::SYSTEM_FNS - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc static">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../index.html'>ketos</a>::<wbr><a href='index.html'>function</a></p><script>window.sidebarCurrent = {name: 'SYSTEM_FNS', ty: 'static', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Static <a href='../index.html'>ketos</a>::<wbr><a href='index.html'>function</a>::<wbr><a class="static" href=''>SYSTEM_FNS</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/ketos/function.rs.html#59-247' title='goto source code'>[src]</a></span></h1>
+<pre class='rust static'>pub static SYSTEM_FNS: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.array.html">[</a><a class="struct" href="../../ketos/function/struct.SystemFn.html" title="struct ketos::function::SystemFn">SystemFn</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.array.html">; 65]</a><code> = </code><code>[SystemFn{arity: Min(0),
+          callback: fn_add,
+          doc:
+              Some(&quot;Returns the sum of all arguments.\n\nGiven no arguments, returns the additive identity, `0`.&quot;),},
+ SystemFn{arity: Min(1),
+          callback: fn_sub,
+          doc:
+              Some(&quot;Returns the cumulative difference between successive arguments.&quot;),},
+ SystemFn{arity: Min(0),
+          callback: fn_mul,
+          doc:
+              Some(&quot;Returns the product of all arguments.\n\nGiven no arguments, returns the multiplicative identity, `1`.&quot;),},
+ SystemFn{arity: Exact(2),
+          callback: fn_pow,
+          doc: Some(&quot;Returns a base value raised to an exponent.&quot;),},
+ SystemFn{arity: Min(1),
+          callback: fn_div,
+          doc:
+              Some(&quot;Returns the cumulative quotient of successive arguments.&quot;),},
+ SystemFn{arity: Min(1),
+          callback: fn_floor_div,
+          doc:
+              Some(&quot;Returns the cumulative quotient of successive arguments,\nrounded toward negative infinity.&quot;),},
+ SystemFn{arity: Exact(2),
+          callback: fn_rem,
+          doc: Some(&quot;Returns the remainder of two arguments.&quot;),},
+ SystemFn{arity: Exact(2),
+          callback: fn_shl,
+          doc:
+              Some(&quot;Returns an integer, bit shifted left by a given number.&quot;),},
+ SystemFn{arity: Exact(2),
+          callback: fn_shr,
+          doc:
+              Some(&quot;Returns an integer, bit shifted right by a given number.&quot;),},
+ SystemFn{arity: Min(2),
+          callback: fn_eq,
+          doc:
+              Some(&quot;Returns whether the given arguments compare equal to one another.\n\nValues of different types may not be compared. Attempts to do so will\nresult in an error.&quot;),},
+ SystemFn{arity: Min(2),
+          callback: fn_ne,
+          doc:
+              Some(&quot;Returns whether each given argument differs in value from each other argument.\n\nValues of different types may not be compared. Attempts to do so will\nresult in an error.&quot;),},
+ SystemFn{arity: Min(2),
+          callback: fn_weak_eq,
+          doc:
+              Some(&quot;Returns whether the given arguments compare equal to one another.\n\nComparing values of different types will yield `false`.&quot;),},
+ SystemFn{arity: Min(2),
+          callback: fn_weak_ne,
+          doc:
+              Some(&quot;Returns whether the given arguments compare not equal to one another.\n\nComparing values of different types will yield `true`.&quot;),},
+ SystemFn{arity: Min(2),
+          callback: fn_lt,
+          doc:
+              Some(&quot;Returns whether each argument compares less than each successive argument.\n\nValues of different types may not be compared. Attempts to do so will\nresult in an error.&quot;),},
+ SystemFn{arity: Min(2),
+          callback: fn_gt,
+          doc:
+              Some(&quot;Returns whether each argument compares greater than each successive argument.\n\nValues of different types may not be compared. Attempts to do so will\nresult in an error.&quot;),},
+ SystemFn{arity: Min(2),
+          callback: fn_le,
+          doc:
+              Some(&quot;Returns whether each argument compares less than or equal to each\nsuccessive argument.\n\nValues of different types may not be compared. Attempts to do so will\nresult in an error.&quot;),},
+ SystemFn{arity: Min(2),
+          callback: fn_ge,
+          doc:
+              Some(&quot;Returns whether each argument compares greater than or equal to each\nsuccessive argument.\n\nValues of different types may not be compared. Attempts to do so will\nresult in an error.&quot;),},
+ SystemFn{arity: Min(1),
+          callback: fn_zero,
+          doc: Some(&quot;Returns whether all given values are equal to zero.&quot;),},
+ SystemFn{arity: Min(1),
+          callback: fn_max,
+          doc: Some(&quot;Returns the greatest value of given arguments.&quot;),},
+ SystemFn{arity: Min(1),
+          callback: fn_min,
+          doc: Some(&quot;Returns the least value of given arguments.&quot;),},
+ SystemFn{arity: Min(1),
+          callback: fn_append,
+          doc: Some(&quot;Append a series of elements to a given list.&quot;),},
+ SystemFn{arity: Exact(2),
+          callback: fn_elt,
+          doc:
+              Some(&quot;Returns an element from a sequence, starting at zero index.&quot;),},
+ SystemFn{arity: Min(1),
+          callback: fn_concat,
+          doc: Some(&quot;Concatenates a series of sequences.&quot;),},
+ SystemFn{arity: Min(1),
+          callback: fn_join,
+          doc:
+              Some(&quot;Joins a series of lists or strings and chars using a separator value.&quot;),},
+ SystemFn{arity: Exact(1),
+          callback: fn_len,
+          doc:
+              Some(&quot;Returns the length of the given sequence.\n\nString length is in bytes rather than characters.&quot;),},
+ SystemFn{arity: Range(2, 3),
+          callback: fn_slice,
+          doc: Some(&quot;Returns a subsequence of a list or string.&quot;),},
+ SystemFn{arity: Exact(1),
+          callback: fn_first,
+          doc:
+              Some(&quot;Returns the first element of the given list or string.&quot;),},
+ SystemFn{arity: Exact(1),
+          callback: fn_second,
+          doc: Some(&quot;Returns the second element of the given list.&quot;),},
+ SystemFn{arity: Exact(1),
+          callback: fn_last,
+          doc:
+              Some(&quot;Returns the last element of the given list or string.&quot;),},
+ SystemFn{arity: Exact(1),
+          callback: fn_init,
+          doc:
+              Some(&quot;Returns all but the last element of the given list or string.&quot;),},
+ SystemFn{arity: Exact(1),
+          callback: fn_tail,
+          doc:
+              Some(&quot;Returns all but the first element of the given list or string.&quot;),},
+ SystemFn{arity: Min(0),
+          callback: fn_list,
+          doc:
+              Some(&quot;Returns a list of values. In contrast with the `\&#39;(a b c ...)` list\nconstruction syntax, this function will evaluate each of its arguments.&quot;),},
+ SystemFn{arity: Exact(1),
+          callback: fn_reverse,
+          doc: Some(&quot;Returns a list in reverse order.&quot;),},
+ SystemFn{arity: Exact(1),
+          callback: fn_abs,
+          doc:
+              Some(&quot;Returns the absolute value of the given numerical value.&quot;),},
+ SystemFn{arity: Exact(1),
+          callback: fn_ceil,
+          doc:
+              Some(&quot;Returns a number value rounded toward positive infinity.&quot;),},
+ SystemFn{arity: Exact(1),
+          callback: fn_floor,
+          doc:
+              Some(&quot;Returns a number value rounded toward negative infinity.&quot;),},
+ SystemFn{arity: Exact(1),
+          callback: fn_round,
+          doc:
+              Some(&quot;Returns a number rounded to the nearest integer.\nRounds half-way cases away from zero.&quot;),},
+ SystemFn{arity: Exact(1),
+          callback: fn_trunc,
+          doc: Some(&quot;Returns a number rounded toward zero.&quot;),},
+ SystemFn{arity: Exact(1),
+          callback: fn_int,
+          doc:
+              Some(&quot;Truncates a float or ratio value and returns its whole portion as an integer.\n\nIf the given value is infinite or `NaN`, an error will result.&quot;),},
+ SystemFn{arity: Exact(1),
+          callback: fn_float,
+          doc: Some(&quot;Returns the given value as a floating point value.&quot;),},
+ SystemFn{arity: Min(0),
+          callback: fn_inf,
+          doc:
+              Some(&quot;Returns whether all given arguments are equal to positive or negative infinity.\n\nGiven no arguments, returns the value of positive infinity.&quot;),},
+ SystemFn{arity: Min(0),
+          callback: fn_nan,
+          doc:
+              Some(&quot;Returns whether all given arguments are equal to `NaN`.\n\nGiven no arguments, returns the value of `NaN`.&quot;),},
+ SystemFn{arity: Exact(1),
+          callback: fn_denom,
+          doc: Some(&quot;Returns the denominator of a ratio.&quot;),},
+ SystemFn{arity: Exact(1),
+          callback: fn_fract,
+          doc: Some(&quot;Returns the fractional portion of a float or ratio.&quot;),},
+ SystemFn{arity: Exact(1),
+          callback: fn_numer,
+          doc: Some(&quot;Returns the numerator of a ratio.&quot;),},
+ SystemFn{arity: Range(1, 2),
+          callback: fn_rat,
+          doc: Some(&quot;Returns the given numerical value as a ratio.&quot;),},
+ SystemFn{arity: Exact(1),
+          callback: fn_recip,
+          doc:
+              Some(&quot;Returns the reciprocal of the given numeric value.\n\nIf the value is of type integer, the value returned will be a ratio.&quot;),},
+ SystemFn{arity: Exact(1),
+          callback: fn_chars,
+          doc:
+              Some(&quot;Returns a string transformed into a list of characters.&quot;),},
+ SystemFn{arity: Exact(1),
+          callback: fn_string,
+          doc: Some(&quot;Returns an argument converted into a string.&quot;),},
+ SystemFn{arity: Exact(1),
+          callback: fn_path,
+          doc: Some(&quot;Returns an argument converted into a path.&quot;),},
+ SystemFn{arity: Exact(1),
+          callback: fn_bytes,
+          doc: Some(&quot;Returns an argument converted into a byte string.&quot;),},
+ SystemFn{arity: Exact(1),
+          callback: fn_id,
+          doc:
+              Some(&quot;Returns the unmodified value of the argument received.&quot;),},
+ SystemFn{arity: Exact(2),
+          callback: fn_is,
+          doc:
+              Some(&quot;    (is type value)\n\nReturns whether a given expression matches the named type.\n\n`is` also accepts `\&#39;number` as a type name, which matches `integer`, `float`,\nand `ratio` type values.&quot;),},
+ SystemFn{arity: Exact(2),
+          callback: fn_is_instance,
+          doc:
+              Some(&quot;    (is-instance def value)\n\nReturns whether a given struct value is an instance of\nthe named struct definition.&quot;),},
+ SystemFn{arity: Exact(1),
+          callback: fn_null,
+          doc: Some(&quot;Returns whether the given value is unit, `()`.&quot;),},
+ SystemFn{arity: Exact(1),
+          callback: fn_type_of,
+          doc:
+              Some(&quot;Returns a name representing the type of the given value.&quot;),},
+ SystemFn{arity: Exact(2),
+          callback: fn_dot,
+          doc:
+              Some(&quot;    (. value field-name)\n\nAccesses a field from a struct value.&quot;),},
+ SystemFn{arity: Min(1),
+          callback: fn_dot_eq,
+          doc:
+              Some(&quot;    (.= struct :field value)\n\nReturns a new struct value with named fields replaced with new values.&quot;),},
+ SystemFn{arity: Min(1),
+          callback: fn_new,
+          doc:
+              Some(&quot;    (new struct-def :field value)\n\nCreates a struct value.&quot;),},
+ SystemFn{arity: Min(1),
+          callback: fn_format,
+          doc: Some(&quot;Returns a formatted string.&quot;),},
+ SystemFn{arity: Min(1),
+          callback: fn_print,
+          doc: Some(&quot;Prints a formatted string to `stdout`.&quot;),},
+ SystemFn{arity: Min(1),
+          callback: fn_println,
+          doc:
+              Some(&quot;Prints a formatted string to `stdout`, followed by a newline.&quot;),},
+ SystemFn{arity: Range(0, 1),
+          callback: fn_panic,
+          doc:
+              Some(&quot;Immediately interrupts execution upon evaluation.\n\nIt accepts an optional parameter describing the reason for the panic.&quot;),},
+ SystemFn{arity: Exact(2),
+          callback: fn_xor,
+          doc:
+              Some(&quot;Returns the exclusive-or of the given boolean values.&quot;),},
+ SystemFn{arity: Exact(1),
+          callback: fn_not,
+          doc: Some(&quot;Returns the inverse of the given boolean value.&quot;),}]</code></pre><div class='docblock'><p>System function implementations.</p>
+
+<p>These names must correspond exactly to the first <code>NUM_SYSTEM_FNS</code>
+standard names defined in <code>name.rs</code>.</p>
+</div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "ketos";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

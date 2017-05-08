@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Reader` struct in crate `linefeed`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Reader">
+
+    <title>linefeed::reader::Reader - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc struct">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../index.html'>linefeed</a>::<wbr><a href='index.html'>reader</a></p><script>window.sidebarCurrent = {name: 'Reader', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../index.html'>linefeed</a>::<wbr><a href='index.html'>reader</a>::<wbr><a class="struct" href=''>Reader</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/linefeed/reader.rs.html#65-161' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct Reader&lt;Term:&nbsp;<a class="trait" href="../../linefeed/terminal/trait.Terminal.html" title="trait linefeed::terminal::Terminal">Terminal</a>&gt; { /* fields omitted */ }</pre><div class='docblock'><p>Interactively reads user input</p>
+</div><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class="struct" href="../../linefeed/reader/struct.Reader.html" title="struct linefeed::reader::Reader">Reader</a>&lt;<a class="type" href="../../linefeed/terminal/type.DefaultTerminal.html" title="type linefeed::terminal::DefaultTerminal">DefaultTerminal</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/linefeed/reader.rs.html#163-176' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.new' class="method"><span id='new.v' class='invisible'><code>fn <a href='#method.new' class='fnname'>new</a>&lt;T&gt;(application: T) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/std/io/error/type.Result.html" title="type std::io::error::Result">Result</a>&lt;<a class="struct" href="../../linefeed/reader/struct.Reader.html" title="struct linefeed::reader::Reader">Reader</a>&lt;<a class="type" href="../../linefeed/terminal/type.DefaultTerminal.html" title="type linefeed::terminal::DefaultTerminal">DefaultTerminal</a>&gt;&gt; <span class="where fmt-newline">where T: <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;<a class="enum" href="https://doc.rust-lang.org/nightly/collections/borrow/enum.Cow.html" title="enum collections::borrow::Cow">Cow</a>&lt;'static, <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>&gt;&gt;</span></code></span></h4>
+<div class='docblock'><p>Creates a new <code>Reader</code> with the given application name.</p>
+
+<p><code>application</code> is a string containing the name of the application.
+This can be used in user configurations to specify behavior for
+particular applications.</p>
+
+<p>The platform-dependent default terminal interface is used.</p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl&lt;Term:&nbsp;<a class="trait" href="../../linefeed/terminal/trait.Terminal.html" title="trait linefeed::terminal::Terminal">Terminal</a>&gt; <a class="struct" href="../../linefeed/reader/struct.Reader.html" title="struct linefeed::reader::Reader">Reader</a>&lt;Term&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/linefeed/reader.rs.html#178-2257' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.with_term' class="method"><span id='with_term.v' class='invisible'><code>fn <a href='#method.with_term' class='fnname'>with_term</a>&lt;T&gt;(application: T, term: Term) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/std/io/error/type.Result.html" title="type std::io::error::Result">Result</a>&lt;<a class="struct" href="../../linefeed/reader/struct.Reader.html" title="struct linefeed::reader::Reader">Reader</a>&lt;Term&gt;&gt; <span class="where fmt-newline">where T: <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;<a class="enum" href="https://doc.rust-lang.org/nightly/collections/borrow/enum.Cow.html" title="enum collections::borrow::Cow">Cow</a>&lt;'static, <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>&gt;&gt;</span></code></span></h4>
+<div class='docblock'><p>Creates a new <code>Reader</code> instance with a particular terminal implementation.</p>
+
+<p>To use the platform-dependent default terminal interface, call
+<code>Reader::new</code> instead.</p>
+</div><h4 id='method.read_line' class="method"><span id='read_line.v' class='invisible'><code>fn <a href='#method.read_line' class='fnname'>read_line</a>(&amp;mut self) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/std/io/error/type.Result.html" title="type std::io::error::Result">Result</a>&lt;<a class="enum" href="../../linefeed/reader/enum.ReadResult.html" title="enum linefeed::reader::ReadResult">ReadResult</a>&gt;</code></span></h4>
+<div class='docblock'><p>Interactively reads a line from <code>stdin</code>.</p>
+
+<p>If end-of-file occurs, returns <code>ReadResult::Eof</code>.</p>
+
+<p>If a reported signal (see <code>set_report_signal</code>) is received,
+it is returned as <code>ReadResult::Signal(_)</code>.</p>
+
+<p>Otherwise, user input is returned as <code>ReadResult::Input(_)</code>.</p>
+</div><h4 id='method.buffer' class="method"><span id='buffer.v' class='invisible'><code>fn <a href='#method.buffer' class='fnname'>buffer</a>(&amp;self) -&gt; &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a></code></span></h4>
+<div class='docblock'><p>Returns the current buffer.</p>
+</div><h4 id='method.set_buffer' class="method"><span id='set_buffer.v' class='invisible'><code>fn <a href='#method.set_buffer' class='fnname'>set_buffer</a>(&amp;mut self, buf: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/std/io/error/type.Result.html" title="type std::io::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>&gt;</code></span></h4>
+<div class='docblock'><p>Sets the buffer to the given value.
+The cursor is moved to the end of the buffer.</p>
+</div><h4 id='method.cursor' class="method"><span id='cursor.v' class='invisible'><code>fn <a href='#method.cursor' class='fnname'>cursor</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a></code></span></h4>
+<div class='docblock'><p>Returns the current position of the cursor.</p>
+</div><h4 id='method.set_cursor' class="method"><span id='set_cursor.v' class='invisible'><code>fn <a href='#method.set_cursor' class='fnname'>set_cursor</a>(&amp;mut self, pos: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/std/io/error/type.Result.html" title="type std::io::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>&gt;</code></span></h4>
+<div class='docblock'><p>Sets the cursor to the given position within the buffer.</p>
+</div><h4 id='method.explicit_arg' class="method"><span id='explicit_arg.v' class='invisible'><code>fn <a href='#method.explicit_arg' class='fnname'>explicit_arg</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+<div class='docblock'><p>Returns whether a numerical argument was explicitly supplied by the user.</p>
+</div><h4 id='method.sequence' class="method"><span id='sequence.v' class='invisible'><code>fn <a href='#method.sequence' class='fnname'>sequence</a>(&amp;self) -&gt; &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a></code></span></h4>
+<div class='docblock'><p>Returns the current input sequence.</p>
+</div><h4 id='method.set_prompt' class="method"><span id='set_prompt.v' class='invisible'><code>fn <a href='#method.set_prompt' class='fnname'>set_prompt</a>(&amp;mut self, prompt: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>)</code></span></h4>
+<div class='docblock'><p>Sets the prompt that will be displayed when <code>read_line</code> is called.</p>
+
+<h1 id='note' class='section-header'><a href='#note'>Note</a></h1>
+<p>If <code>prompt</code> contains any terminal escape sequences (e.g. color codes),
+such escape sequences should be immediately preceded by the character
+<code>&#39;\x01&#39;</code> and immediately followed by the character <code>&#39;\x02&#39;</code>.</p>
+</div><h4 id='method.bindings' class="method"><span id='bindings.v' class='invisible'><code>fn <a href='#method.bindings' class='fnname'>bindings</a>(&amp;self) -&gt; <a class="struct" href="../../linefeed/reader/struct.BindingIter.html" title="struct linefeed::reader::BindingIter">BindingIter</a></code></span></h4>
+<div class='docblock'><p>Returns an iterator over bound sequences</p>
+</div><h4 id='method.bind_sequence' class="method"><span id='bind_sequence.v' class='invisible'><code>fn <a href='#method.bind_sequence' class='fnname'>bind_sequence</a>&lt;T&gt;(&amp;mut self, seq: T, cmd: <a class="enum" href="../../linefeed/command/enum.Command.html" title="enum linefeed::command::Command">Command</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="enum" href="../../linefeed/command/enum.Command.html" title="enum linefeed::command::Command">Command</a>&gt; <span class="where fmt-newline">where T: <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;<a class="enum" href="https://doc.rust-lang.org/nightly/collections/borrow/enum.Cow.html" title="enum collections::borrow::Cow">Cow</a>&lt;'static, <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>&gt;&gt;</span></code></span></h4>
+<div class='docblock'><p>Binds a sequence to a command.</p>
+
+<p>Returns the previously bound command.</p>
+</div><h4 id='method.bind_sequence_if_unbound' class="method"><span id='bind_sequence_if_unbound.v' class='invisible'><code>fn <a href='#method.bind_sequence_if_unbound' class='fnname'>bind_sequence_if_unbound</a>&lt;T&gt;(&amp;mut self, seq: T, cmd: <a class="enum" href="../../linefeed/command/enum.Command.html" title="enum linefeed::command::Command">Command</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a> <span class="where fmt-newline">where T: <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;<a class="enum" href="https://doc.rust-lang.org/nightly/collections/borrow/enum.Cow.html" title="enum collections::borrow::Cow">Cow</a>&lt;'static, <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>&gt;&gt;</span></code></span></h4>
+<div class='docblock'><p>Binds a sequence to a command, if and only if the given sequence
+is not already bound to a command.</p>
+
+<p>Returns <code>true</code> if a new binding was created.</p>
+</div><h4 id='method.unbind_sequence' class="method"><span id='unbind_sequence.v' class='invisible'><code>fn <a href='#method.unbind_sequence' class='fnname'>unbind_sequence</a>(&amp;mut self, seq: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="enum" href="../../linefeed/command/enum.Command.html" title="enum linefeed::command::Command">Command</a>&gt;</code></span></h4>
+<div class='docblock'><p>Removes a binding for the given sequence.</p>
+
+<p>Returns the previously bound command.</p>
+</div><h4 id='method.define_function' class="method"><span id='define_function.v' class='invisible'><code>fn <a href='#method.define_function' class='fnname'>define_function</a>&lt;T&gt;(&amp;mut self,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; name: T,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; cmd: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/rc/struct.Rc.html" title="struct alloc::rc::Rc">Rc</a>&lt;<a class="trait" href="../../linefeed/function/trait.Function.html" title="trait linefeed::function::Function">Function</a>&lt;Term&gt;&gt;)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/rc/struct.Rc.html" title="struct alloc::rc::Rc">Rc</a>&lt;<a class="trait" href="../../linefeed/function/trait.Function.html" title="trait linefeed::function::Function">Function</a>&lt;Term&gt;&gt;&gt; <span class="where fmt-newline">where T: <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;<a class="enum" href="https://doc.rust-lang.org/nightly/collections/borrow/enum.Cow.html" title="enum collections::borrow::Cow">Cow</a>&lt;'static, <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>&gt;&gt;</span></code></span></h4>
+<div class='docblock'><p>Defines a named function to which sequences may be bound.</p>
+
+<p>The name should contain no spaces, with words separated by hyphens,
+and all lowercase.</p>
+
+<p>Returns the function previously defined with the same name.</p>
+</div><h4 id='method.remove_function' class="method"><span id='remove_function.v' class='invisible'><code>fn <a href='#method.remove_function' class='fnname'>remove_function</a>(&amp;mut self, name: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/rc/struct.Rc.html" title="struct alloc::rc::Rc">Rc</a>&lt;<a class="trait" href="../../linefeed/function/trait.Function.html" title="trait linefeed::function::Function">Function</a>&lt;Term&gt;&gt;&gt;</code></span></h4>
+<div class='docblock'><p>Removes a function defined with the given name.</p>
+
+<p>Returns the defined function.</p>
+</div><h4 id='method.add_history' class="method"><span id='add_history.v' class='invisible'><code>fn <a href='#method.add_history' class='fnname'>add_history</a>(&amp;mut self, line: <a class="struct" href="https://doc.rust-lang.org/nightly/collections/string/struct.String.html" title="struct collections::string::String">String</a>)</code></span></h4>
+<div class='docblock'><p>Adds a line to history.</p>
+
+<p>If the maximum size is reached, the oldest entry is removed.</p>
+</div><h4 id='method.history' class="method"><span id='history.v' class='invisible'><code>fn <a href='#method.history' class='fnname'>history</a>(&amp;self) -&gt; <a class="struct" href="../../linefeed/reader/struct.HistoryIter.html" title="struct linefeed::reader::HistoryIter">HistoryIter</a></code></span></h4>
+<div class='docblock'><p>Returns an iterator over history entries</p>
+</div><h4 id='method.history_len' class="method"><span id='history_len.v' class='invisible'><code>fn <a href='#method.history_len' class='fnname'>history_len</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a></code></span></h4>
+<div class='docblock'><p>Returns the current number of history entries.</p>
+</div><h4 id='method.remove_history' class="method"><span id='remove_history.v' class='invisible'><code>fn <a href='#method.remove_history' class='fnname'>remove_history</a>(&amp;mut self, n: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>)</code></span></h4>
+<div class='docblock'><p>Removes the <code>n</code>th history entry</p>
+
+<h1 id='panics' class='section-header'><a href='#panics'>Panics</a></h1>
+<p>If <code>n</code> is out of bounds.</p>
+</div><h4 id='method.truncate_history' class="method"><span id='truncate_history.v' class='invisible'><code>fn <a href='#method.truncate_history' class='fnname'>truncate_history</a>(&amp;mut self, n: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>)</code></span></h4>
+<div class='docblock'><p>Truncates history to the most recent <code>n</code> entries.</p>
+
+<p>If there are fewer than <code>n</code> entries in history, this has no effect.</p>
+</div><h4 id='method.completer' class="method"><span id='completer.v' class='invisible'><code>fn <a href='#method.completer' class='fnname'>completer</a>(&amp;self) -&gt; &amp;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/rc/struct.Rc.html" title="struct alloc::rc::Rc">Rc</a>&lt;<a class="trait" href="../../linefeed/complete/trait.Completer.html" title="trait linefeed::complete::Completer">Completer</a>&lt;Term&gt;&gt;</code></span></h4>
+<div class='docblock'><p>Returns a reference to the current completer instance</p>
+</div><h4 id='method.set_completer' class="method"><span id='set_completer.v' class='invisible'><code>fn <a href='#method.set_completer' class='fnname'>set_completer</a>(&amp;mut self,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; completer: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/rc/struct.Rc.html" title="struct alloc::rc::Rc">Rc</a>&lt;<a class="trait" href="../../linefeed/complete/trait.Completer.html" title="trait linefeed::complete::Completer">Completer</a>&lt;Term&gt;&gt;)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -&gt; <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/rc/struct.Rc.html" title="struct alloc::rc::Rc">Rc</a>&lt;<a class="trait" href="../../linefeed/complete/trait.Completer.html" title="trait linefeed::complete::Completer">Completer</a>&lt;Term&gt;&gt;</code></span></h4>
+<div class='docblock'><p>Replaces the current completer, returning the previous instance.</p>
+</div><h4 id='method.completions' class="method"><span id='completions.v' class='invisible'><code>fn <a href='#method.completions' class='fnname'>completions</a>(&amp;self) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[</a><a class="struct" href="../../linefeed/complete/struct.Completion.html" title="struct linefeed::complete::Completion">Completion</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>&gt;</code></span></h4>
+<div class='docblock'><p>Returns the current set of completions.</p>
+
+<p>The result is only not <code>None</code> when the most recent command executed
+was one operating on completion sets.</p>
+</div><h4 id='method.set_completions' class="method"><span id='set_completions.v' class='invisible'><code>fn <a href='#method.set_completions' class='fnname'>set_completions</a>(&amp;mut self, completions: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html" title="struct collections::vec::Vec">Vec</a>&lt;<a class="struct" href="../../linefeed/complete/struct.Completion.html" title="struct linefeed::complete::Completion">Completion</a>&gt;&gt;)</code></span></h4>
+<div class='docblock'><p>Sets the current set of completions.</p>
+
+<p>This completion set is accessed by commands such as <code>complete</code> and
+<code>possible-completions</code>.</p>
+
+<p>This set will only remain active until the end of the next
+non-completion command&#39;s execution. Therefore, any <code>Function</code>
+that uses this method must be of the <code>Complete</code> category.</p>
+</div><h4 id='method.blink' class="method"><span id='blink.v' class='invisible'><code>fn <a href='#method.blink' class='fnname'>blink</a>(&amp;mut self, pos: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/std/io/error/type.Result.html" title="type std::io::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>&gt;</code></span></h4>
+<div class='docblock'><p>Moves the cursor to the given position, waits for <code>BLINK_TIMEOUT_MS</code>
+(or until next user input), then restores the original cursor position.</p>
+</div><h4 id='method.delete_range' class="method"><span id='delete_range.v' class='invisible'><code>fn <a href='#method.delete_range' class='fnname'>delete_range</a>&lt;R:&nbsp;<a class="trait" href="../../linefeed/util/trait.RangeArgument.html" title="trait linefeed::util::RangeArgument">RangeArgument</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>&gt;&gt;(&amp;mut self, range: R) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/std/io/error/type.Result.html" title="type std::io::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>&gt;</code></span></h4>
+<div class='docblock'><p>Deletes a range from the buffer; the cursor is moved to the end
+of the given range.</p>
+</div><h4 id='method.kill_range' class="method"><span id='kill_range.v' class='invisible'><code>fn <a href='#method.kill_range' class='fnname'>kill_range</a>&lt;R:&nbsp;<a class="trait" href="../../linefeed/util/trait.RangeArgument.html" title="trait linefeed::util::RangeArgument">RangeArgument</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>&gt;&gt;(&amp;mut self, range: R) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/std/io/error/type.Result.html" title="type std::io::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>&gt;</code></span></h4>
+<div class='docblock'><p>Deletes a range from the buffer and adds the removed text to the
+kill ring.</p>
+</div><h4 id='method.transpose_range' class="method"><span id='transpose_range.v' class='invisible'><code>fn <a href='#method.transpose_range' class='fnname'>transpose_range</a>(&amp;mut self,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; src: <a class="struct" href="https://doc.rust-lang.org/nightly/core/ops/struct.Range.html" title="struct core::ops::Range">Range</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>&gt;,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; dest: <a class="struct" href="https://doc.rust-lang.org/nightly/core/ops/struct.Range.html" title="struct core::ops::Range">Range</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>&gt;)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/std/io/error/type.Result.html" title="type std::io::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>&gt;</code></span></h4>
+<div class='docblock'><p>Transposes two regions of the buffer, <code>src</code> and <code>dest</code>.
+The cursor is placed at the end of the new location of <code>src</code>.</p>
+
+<h1 id='panics-1' class='section-header'><a href='#panics-1'>Panics</a></h1>
+<p>If <code>src</code> and <code>dest</code> overlap.</p>
+</div><h4 id='method.yank' class="method"><span id='yank.v' class='invisible'><code>fn <a href='#method.yank' class='fnname'>yank</a>(&amp;mut self) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/std/io/error/type.Result.html" title="type std::io::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>&gt;</code></span></h4>
+<div class='docblock'><p>Insert text from the front of the kill ring at the current cursor position.
+The cursor is placed at the end of the new text.</p>
+</div><h4 id='method.yank_pop' class="method"><span id='yank_pop.v' class='invisible'><code>fn <a href='#method.yank_pop' class='fnname'>yank_pop</a>(&amp;mut self) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/std/io/error/type.Result.html" title="type std::io::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>&gt;</code></span></h4>
+<div class='docblock'><p>Rotates the kill ring and replaces yanked text with the new front.</p>
+
+<p>If the previous operation was not <code>yank</code>, this has no effect.</p>
+</div><h4 id='method.insert' class="method"><span id='insert.v' class='invisible'><code>fn <a href='#method.insert' class='fnname'>insert</a>(&amp;mut self, n: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>, ch: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.char.html">char</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/std/io/error/type.Result.html" title="type std::io::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>&gt;</code></span></h4>
+<div class='docblock'><p>Insert a given character at the current cursor position <code>n</code> times.</p>
+</div><h4 id='method.insert_str' class="method"><span id='insert_str.v' class='invisible'><code>fn <a href='#method.insert_str' class='fnname'>insert_str</a>(&amp;mut self, s: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/std/io/error/type.Result.html" title="type std::io::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>&gt;</code></span></h4>
+<div class='docblock'><p>Insert a string at the current cursor position.</p>
+</div><h4 id='method.replace_str_backward' class="method"><span id='replace_str_backward.v' class='invisible'><code>fn <a href='#method.replace_str_backward' class='fnname'>replace_str_backward</a>&lt;R:&nbsp;<a class="trait" href="../../linefeed/util/trait.RangeArgument.html" title="trait linefeed::util::RangeArgument">RangeArgument</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>&gt;&gt;(&amp;mut self,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; range: R,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; s: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/std/io/error/type.Result.html" title="type std::io::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>&gt;</code></span></h4>
+<div class='docblock'><p>Replaces a range in the buffer and redraws.
+Cursor is placed at the start of the range</p>
+</div><h4 id='method.replace_str_forward' class="method"><span id='replace_str_forward.v' class='invisible'><code>fn <a href='#method.replace_str_forward' class='fnname'>replace_str_forward</a>&lt;R:&nbsp;<a class="trait" href="../../linefeed/util/trait.RangeArgument.html" title="trait linefeed::util::RangeArgument">RangeArgument</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>&gt;&gt;(&amp;mut self,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; range: R,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; s: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/std/io/error/type.Result.html" title="type std::io::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>&gt;</code></span></h4>
+<div class='docblock'><p>Replaces a range in the buffer and redraws.
+Cursor is placed at the end of the new string</p>
+</div><h4 id='method.evaluate_directives' class="method"><span id='evaluate_directives.v' class='invisible'><code>fn <a href='#method.evaluate_directives' class='fnname'>evaluate_directives</a>(&amp;mut self, dirs: <a class="struct" href="https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html" title="struct collections::vec::Vec">Vec</a>&lt;<a class="enum" href="../../linefeed/inputrc/enum.Directive.html" title="enum linefeed::inputrc::Directive">Directive</a>&gt;)</code></span></h4>
+<div class='docblock'><p>Evaluates a series of configuration directives.</p>
+</div><h4 id='method.evaluate_directive' class="method"><span id='evaluate_directive.v' class='invisible'><code>fn <a href='#method.evaluate_directive' class='fnname'>evaluate_directive</a>(&amp;mut self, dir: <a class="enum" href="../../linefeed/inputrc/enum.Directive.html" title="enum linefeed::inputrc::Directive">Directive</a>)</code></span></h4>
+<div class='docblock'><p>Evaluates a single configuration directive.</p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl&lt;Term:&nbsp;<a class="trait" href="../../linefeed/terminal/trait.Terminal.html" title="trait linefeed::terminal::Terminal">Terminal</a>&gt; <a class="struct" href="../../linefeed/reader/struct.Reader.html" title="struct linefeed::reader::Reader">Reader</a>&lt;Term&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/linefeed/reader.rs.html#2260-2492' title='goto source code'>[src]</a></span></h3>
+<div class='docblock'><p>Variables and other configurable parameters</p>
+</div><div class='impl-items'><h4 id='method.application' class="method"><span id='application.v' class='invisible'><code>fn <a href='#method.application' class='fnname'>application</a>(&amp;self) -&gt; &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a></code></span></h4>
+<div class='docblock'><p>Returns the application name</p>
+</div><h4 id='method.set_application' class="method"><span id='set_application.v' class='invisible'><code>fn <a href='#method.set_application' class='fnname'>set_application</a>&lt;T&gt;(&amp;mut self, application: T) <span class="where fmt-newline">where T: <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;<a class="enum" href="https://doc.rust-lang.org/nightly/collections/borrow/enum.Cow.html" title="enum collections::borrow::Cow">Cow</a>&lt;'static, <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>&gt;&gt;</span></code></span></h4>
+<div class='docblock'><p>Sets the application name</p>
+</div><h4 id='method.get_variable' class="method"><span id='get_variable.v' class='invisible'><code>fn <a href='#method.get_variable' class='fnname'>get_variable</a>(&amp;self, name: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="enum" href="../../linefeed/reader/enum.Variable.html" title="enum linefeed::reader::Variable">Variable</a>&gt;</code></span></h4>
+<div class='docblock'><p>Returns the value of the named variable or <code>None</code>
+if no such variable exists.</p>
+</div><h4 id='method.set_variable' class="method"><span id='set_variable.v' class='invisible'><code>fn <a href='#method.set_variable' class='fnname'>set_variable</a>(&amp;mut self, name: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>, value: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="enum" href="../../linefeed/reader/enum.Variable.html" title="enum linefeed::reader::Variable">Variable</a>&lt;'static&gt;&gt;</code></span></h4>
+<div class='docblock'><p>Sets the value of the named variable and returns the previous
+value.</p>
+
+<p>If <code>name</code> does not refer to a variable or the <code>value</code> is not
+a valid value for the variable, <code>None</code> is returned.</p>
+</div><h4 id='method.variables' class="method"><span id='variables.v' class='invisible'><code>fn <a href='#method.variables' class='fnname'>variables</a>(&amp;self) -&gt; <a class="struct" href="../../linefeed/reader/struct.VariableIter.html" title="struct linefeed::reader::VariableIter">VariableIter</a>&lt;Term&gt;</code></span></h4>
+<div class='docblock'><p>Returns an iterator over stored variables.</p>
+</div><h4 id='method.history_size' class="method"><span id='history_size.v' class='invisible'><code>fn <a href='#method.history_size' class='fnname'>history_size</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a></code></span></h4>
+<div class='docblock'><p>Returns the maximum number of history entries.</p>
+
+<h1 id='note-1' class='section-header'><a href='#note-1'>Note</a></h1>
+<p>Not to be confused with <code>history_len</code> which returns the <em>current</em>
+number of stored history entries.</p>
+</div><h4 id='method.set_history_size' class="method"><span id='set_history_size.v' class='invisible'><code>fn <a href='#method.set_history_size' class='fnname'>set_history_size</a>(&amp;mut self, n: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>)</code></span></h4>
+<div class='docblock'><p>Sets the maximum number of history entries.
+If <code>n</code> is less than the current number of history entries,
+history will be truncated to the most recent <code>n</code> entries.</p>
+</div><h4 id='method.blink_matching_paren' class="method"><span id='blink_matching_paren.v' class='invisible'><code>fn <a href='#method.blink_matching_paren' class='fnname'>blink_matching_paren</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+<div class='docblock'><p>Returns whether to &quot;blink&quot; matching opening parenthesis character
+when a closing parenthesis character is entered.</p>
+
+<p>The default value is <code>false</code>.</p>
+</div><h4 id='method.set_blink_matching_paren' class="method"><span id='set_blink_matching_paren.v' class='invisible'><code>fn <a href='#method.set_blink_matching_paren' class='fnname'>set_blink_matching_paren</a>(&amp;mut self, set: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>)</code></span></h4>
+<div class='docblock'><p>Sets the <code>blink-matching-paren</code> variable.</p>
+</div><h4 id='method.catch_signals' class="method"><span id='catch_signals.v' class='invisible'><code>fn <a href='#method.catch_signals' class='fnname'>catch_signals</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+<div class='docblock'><p>Returns whether <code>linefeed</code> will catch certain signals.</p>
+</div><h4 id='method.set_catch_signals' class="method"><span id='set_catch_signals.v' class='invisible'><code>fn <a href='#method.set_catch_signals' class='fnname'>set_catch_signals</a>(&amp;mut self, enabled: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>)</code></span></h4>
+<div class='docblock'><p>Sets whether <code>linefeed</code> will catch certain signals.</p>
+
+<p>This setting is <code>true</code> by default. It can be disabled to allow the
+host program to handle signals itself.</p>
+</div><h4 id='method.ignore_signal' class="method"><span id='ignore_signal.v' class='invisible'><code>fn <a href='#method.ignore_signal' class='fnname'>ignore_signal</a>(&amp;self, signal: <a class="enum" href="../../linefeed/terminal/enum.Signal.html" title="enum linefeed::terminal::Signal">Signal</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+<div class='docblock'><p>Returns whether the given <code>Signal</code> is ignored.</p>
+</div><h4 id='method.set_ignore_signal' class="method"><span id='set_ignore_signal.v' class='invisible'><code>fn <a href='#method.set_ignore_signal' class='fnname'>set_ignore_signal</a>(&amp;mut self, signal: <a class="enum" href="../../linefeed/terminal/enum.Signal.html" title="enum linefeed::terminal::Signal">Signal</a>, set: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>)</code></span></h4>
+<div class='docblock'><p>Sets whether the given <code>Signal</code> will be ignored.</p>
+</div><h4 id='method.report_signal' class="method"><span id='report_signal.v' class='invisible'><code>fn <a href='#method.report_signal' class='fnname'>report_signal</a>(&amp;self, signal: <a class="enum" href="../../linefeed/terminal/enum.Signal.html" title="enum linefeed::terminal::Signal">Signal</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+<div class='docblock'><p>Returns whether the given <code>Signal</code> is to be reported.</p>
+</div><h4 id='method.set_report_signal' class="method"><span id='set_report_signal.v' class='invisible'><code>fn <a href='#method.set_report_signal' class='fnname'>set_report_signal</a>(&amp;mut self, signal: <a class="enum" href="../../linefeed/terminal/enum.Signal.html" title="enum linefeed::terminal::Signal">Signal</a>, set: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>)</code></span></h4>
+<div class='docblock'><p>Sets whether to report the given <code>Signal</code>.</p>
+
+<p>When a reported signal is received via the terminal, it will be returned
+from <code>Reader::read_line</code> as <code>Ok(Signal(signal))</code>.</p>
+</div><h4 id='method.disable_completion' class="method"><span id='disable_completion.v' class='invisible'><code>fn <a href='#method.disable_completion' class='fnname'>disable_completion</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+<div class='docblock'><p>Returns whether Tab completion is disabled.</p>
+
+<p>The default value is <code>false</code>.</p>
+</div><h4 id='method.set_disable_completion' class="method"><span id='set_disable_completion.v' class='invisible'><code>fn <a href='#method.set_disable_completion' class='fnname'>set_disable_completion</a>(&amp;mut self, disable: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>)</code></span></h4>
+<div class='docblock'><p>Sets the <code>disable-completion</code> variable.</p>
+</div><h4 id='method.echo_control_characters' class="method"><span id='echo_control_characters.v' class='invisible'><code>fn <a href='#method.echo_control_characters' class='fnname'>echo_control_characters</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+<div class='docblock'><p>When certain control characters are pressed, a character sequence
+equivalent to this character will be echoed.</p>
+
+<p>The default value is <code>true</code>.</p>
+</div><h4 id='method.set_echo_control_characters' class="method"><span id='set_echo_control_characters.v' class='invisible'><code>fn <a href='#method.set_echo_control_characters' class='fnname'>set_echo_control_characters</a>(&amp;mut self, echo: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>)</code></span></h4>
+<div class='docblock'><p>Sets the <code>echo-control-characters</code> variable.</p>
+</div><h4 id='method.completion_append_character' class="method"><span id='completion_append_character.v' class='invisible'><code>fn <a href='#method.completion_append_character' class='fnname'>completion_append_character</a>(&amp;self) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.char.html">char</a>&gt;</code></span></h4>
+<div class='docblock'><p>Returns the character, if any, that is appended to a successful completion.</p>
+</div><h4 id='method.set_completion_append_character' class="method"><span id='set_completion_append_character.v' class='invisible'><code>fn <a href='#method.set_completion_append_character' class='fnname'>set_completion_append_character</a>(&amp;mut self, ch: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.char.html">char</a>&gt;)</code></span></h4>
+<div class='docblock'><p>Sets the character, if any, that is appended to a successful completion.</p>
+</div><h4 id='method.completion_display_width' class="method"><span id='completion_display_width.v' class='invisible'><code>fn <a href='#method.completion_display_width' class='fnname'>completion_display_width</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a></code></span></h4>
+<div class='docblock'><p>Returns the width of completion listing display.</p>
+
+<p>If this value is greater than the terminal width, terminal width is used
+instead.</p>
+
+<p>The default value is equal to <code>usize::max_value()</code>.</p>
+</div><h4 id='method.set_completion_display_width' class="method"><span id='set_completion_display_width.v' class='invisible'><code>fn <a href='#method.set_completion_display_width' class='fnname'>set_completion_display_width</a>(&amp;mut self, n: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>)</code></span></h4>
+<div class='docblock'><p>Sets the <code>completion-display-width</code> variable.</p>
+</div><h4 id='method.completion_query_items' class="method"><span id='completion_query_items.v' class='invisible'><code>fn <a href='#method.completion_query_items' class='fnname'>completion_query_items</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a></code></span></h4>
+<div class='docblock'><p>Returns the minimum number of completion items that require user
+confirmation before listing.</p>
+
+<p>The default value is <code>100</code>.</p>
+</div><h4 id='method.set_completion_query_items' class="method"><span id='set_completion_query_items.v' class='invisible'><code>fn <a href='#method.set_completion_query_items' class='fnname'>set_completion_query_items</a>(&amp;mut self, n: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>)</code></span></h4>
+<div class='docblock'><p>Sets the <code>completion-query-items</code> variable.</p>
+</div><h4 id='method.keyseq_timeout' class="method"><span id='keyseq_timeout.v' class='invisible'><code>fn <a href='#method.keyseq_timeout' class='fnname'>keyseq_timeout</a>(&amp;self) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/std/time/duration/struct.Duration.html" title="struct std::time::duration::Duration">Duration</a>&gt;</code></span></h4>
+<div class='docblock'><p>Returns the timeout to wait for further user input when an ambiguous
+sequence has been entered. If the value is <code>None</code>, wait is indefinite.</p>
+
+<p>The default value is equal to <code>KEYSEQ_TIMEOUT_MS</code>.</p>
+</div><h4 id='method.set_keyseq_timeout' class="method"><span id='set_keyseq_timeout.v' class='invisible'><code>fn <a href='#method.set_keyseq_timeout' class='fnname'>set_keyseq_timeout</a>(&amp;mut self, timeout: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/std/time/duration/struct.Duration.html" title="struct std::time::duration::Duration">Duration</a>&gt;)</code></span></h4>
+<div class='docblock'><p>Sets the <code>keyseq-timeout</code> variable.</p>
+</div><h4 id='method.page_completions' class="method"><span id='page_completions.v' class='invisible'><code>fn <a href='#method.page_completions' class='fnname'>page_completions</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+<div class='docblock'><p>Returns whether to list possible completions one page at a time.</p>
+
+<p>The default value is <code>true</code>.</p>
+</div><h4 id='method.set_page_completions' class="method"><span id='set_page_completions.v' class='invisible'><code>fn <a href='#method.set_page_completions' class='fnname'>set_page_completions</a>(&amp;mut self, set: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>)</code></span></h4>
+<div class='docblock'><p>Sets the <code>page-completions</code> variable.</p>
+</div><h4 id='method.print_completions_horizontally' class="method"><span id='print_completions_horizontally.v' class='invisible'><code>fn <a href='#method.print_completions_horizontally' class='fnname'>print_completions_horizontally</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+<div class='docblock'><p>Returns whether to list completions horizontally, rather than down
+the screen.</p>
+
+<p>The default value is <code>false</code>.</p>
+</div><h4 id='method.set_print_completions_horizontally' class="method"><span id='set_print_completions_horizontally.v' class='invisible'><code>fn <a href='#method.set_print_completions_horizontally' class='fnname'>set_print_completions_horizontally</a>(&amp;mut self, set: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>)</code></span></h4>
+<div class='docblock'><p>Sets the <code>print-completions-horizontally</code> variable.</p>
+</div><h4 id='method.string_chars' class="method"><span id='string_chars.v' class='invisible'><code>fn <a href='#method.string_chars' class='fnname'>string_chars</a>(&amp;self) -&gt; &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a></code></span></h4>
+<div class='docblock'><p>Returns the set of characters that delimit strings.</p>
+</div><h4 id='method.set_string_chars' class="method"><span id='set_string_chars.v' class='invisible'><code>fn <a href='#method.set_string_chars' class='fnname'>set_string_chars</a>&lt;T&gt;(&amp;mut self, chars: T) <span class="where fmt-newline">where T: <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;<a class="enum" href="https://doc.rust-lang.org/nightly/collections/borrow/enum.Cow.html" title="enum collections::borrow::Cow">Cow</a>&lt;'static, <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>&gt;&gt;</span></code></span></h4>
+<div class='docblock'><p>Sets the set of characters that delimit strings.</p>
+</div><h4 id='method.word_break_chars' class="method"><span id='word_break_chars.v' class='invisible'><code>fn <a href='#method.word_break_chars' class='fnname'>word_break_chars</a>(&amp;self) -&gt; &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a></code></span></h4>
+<div class='docblock'><p>Returns the set of characters that indicate a word break.</p>
+</div><h4 id='method.set_word_break_chars' class="method"><span id='set_word_break_chars.v' class='invisible'><code>fn <a href='#method.set_word_break_chars' class='fnname'>set_word_break_chars</a>&lt;T&gt;(&amp;mut self, chars: T) <span class="where fmt-newline">where T: <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;<a class="enum" href="https://doc.rust-lang.org/nightly/collections/borrow/enum.Cow.html" title="enum collections::borrow::Cow">Cow</a>&lt;'static, <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>&gt;&gt;</span></code></span></h4>
+<div class='docblock'><p>Sets the set of characters that indicate a word break.</p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "linefeed";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

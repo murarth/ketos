@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["More","Indicates the cause of incomplete input"],["MoreResult","Indicates whether an operation has completed or more input is required"]],"struct":[["CodeBuffer","Buffers potentially incomplete input code"]]});

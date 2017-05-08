@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `function` mod in crate `ketos`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, function">
+
+    <title>ketos::function - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc mod">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../index.html'>ketos</a></p><script>window.sidebarCurrent = {name: 'function', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Module <a href='../index.html'>ketos</a>::<wbr><a class="mod" href=''>function</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/ketos/function.rs.html#1-2064' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>Contains implementations of core system functions.</p>
+</div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Function.html"
+                                  title='struct ketos::function::Function'>Function</a></td>
+                           <td class='docblock-short'>
+                                <p>Represents a function implemented in Rust.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Lambda.html"
+                                  title='struct ketos::function::Lambda'>Lambda</a></td>
+                           <td class='docblock-short'>
+                                <p>Represents a function that evaluates an expression.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.SystemFn.html"
+                                  title='struct ketos::function::SystemFn'>SystemFn</a></td>
+                           <td class='docblock-short'>
+                                <p>Represents a system function</p>
+                           </td>
+                       </tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.Arity.html"
+                                  title='enum ketos::function::Arity'>Arity</a></td>
+                           <td class='docblock-short'>
+                                <p>Describes the number of arguments a function may accept.</p>
+                           </td>
+                       </tr></table><h2 id='statics' class='section-header'><a href="#statics">Statics</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="static" href="static.SYSTEM_FNS.html"
+                                  title='static ketos::function::SYSTEM_FNS'>SYSTEM_FNS</a></td>
+                           <td class='docblock-short'>
+                                <p>System function implementations.</p>
+                           </td>
+                       </tr></table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.add_number.html"
+                                  title='fn ketos::function::add_number'>add_number</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns the result of adding two values together.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.div_number.html"
+                                  title='fn ketos::function::div_number'>div_number</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns the result of dividing two values.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.first.html"
+                                  title='fn ketos::function::first'>first</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns the first element of a list or string.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.floor_div_number_step.html"
+                                  title='fn ketos::function::floor_div_number_step'>floor_div_number_step</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns the result of floor-dividing two values,
+without calling <code>floor</code> on the result.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.floor_number.html"
+                                  title='fn ketos::function::floor_number'>floor_number</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns a value rounded toward negative infinity.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.init.html"
+                                  title='fn ketos::function::init'>init</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns all but the last element of a list or string.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.last.html"
+                                  title='fn ketos::function::last'>last</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns the last element of a list or string.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.mul_number.html"
+                                  title='fn ketos::function::mul_number'>mul_number</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns the result of multiplying two values together.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.neg_number.html"
+                                  title='fn ketos::function::neg_number'>neg_number</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns the result of negating a value.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.plural.html"
+                                  title='fn ketos::function::plural'>plural</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns the suitable plural suffix <code>&quot;&quot;</code> or <code>&quot;s&quot;</code> for count <code>n</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.sub_number.html"
+                                  title='fn ketos::function::sub_number'>sub_number</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns the resulting of subtracting a value from another.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.tail.html"
+                                  title='fn ketos::function::tail'>tail</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns all but the first element of a list or string.</p>
+                           </td>
+                       </tr></table><h2 id='types' class='section-header'><a href="#types">Type Definitions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="type" href="type.FunctionImpl.html"
+                                  title='type ketos::function::FunctionImpl'>FunctionImpl</a></td>
+                           <td class='docblock-short'>
+                                <p><code>SystemFn</code> implemented by Rust function</p>
+                           </td>
+                       </tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "ketos";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

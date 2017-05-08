@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Interpreter` struct in crate `ketos`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Interpreter">
+
+    <title>ketos::interpreter::Interpreter - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc struct">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../index.html'>ketos</a>::<wbr><a href='index.html'>interpreter</a></p><script>window.sidebarCurrent = {name: 'Interpreter', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../index.html'>ketos</a>::<wbr><a href='index.html'>interpreter</a>::<wbr><a class="struct" href=''>Interpreter</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/ketos/interpreter.rs.html#195-197' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct Interpreter { /* fields omitted */ }</pre><div class='docblock'><p>Provides a context in which to compile and execute code.</p>
+
+<p>Values created by one interpreter are exclusive to that interpreter.
+They should not be passed directly into another interpreter.
+Specifically, unexpected behavior or a panic may occur if another
+interpreter attempts to operate on <code>Name</code>/<code>Keyword</code> values created by
+another interpreter or any values which may contain arbitrary values
+(<code>Struct</code>, <code>StructDef</code>, <code>List</code>, <code>Lambda</code>, <code>Quote</code>, etc.).</p>
+</div><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class="struct" href="../../ketos/interpreter/struct.Interpreter.html" title="struct ketos::interpreter::Interpreter">Interpreter</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/ketos/interpreter.rs.html#199-473' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.new' class="method"><span id='new.v' class='invisible'><code>fn <a href='#method.new' class='fnname'>new</a>() -&gt; <a class="struct" href="../../ketos/interpreter/struct.Interpreter.html" title="struct ketos::interpreter::Interpreter">Interpreter</a></code></span></h4>
+<div class='docblock'><p>Creates a new <code>Interpreter</code>.</p>
+</div><h4 id='method.with_loader' class="method"><span id='with_loader.v' class='invisible'><code>fn <a href='#method.with_loader' class='fnname'>with_loader</a>(loader: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;<a class="trait" href="../../ketos/module/trait.ModuleLoader.html" title="trait ketos::module::ModuleLoader">ModuleLoader</a>&gt;) -&gt; <a class="struct" href="../../ketos/interpreter/struct.Interpreter.html" title="struct ketos::interpreter::Interpreter">Interpreter</a></code></span></h4>
+<div class='docblock'><p>Creates a new <code>Interpreter</code> using the given <code>ModuleLoader</code> instance.</p>
+</div><h4 id='method.with_context' class="method"><span id='with_context.v' class='invisible'><code>fn <a href='#method.with_context' class='fnname'>with_context</a>(context: <a class="struct" href="../../ketos/exec/struct.Context.html" title="struct ketos::exec::Context">Context</a>) -&gt; <a class="struct" href="../../ketos/interpreter/struct.Interpreter.html" title="struct ketos::interpreter::Interpreter">Interpreter</a></code></span></h4>
+<div class='docblock'><p>Creates a new <code>Interpreter</code> using the given <code>Context</code> instance.</p>
+</div><h4 id='method.with_scope' class="method"><span id='with_scope.v' class='invisible'><code>fn <a href='#method.with_scope' class='fnname'>with_scope</a>(scope: <a class="type" href="../../ketos/scope/type.Scope.html" title="type ketos::scope::Scope">Scope</a>) -&gt; <a class="struct" href="../../ketos/interpreter/struct.Interpreter.html" title="struct ketos::interpreter::Interpreter">Interpreter</a></code></span></h4>
+<div class='docblock'><p>Creates a new <code>Interpreter</code> using the given <code>Scope</code> instance.</p>
+</div><h4 id='method.with_search_paths' class="method"><span id='with_search_paths.v' class='invisible'><code>fn <a href='#method.with_search_paths' class='fnname'>with_search_paths</a>(paths: <a class="struct" href="https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html" title="struct collections::vec::Vec">Vec</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/std/path/struct.PathBuf.html" title="struct std::path::PathBuf">PathBuf</a>&gt;) -&gt; <a class="struct" href="../../ketos/interpreter/struct.Interpreter.html" title="struct ketos::interpreter::Interpreter">Interpreter</a></code></span></h4>
+<div class='docblock'><p>Creates a new <code>Interpreter</code> that searches for module files in a given
+series of directories.</p>
+</div><h4 id='method.clear_codemap' class="method"><span id='clear_codemap.v' class='invisible'><code>fn <a href='#method.clear_codemap' class='fnname'>clear_codemap</a>(&amp;self)</code></span></h4>
+<div class='docblock'><p>Clears cached source from the contained <code>CodeMap</code>.</p>
+
+<h1 id='note' class='section-header'><a href='#note'>Note</a></h1>
+<p>This will invalidate any previously created <code>ParseError</code> values.</p>
+</div><h4 id='method.display_error' class="method"><span id='display_error.v' class='invisible'><code>fn <a href='#method.display_error' class='fnname'>display_error</a>(&amp;self, e: &amp;<a class="enum" href="../../ketos/error/enum.Error.html" title="enum ketos::error::Error">Error</a>)</code></span></h4>
+<div class='docblock'><p>Prints an error to <code>stderr</code>.</p>
+</div><h4 id='method.display_trace' class="method"><span id='display_trace.v' class='invisible'><code>fn <a href='#method.display_trace' class='fnname'>display_trace</a>(&amp;self, trace: &amp;<a class="struct" href="../../ketos/trace/struct.Trace.html" title="struct ketos::trace::Trace">Trace</a>)</code></span></h4>
+<div class='docblock'><p>Prints traceback information to <code>stderr</code>.</p>
+</div><h4 id='method.display_value' class="method"><span id='display_value.v' class='invisible'><code>fn <a href='#method.display_value' class='fnname'>display_value</a>(&amp;self, value: &amp;<a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>)</code></span></h4>
+<div class='docblock'><p>Prints a string representation of a value to <code>stdout</code>.</p>
+</div><h4 id='method.format_error' class="method"><span id='format_error.v' class='invisible'><code>fn <a href='#method.format_error' class='fnname'>format_error</a>(&amp;self, e: &amp;<a class="enum" href="../../ketos/error/enum.Error.html" title="enum ketos::error::Error">Error</a>) -&gt; <a class="struct" href="https://doc.rust-lang.org/nightly/collections/string/struct.String.html" title="struct collections::string::String">String</a></code></span></h4>
+<div class='docblock'><p>Formats an error into a <code>String</code>.</p>
+</div><h4 id='method.format_trace' class="method"><span id='format_trace.v' class='invisible'><code>fn <a href='#method.format_trace' class='fnname'>format_trace</a>(&amp;self, trace: &amp;<a class="struct" href="../../ketos/trace/struct.Trace.html" title="struct ketos::trace::Trace">Trace</a>) -&gt; <a class="struct" href="https://doc.rust-lang.org/nightly/collections/string/struct.String.html" title="struct collections::string::String">String</a></code></span></h4>
+<div class='docblock'><p>Formats a <code>Trace</code> into a <code>String</code>.</p>
+
+<p>The result does <em>not</em> include the <code>&quot;Traceback:&quot;</code> preamble.</p>
+</div><h4 id='method.get_traceback' class="method"><span id='get_traceback.v' class='invisible'><code>fn <a href='#method.get_traceback' class='fnname'>get_traceback</a>(&amp;self) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="../../ketos/trace/struct.Trace.html" title="struct ketos::trace::Trace">Trace</a>&gt;</code></span></h4>
+<div class='docblock'><p>Returns the traceback from the most recent error.</p>
+
+<p>The traceback will remain stored for future calls to <code>get_traceback</code>.</p>
+</div><h4 id='method.take_traceback' class="method"><span id='take_traceback.v' class='invisible'><code>fn <a href='#method.take_traceback' class='fnname'>take_traceback</a>(&amp;self) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="../../ketos/trace/struct.Trace.html" title="struct ketos::trace::Trace">Trace</a>&gt;</code></span></h4>
+<div class='docblock'><p>Removes and returns the traceback from the most recent error.</p>
+</div><h4 id='method.format_value' class="method"><span id='format_value.v' class='invisible'><code>fn <a href='#method.format_value' class='fnname'>format_value</a>(&amp;self, value: &amp;<a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>) -&gt; <a class="struct" href="https://doc.rust-lang.org/nightly/collections/string/struct.String.html" title="struct collections::string::String">String</a></code></span></h4>
+<div class='docblock'><p>Formats a value into a string.</p>
+</div><h4 id='method.execute' class="method"><span id='execute.v' class='invisible'><code>fn <a href='#method.execute' class='fnname'>execute</a>(&amp;self, code: <a class="struct" href="../../ketos/bytecode/struct.Code.html" title="struct ketos::bytecode::Code">Code</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>, <a class="enum" href="../../ketos/error/enum.Error.html" title="enum ketos::error::Error">Error</a>&gt;</code></span></h4>
+<div class='docblock'><p>Executes a bare <code>Code</code> object taking no parameters.</p>
+</div><h4 id='method.execute_code' class="method"><span id='execute_code.v' class='invisible'><code>fn <a href='#method.execute_code' class='fnname'>execute_code</a>(&amp;self, code: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/rc/struct.Rc.html" title="struct alloc::rc::Rc">Rc</a>&lt;<a class="struct" href="../../ketos/bytecode/struct.Code.html" title="struct ketos::bytecode::Code">Code</a>&gt;) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>, <a class="enum" href="../../ketos/error/enum.Error.html" title="enum ketos::error::Error">Error</a>&gt;</code></span></h4>
+<div class='docblock'><p>Executes a <code>Rc&lt;Code&gt;</code> object taking no parameters.</p>
+</div><h4 id='method.execute_program' class="method"><span id='execute_program.v' class='invisible'><code>fn <a href='#method.execute_program' class='fnname'>execute_program</a>(&amp;self, code: <a class="struct" href="https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html" title="struct collections::vec::Vec">Vec</a>&lt;<a class="struct" href="../../ketos/bytecode/struct.Code.html" title="struct ketos::bytecode::Code">Code</a>&gt;) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>, <a class="enum" href="../../ketos/error/enum.Error.html" title="enum ketos::error::Error">Error</a>&gt;</code></span></h4>
+<div class='docblock'><p>Executes a series of code objects sequentially and returns the value
+of the final expression. If <code>code</code> is empty, the value <code>()</code> is returned.</p>
+</div><h4 id='method.call' class="method"><span id='call.v' class='invisible'><code>fn <a href='#method.call' class='fnname'>call</a>(&amp;self, name: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>, args: <a class="struct" href="https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html" title="struct collections::vec::Vec">Vec</a>&lt;<a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>&gt;) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>, <a class="enum" href="../../ketos/error/enum.Error.html" title="enum ketos::error::Error">Error</a>&gt;</code></span></h4>
+<div class='docblock'><p>Calls a named function with the given arguments.</p>
+</div><h4 id='method.call_value' class="method"><span id='call_value.v' class='invisible'><code>fn <a href='#method.call_value' class='fnname'>call_value</a>(&amp;self, value: <a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>, args: <a class="struct" href="https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html" title="struct collections::vec::Vec">Vec</a>&lt;<a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>&gt;) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>, <a class="enum" href="../../ketos/error/enum.Error.html" title="enum ketos::error::Error">Error</a>&gt;</code></span></h4>
+<div class='docblock'><p>Calls a function with the given arguments.</p>
+</div><h4 id='method.get_value' class="method"><span id='get_value.v' class='invisible'><code>fn <a href='#method.get_value' class='fnname'>get_value</a>(&amp;self, name: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>&gt;</code></span></h4>
+<div class='docblock'><p>Returns a value, if present, in the interpreter scope.</p>
+</div><h4 id='method.context' class="method"><span id='context.v' class='invisible'><code>fn <a href='#method.context' class='fnname'>context</a>(&amp;self) -&gt; &amp;<a class="struct" href="../../ketos/exec/struct.Context.html" title="struct ketos::exec::Context">Context</a></code></span></h4>
+<div class='docblock'><p>Returns a borrowed reference to the contained context.</p>
+</div><h4 id='method.scope' class="method"><span id='scope.v' class='invisible'><code>fn <a href='#method.scope' class='fnname'>scope</a>(&amp;self) -&gt; &amp;<a class="type" href="../../ketos/scope/type.Scope.html" title="type ketos::scope::Scope">Scope</a></code></span></h4>
+<div class='docblock'><p>Returns a borrowed reference to the contained scope.</p>
+</div><h4 id='method.set_args' class="method"><span id='set_args.v' class='invisible'><code>fn <a href='#method.set_args' class='fnname'>set_args</a>&lt;T:&nbsp;<a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.AsRef.html" title="trait core::convert::AsRef">AsRef</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>&gt;&gt;(&amp;self, args: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[</a>T<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>)</code></span></h4>
+<div class='docblock'><p>Sets the value of <code>argv</code> within the execution scope.</p>
+</div><h4 id='method.run_file' class="method"><span id='run_file.v' class='invisible'><code>fn <a href='#method.run_file' class='fnname'>run_file</a>(&amp;self, path: &amp;<a class="struct" href="https://doc.rust-lang.org/nightly/std/path/struct.Path.html" title="struct std::path::Path">Path</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>, <a class="enum" href="../../ketos/error/enum.Error.html" title="enum ketos::error::Error">Error</a>&gt;</code></span></h4>
+<div class='docblock'><p>Compiles and executes the contents of a file.</p>
+</div><h4 id='method.run_single_expr' class="method"><span id='run_single_expr.v' class='invisible'><code>fn <a href='#method.run_single_expr' class='fnname'>run_single_expr</a>(&amp;self,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; input: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; path: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/collections/string/struct.String.html" title="struct collections::string::String">String</a>&gt;)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>, <a class="enum" href="../../ketos/error/enum.Error.html" title="enum ketos::error::Error">Error</a>&gt;</code></span></h4>
+<div class='docblock'><p>Compiles and executes an input expression.</p>
+</div><h4 id='method.run_code' class="method"><span id='run_code.v' class='invisible'><code>fn <a href='#method.run_code' class='fnname'>run_code</a>(&amp;self, input: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>, path: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/collections/string/struct.String.html" title="struct collections::string::String">String</a>&gt;) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>, <a class="enum" href="../../ketos/error/enum.Error.html" title="enum ketos::error::Error">Error</a>&gt;</code></span></h4>
+<div class='docblock'><p>Parses and executes a series of expressions and return the last value.</p>
+</div><h4 id='method.compile_single_expr' class="method"><span id='compile_single_expr.v' class='invisible'><code>fn <a href='#method.compile_single_expr' class='fnname'>compile_single_expr</a>(&amp;self,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; input: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; path: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/collections/string/struct.String.html" title="struct collections::string::String">String</a>&gt;)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="struct" href="../../ketos/bytecode/struct.Code.html" title="struct ketos::bytecode::Code">Code</a>, <a class="enum" href="../../ketos/error/enum.Error.html" title="enum ketos::error::Error">Error</a>&gt;</code></span></h4>
+<div class='docblock'><p>Compiles and compiles a single expression and returns a code object.
+If the input string contains more than one expression, an error is returned.</p>
+</div><h4 id='method.compile_exprs' class="method"><span id='compile_exprs.v' class='invisible'><code>fn <a href='#method.compile_exprs' class='fnname'>compile_exprs</a>(&amp;self, input: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html" title="struct collections::vec::Vec">Vec</a>&lt;<a class="struct" href="../../ketos/bytecode/struct.Code.html" title="struct ketos::bytecode::Code">Code</a>&gt;, <a class="enum" href="../../ketos/error/enum.Error.html" title="enum ketos::error::Error">Error</a>&gt;</code></span></h4>
+<div class='docblock'><p>Compiles and compiles a series of expressions.</p>
+</div><h4 id='method.parse_single_expr' class="method"><span id='parse_single_expr.v' class='invisible'><code>fn <a href='#method.parse_single_expr' class='fnname'>parse_single_expr</a>(&amp;self,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; input: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; path: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/collections/string/struct.String.html" title="struct collections::string::String">String</a>&gt;)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>, <a class="enum" href="../../ketos/error/enum.Error.html" title="enum ketos::error::Error">Error</a>&gt;</code></span></h4>
+<div class='docblock'><p>Parses a single expression and returns it as a <code>Value</code>.
+If <code>input</code> contains more than one expression, an error is returned.</p>
+</div><h4 id='method.parse_exprs' class="method"><span id='parse_exprs.v' class='invisible'><code>fn <a href='#method.parse_exprs' class='fnname'>parse_exprs</a>(&amp;self,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; input: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; path: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/collections/string/struct.String.html" title="struct collections::string::String">String</a>&gt;)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html" title="struct collections::vec::Vec">Vec</a>&lt;<a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>&gt;, <a class="enum" href="../../ketos/error/enum.Error.html" title="enum ketos::error::Error">Error</a>&gt;</code></span></h4>
+<div class='docblock'><p>Parses a series of expressions and returns them as <code>Value</code>s.</p>
+</div><h4 id='method.parse_file' class="method"><span id='parse_file.v' class='invisible'><code>fn <a href='#method.parse_file' class='fnname'>parse_file</a>(&amp;self,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; input: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; path: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/collections/string/struct.String.html" title="struct collections::string::String">String</a>&gt;)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html" title="struct collections::vec::Vec">Vec</a>&lt;<a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>&gt;, <a class="enum" href="../../ketos/error/enum.Error.html" title="enum ketos::error::Error">Error</a>&gt;</code></span></h4>
+<div class='docblock'><p>Parses a series of expressions from the contents of a file and
+returns them as <code>Value</code>s.</p>
+</div></div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html" title="trait core::clone::Clone">Clone</a> for <a class="struct" href="../../ketos/interpreter/struct.Interpreter.html" title="struct ketos::interpreter::Interpreter">Interpreter</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/ketos/interpreter.rs.html#194' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.clone' class="method"><span id='clone.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone' class='fnname'>clone</a>(&amp;self) -&gt; <a class="struct" href="../../ketos/interpreter/struct.Interpreter.html" title="struct ketos::interpreter::Interpreter">Interpreter</a></code></span></h4>
+<div class='docblock'><p>Returns a copy of the value. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone">Read more</a></p>
+</div><h4 id='method.clone_from' class="method"><span id='clone_from.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from' class='fnname'>clone_from</a>(&amp;mut self, source: &amp;Self)</code><div class='since' title='Stable since Rust version 1.0.0'>1.0.0</div></span></h4>
+<div class='docblock'><p>Performs copy-assignment from <code>source</code>. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from">Read more</a></p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "ketos";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

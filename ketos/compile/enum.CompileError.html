@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `CompileError` enum in crate `ketos`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, CompileError">
+
+    <title>ketos::compile::CompileError - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc enum">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../index.html'>ketos</a>::<wbr><a href='index.html'>compile</a></p><script>window.sidebarCurrent = {name: 'CompileError', ty: 'enum', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Enum <a href='../index.html'>ketos</a>::<wbr><a href='index.html'>compile</a>::<wbr><a class="enum" href=''>CompileError</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/ketos/compile.rs.html#27-92' title='goto source code'>[src]</a></span></h1>
+<pre class='rust enum'>pub enum CompileError {
+    ArityError {
+        name: <a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>,
+        expected: <a class="enum" href="../../ketos/function/enum.Arity.html" title="enum ketos::function::Arity">Arity</a>,
+        found: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>,
+    },
+    CannotDefine(<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>),
+    ConstantExists(<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>),
+    DuplicateExports,
+    DuplicateModuleDoc,
+    DuplicateParameter(<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>),
+    ExportError {
+        module: <a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>,
+        name: <a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>,
+    },
+    ImportCycle(<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>),
+    ImportError {
+        module: <a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>,
+        name: <a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>,
+    },
+    ImportShadow(<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>),
+    InvalidCallExpression(&amp;'static <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>),
+    InvalidCommaAt,
+    InvalidModuleName(<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>),
+    MacroRecursionExceeded,
+    MissingExport,
+    ModuleError(<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>),
+    NotConstant(<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>),
+    OperandOverflow(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    PrivacyError {
+        module: <a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>,
+        name: <a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>,
+    },
+    SyntaxError(&amp;'static <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>),
+    UnbalancedComma,
+}</pre><div class='docblock'><p>Represents an error generated while compiling to bytecode.</p>
+</div><h2 class='variants'>Variants</h2>
+<span id='variant.ArityError' class='variant'><span id='ArityError.v' class='invisible'><code>ArityError</code></span></span><div class='docblock'><p>Error in arity for call to system function</p>
+</div><span class='docblock autohide sub-variant' id='variant.ArityError.fields'><h3 class='fields'>Fields of <code>ArityError</code></h3>
+
+                           <table><tr><td id='variant.ArityError.field.name'><span id='ArityError.v.name.v' class='invisible'><code>name:&nbsp;<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a></code></span></td><td><div class='docblock'><p>Name of function</p>
+</div></td></tr><tr><td id='variant.ArityError.field.expected'><span id='ArityError.v.expected.v' class='invisible'><code>expected:&nbsp;<a class="enum" href="../../ketos/function/enum.Arity.html" title="enum ketos::function::Arity">Arity</a></code></span></td><td><div class='docblock'><p>Expected count or range of arguments</p>
+</div></td></tr><tr><td id='variant.ArityError.field.found'><span id='ArityError.v.found.v' class='invisible'><code>found:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a></code></span></td><td><div class='docblock'><p>Number of arguments present</p>
+</div></td></tr></table></span><span id='variant.CannotDefine' class='variant'><span id='CannotDefine.v' class='invisible'><code>CannotDefine(<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>)</code></span></span><div class='docblock'><p>Attempt to define name of standard value or operator</p>
+</div><span id='variant.ConstantExists' class='variant'><span id='ConstantExists.v' class='invisible'><code>ConstantExists(<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>)</code></span></span><div class='docblock'><p>Attempt to define name held by <code>const</code> value</p>
+</div><span id='variant.DuplicateExports' class='variant'><span id='DuplicateExports.v' class='invisible'><code>DuplicateExports</code></span></span><div class='docblock'><p>Duplicate <code>exports</code> declaration</p>
+</div><span id='variant.DuplicateModuleDoc' class='variant'><span id='DuplicateModuleDoc.v' class='invisible'><code>DuplicateModuleDoc</code></span></span><div class='docblock'><p>Duplicate <code>module-doc</code> declaration</p>
+</div><span id='variant.DuplicateParameter' class='variant'><span id='DuplicateParameter.v' class='invisible'><code>DuplicateParameter(<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>)</code></span></span><div class='docblock'><p>Duplicate name in parameter list</p>
+</div><span id='variant.ExportError' class='variant'><span id='ExportError.v' class='invisible'><code>ExportError</code></span></span><div class='docblock'><p>Attempt to export nonexistent name from module</p>
+</div><span class='docblock autohide sub-variant' id='variant.ExportError.fields'><h3 class='fields'>Fields of <code>ExportError</code></h3>
+
+                           <table><tr><td id='variant.ExportError.field.module'><span id='ExportError.v.module.v' class='invisible'><code>module:&nbsp;<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a></code></span></td><td><div class='docblock'><p>Module name</p>
+</div></td></tr><tr><td id='variant.ExportError.field.name'><span id='ExportError.v.name.v' class='invisible'><code>name:&nbsp;<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a></code></span></td><td><div class='docblock'><p>Imported name</p>
+</div></td></tr></table></span><span id='variant.ImportCycle' class='variant'><span id='ImportCycle.v' class='invisible'><code>ImportCycle(<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>)</code></span></span><div class='docblock'><p>Recursion in module imports</p>
+</div><span id='variant.ImportError' class='variant'><span id='ImportError.v' class='invisible'><code>ImportError</code></span></span><div class='docblock'><p>Attempt to import nonexistent name from module</p>
+</div><span class='docblock autohide sub-variant' id='variant.ImportError.fields'><h3 class='fields'>Fields of <code>ImportError</code></h3>
+
+                           <table><tr><td id='variant.ImportError.field.module'><span id='ImportError.v.module.v' class='invisible'><code>module:&nbsp;<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a></code></span></td><td><div class='docblock'><p>Module name</p>
+</div></td></tr><tr><td id='variant.ImportError.field.name'><span id='ImportError.v.name.v' class='invisible'><code>name:&nbsp;<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a></code></span></td><td><div class='docblock'><p>Imported name</p>
+</div></td></tr></table></span><span id='variant.ImportShadow' class='variant'><span id='ImportShadow.v' class='invisible'><code>ImportShadow(<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>)</code></span></span><div class='docblock'><p>Attempt to import or define name which already exists</p>
+</div><span id='variant.InvalidCallExpression' class='variant'><span id='InvalidCallExpression.v' class='invisible'><code>InvalidCallExpression(&amp;'static <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>)</code></span></span><div class='docblock'><p>Invalid expression to function call</p>
+</div><span id='variant.InvalidCommaAt' class='variant'><span id='InvalidCommaAt.v' class='invisible'><code>InvalidCommaAt</code></span></span><div class='docblock'><p><code>,@expr</code> form outside of a list</p>
+</div><span id='variant.InvalidModuleName' class='variant'><span id='InvalidModuleName.v' class='invisible'><code>InvalidModuleName(<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>)</code></span></span><div class='docblock'><p>Module name contains invalid characters</p>
+</div><span id='variant.MacroRecursionExceeded' class='variant'><span id='MacroRecursionExceeded.v' class='invisible'><code>MacroRecursionExceeded</code></span></span><div class='docblock'><p>Recursion limit exceeded while expanding macros</p>
+</div><span id='variant.MissingExport' class='variant'><span id='MissingExport.v' class='invisible'><code>MissingExport</code></span></span><div class='docblock'><p>Missing <code>export</code> declaration in loaded module</p>
+</div><span id='variant.ModuleError' class='variant'><span id='ModuleError.v' class='invisible'><code>ModuleError(<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>)</code></span></span><div class='docblock'><p>Failed to load a module</p>
+</div><span id='variant.NotConstant' class='variant'><span id='NotConstant.v' class='invisible'><code>NotConstant(<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a>)</code></span></span><div class='docblock'><p><code>const</code> operator value is not constant</p>
+</div><span id='variant.OperandOverflow' class='variant'><span id='OperandOverflow.v' class='invisible'><code>OperandOverflow(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Operand value overflow</p>
+</div><span id='variant.PrivacyError' class='variant'><span id='PrivacyError.v' class='invisible'><code>PrivacyError</code></span></span><div class='docblock'><p>Attempt to import value that is not exported</p>
+</div><span class='docblock autohide sub-variant' id='variant.PrivacyError.fields'><h3 class='fields'>Fields of <code>PrivacyError</code></h3>
+
+                           <table><tr><td id='variant.PrivacyError.field.module'><span id='PrivacyError.v.module.v' class='invisible'><code>module:&nbsp;<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a></code></span></td><td><div class='docblock'><p>Module name</p>
+</div></td></tr><tr><td id='variant.PrivacyError.field.name'><span id='PrivacyError.v.name.v' class='invisible'><code>name:&nbsp;<a class="struct" href="../../ketos/name/struct.Name.html" title="struct ketos::name::Name">Name</a></code></span></td><td><div class='docblock'><p>Imported name</p>
+</div></td></tr></table></span><span id='variant.SyntaxError' class='variant'><span id='SyntaxError.v' class='invisible'><code>SyntaxError(&amp;'static <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>)</code></span></span><div class='docblock'><p>Error in parsing operator syntax</p>
+</div><span id='variant.UnbalancedComma' class='variant'><span id='UnbalancedComma.v' class='invisible'><code>UnbalancedComma</code></span></span><div class='docblock'><p>More commas than backquotes</p>
+</div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html" title="trait core::fmt::Debug">Debug</a> for <a class="enum" href="../../ketos/compile/enum.CompileError.html" title="enum ketos::compile::CompileError">CompileError</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/ketos/compile.rs.html#26' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt' class="method"><span id='fmt.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, __arg_0: &amp;mut <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html" title="struct core::fmt::Formatter">Formatter</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/core/fmt/type.Result.html" title="type core::fmt::Result">Result</a></code></span></h4>
+<div class='docblock'><p>Formats the value using the given formatter.</p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html" title="trait core::fmt::Display">Display</a> for <a class="enum" href="../../ketos/compile/enum.CompileError.html" title="enum ketos::compile::CompileError">CompileError</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/ketos/compile.rs.html#94-128' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt-1' class="method"><span id='fmt.v-1' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, f: &amp;mut <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html" title="struct core::fmt::Formatter">Formatter</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/core/fmt/type.Result.html" title="type core::fmt::Result">Result</a></code></span></h4>
+<div class='docblock'><p>Formats the value using the given formatter. <a href="https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html#tymethod.fmt">Read more</a></p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl <a class="trait" href="../../ketos/name/trait.NameDisplay.html" title="trait ketos::name::NameDisplay">NameDisplay</a> for <a class="enum" href="../../ketos/compile/enum.CompileError.html" title="enum ketos::compile::CompileError">CompileError</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/ketos/compile.rs.html#130-159' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt-2' class="method"><span id='fmt.v-2' class='invisible'><code>fn <a href='../../ketos/name/trait.NameDisplay.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, names: &amp;<a class="struct" href="../../ketos/name/struct.NameStore.html" title="struct ketos::name::NameStore">NameStore</a>, f: &amp;mut <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html" title="struct core::fmt::Formatter">Formatter</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/core/fmt/type.Result.html" title="type core::fmt::Result">Result</a></code></span></h4>
+<div class='docblock'><p>Writes the value&#39;s display representation to the formatter stream.</p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "ketos";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

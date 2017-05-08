@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["CompileError","Represents an error generated while compiling to bytecode."]],"fn":[["compile","Compiles an expression into a code object."]]});

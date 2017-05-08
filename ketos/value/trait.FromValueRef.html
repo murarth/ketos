@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `FromValueRef` trait in crate `ketos`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, FromValueRef">
+
+    <title>ketos::value::FromValueRef - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc trait">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../index.html'>ketos</a>::<wbr><a href='index.html'>value</a></p><script>window.sidebarCurrent = {name: 'FromValueRef', ty: 'trait', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Trait <a href='../index.html'>ketos</a>::<wbr><a href='index.html'>value</a>::<wbr><a class="trait" href=''>FromValueRef</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/ketos/value.rs.html#855-858' title='goto source code'>[src]</a></span></h1>
+<pre class='rust trait'>pub trait FromValueRef&lt;'a&gt;: <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sized.html" title="trait core::marker::Sized">Sized</a> {
+    fn <a href='#tymethod.from_value_ref' class='fnname'>from_value_ref</a>(v: &amp;'a <a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;Self, <a class="enum" href="../../ketos/exec/enum.ExecError.html" title="enum ketos::exec::ExecError">ExecError</a>&gt;;
+}</pre><div class='docblock'><p>Borrows a Rust value from a <code>Value</code></p>
+</div>
+            <h2 id='required-methods'>Required Methods</h2>
+            <div class='methods'>
+        <h3 id='tymethod.from_value_ref' class='method'><span id='from_value_ref.v' class='invisible'><code>fn <a href='#tymethod.from_value_ref' class='fnname'>from_value_ref</a>(v: &amp;'a <a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;Self, <a class="enum" href="../../ketos/exec/enum.ExecError.html" title="enum ketos::exec::ExecError">ExecError</a>&gt;</code></span></h3><div class='docblock'><p>Returns the borrowed value</p>
+</div></div>
+        <h2 id='implementors'>Implementors</h2>
+        <ul class='item-list' id='implementors-list'>
+    <li><code>impl&lt;'a&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a></code></li>
+<li><code>impl&lt;'a&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></li>
+<li><code>impl&lt;'a&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.char.html">char</a></code></li>
+<li><code>impl&lt;'a&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.f32.html">f32</a></code></li>
+<li><code>impl&lt;'a&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.f64.html">f64</a></code></li>
+<li><code>impl&lt;'a&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.i8.html">i8</a></code></li>
+<li><code>impl&lt;'a&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.i16.html">i16</a></code></li>
+<li><code>impl&lt;'a&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.i32.html">i32</a></code></li>
+<li><code>impl&lt;'a&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.i64.html">i64</a></code></li>
+<li><code>impl&lt;'a&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.isize.html">isize</a></code></li>
+<li><code>impl&lt;'a&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a></code></li>
+<li><code>impl&lt;'a&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u16.html">u16</a></code></li>
+<li><code>impl&lt;'a&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a></code></li>
+<li><code>impl&lt;'a&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u64.html">u64</a></code></li>
+<li><code>impl&lt;'a&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a></code></li>
+<li><code>impl&lt;'a&gt; FromValueRef&lt;'a&gt; for &amp;'a <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a></code></li>
+<li><code>impl&lt;'a&gt; FromValueRef&lt;'a&gt; for &amp;'a <a class="struct" href="https://doc.rust-lang.org/nightly/std/path/struct.Path.html" title="struct std::path::Path">Path</a></code></li>
+<li><code>impl&lt;'a&gt; FromValueRef&lt;'a&gt; for &amp;'a <a class="struct" href="https://doc.rust-lang.org/nightly/std/ffi/os_str/struct.OsStr.html" title="struct std::ffi::os_str::OsStr">OsStr</a></code></li>
+<li><code>impl&lt;'a&gt; FromValueRef&lt;'a&gt; for &amp;'a <a class="struct" href="../../ketos/integer/struct.Integer.html" title="struct ketos::integer::Integer">Integer</a></code></li>
+<li><code>impl&lt;'a&gt; FromValueRef&lt;'a&gt; for &amp;'a <a class="struct" href="../../ketos/integer/struct.Ratio.html" title="struct ketos::integer::Ratio">Ratio</a></code></li>
+<li><code>impl&lt;'a&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;'a [</a><a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a></code></li>
+<li><code>impl&lt;'a&gt; FromValueRef&lt;'a&gt; for &amp;'a <a class="struct" href="../../ketos/bytes/struct.Bytes.html" title="struct ketos::bytes::Bytes">Bytes</a></code></li>
+<li><code>impl&lt;'a&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;'a [</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a></code></li>
+<li><code>impl&lt;'a, T:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;&gt; FromValueRef&lt;'a&gt; for <a class="struct" href="https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html" title="struct collections::vec::Vec">Vec</a>&lt;T&gt;</code></li>
+<li><code>impl&lt;'a&gt; FromValueRef&lt;'a&gt; for &amp;'a <a class="struct" href="../../ketos/function/struct.Lambda.html" title="struct ketos::function::Lambda">Lambda</a></code></li>
+<li><code>impl&lt;'a&gt; FromValueRef&lt;'a&gt; for &amp;'a <a class="enum" href="../../ketos/value/enum.Value.html" title="enum ketos::value::Value">Value</a></code></li>
+<li><code>impl&lt;'a, A:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">(</a>A<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">,)</a></code></li>
+<li><code>impl&lt;'a, A:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, B:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">(</a>A, B<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">)</a></code></li>
+<li><code>impl&lt;'a, A:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, B:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, C:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">(</a>A, B, C<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">)</a></code></li>
+<li><code>impl&lt;'a, A:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, B:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, C:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, D:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">(</a>A, B, C, D<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">)</a></code></li>
+<li><code>impl&lt;'a, A:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, B:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, C:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, D:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, E:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">(</a>A, B, C, D, E<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">)</a></code></li>
+<li><code>impl&lt;'a, A:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, B:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, C:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, D:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, E:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, F:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">(</a>A, B, C, D, E, F<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">)</a></code></li>
+<li><code>impl&lt;'a, A:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, B:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, C:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, D:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, E:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, F:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, G:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">(</a>A, B, C, D, E, F, G<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">)</a></code></li>
+<li><code>impl&lt;'a, A:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, B:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, C:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, D:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, E:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, F:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, G:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, H:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">(</a>A, B, C, D, E, F, G, H<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">)</a></code></li>
+<li><code>impl&lt;'a, A:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, B:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, C:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, D:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, E:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, F:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, G:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, H:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, I:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">(</a>A, B, C, D, E, F, G, H, I<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">)</a></code></li>
+<li><code>impl&lt;'a, A:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, B:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, C:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, D:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, E:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, F:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, G:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, H:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, I:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, J:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">(</a>A, B, C, D, E, F, G, H, I, J<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">)</a></code></li>
+<li><code>impl&lt;'a, A:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, B:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, C:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, D:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, E:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, F:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, G:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, H:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, I:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, J:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, K:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">(</a>A, B, C, D, E, F, G, H, I, J, K<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">)</a></code></li>
+<li><code>impl&lt;'a, A:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, B:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, C:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, D:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, E:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, F:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, G:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, H:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, I:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, J:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, K:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;, L:&nbsp;<a class="trait" href="../../ketos/value/trait.FromValueRef.html" title="trait ketos::value::FromValueRef">FromValueRef</a>&lt;'a&gt;&gt; FromValueRef&lt;'a&gt; for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">(</a>A, B, C, D, E, F, G, H, I, J, K, L<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">)</a></code></li>
+</ul><script type="text/javascript" async
+                         src="../../implementors/ketos/value/trait.FromValueRef.js">
+                 </script></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "ketos";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

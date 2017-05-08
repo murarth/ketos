@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `name` mod in crate `ketos`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, name">
+
+    <title>ketos::name - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc mod">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../index.html'>ketos</a></p><script>window.sidebarCurrent = {name: 'name', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Module <a href='../index.html'>ketos</a>::<wbr><a class="mod" href=''>name</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/ketos/name.rs.html#1-788' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>Implements name interning and containers using names as keys.</p>
+</div><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="mod" href="standard_names/index.html"
+                                  title='mod ketos::name::standard_names'>standard_names</a></td>
+                           <td class='docblock-short'>
+                                <p>Contains constants standard name values; interned names which are
+universal to all programs.</p>
+                           </td>
+                       </tr></table><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Name.html"
+                                  title='struct ketos::name::Name'>Name</a></td>
+                           <td class='docblock-short'>
+                                <p>Represents a name interned within a <code>NameStore</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.NameDebugger.html"
+                                  title='struct ketos::name::NameDebugger'>NameDebugger</a></td>
+                           <td class='docblock-short'>
+                                <p>Displays a <code>NameDebug</code> value using standard formatting.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.NameDisplayer.html"
+                                  title='struct ketos::name::NameDisplayer'>NameDisplayer</a></td>
+                           <td class='docblock-short'>
+                                <p>Displays a <code>NameDisplay</code> value using standard formatting.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.NameInputConversion.html"
+                                  title='struct ketos::name::NameInputConversion'>NameInputConversion</a></td>
+                           <td class='docblock-short'>
+                                <p>Converts module-local names loaded from bytecode files into global names
+in a running interpreter.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.NameIter.html"
+                                  title='struct ketos::name::NameIter'>NameIter</a></td>
+                           <td class='docblock-short'>
+                                <p>Iterator over names stored in a <code>NameStore</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.NameMap.html"
+                                  title='struct ketos::name::NameMap'>NameMap</a></td>
+                           <td class='docblock-short'>
+                                <p>Maps names to values in a sorted <code>Vec</code></p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.NameMapSlice.html"
+                                  title='struct ketos::name::NameMapSlice'>NameMapSlice</a></td>
+                           <td class='docblock-short'>
+                                <p>Maps names to values in a sorted boxed slice.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.NameOutputConversion.html"
+                                  title='struct ketos::name::NameOutputConversion'>NameOutputConversion</a></td>
+                           <td class='docblock-short'>
+                                <p>Converts global names in a running interpreter into module-local names,
+retaining string representations, which can be written to a bytecode file.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.NameSet.html"
+                                  title='struct ketos::name::NameSet'>NameSet</a></td>
+                           <td class='docblock-short'>
+                                <p>Represents a set of names</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.NameSetSlice.html"
+                                  title='struct ketos::name::NameSetSlice'>NameSetSlice</a></td>
+                           <td class='docblock-short'>
+                                <p>Represents a set of names.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.NameStore.html"
+                                  title='struct ketos::name::NameStore'>NameStore</a></td>
+                           <td class='docblock-short'>
+                                <p>Maps interned <code>Name</code> values to their <code>String</code> representations</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.SetIter.html"
+                                  title='struct ketos::name::SetIter'>SetIter</a></td>
+                           <td class='docblock-short'>
+                                <p>Iterates over names in a <code>NameSet</code> or <code>NameSetSlice</code>.</p>
+                           </td>
+                       </tr></table><h2 id='constants' class='section-header'><a href="#constants">Constants</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.NUM_STANDARD_NAMES.html"
+                                  title='constant ketos::name::NUM_STANDARD_NAMES'>NUM_STANDARD_NAMES</a></td>
+                           <td class='docblock-short'>
+                                <p>Number of standard names</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.NUM_STANDARD_VALUES.html"
+                                  title='constant ketos::name::NUM_STANDARD_VALUES'>NUM_STANDARD_VALUES</a></td>
+                           <td class='docblock-short'>
+                                <p>Number of names, starting at <code>0</code>, which refer to standard values.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.NUM_SYSTEM_FNS.html"
+                                  title='constant ketos::name::NUM_SYSTEM_FNS'>NUM_SYSTEM_FNS</a></td>
+                           <td class='docblock-short'>
+                                <p>Number of names, starting at <code>0</code>, which refer to system functions.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.NUM_SYSTEM_OPERATORS.html"
+                                  title='constant ketos::name::NUM_SYSTEM_OPERATORS'>NUM_SYSTEM_OPERATORS</a></td>
+                           <td class='docblock-short'>
+                                <p>Number of system operators, beginning at <code>SYSTEM_OPERATORS_BEGIN</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.SYSTEM_OPERATORS_BEGIN.html"
+                                  title='constant ketos::name::SYSTEM_OPERATORS_BEGIN'>SYSTEM_OPERATORS_BEGIN</a></td>
+                           <td class='docblock-short'>
+                                <p>First standard name which refers to a system operator.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.SYSTEM_OPERATORS_END.html"
+                                  title='constant ketos::name::SYSTEM_OPERATORS_END'>SYSTEM_OPERATORS_END</a></td>
+                           <td class='docblock-short'>
+                                <p>One-past-the-end of standard names which refer to system operators.</p>
+                           </td>
+                       </tr></table><h2 id='traits' class='section-header'><a href="#traits">Traits</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.NameDebug.html"
+                                  title='trait ketos::name::NameDebug'>NameDebug</a></td>
+                           <td class='docblock-short'>
+                                <p>Represents a value which can produce debugging output and may contain
+one or more interned <code>Name</code> values.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.NameDisplay.html"
+                                  title='trait ketos::name::NameDisplay'>NameDisplay</a></td>
+                           <td class='docblock-short'>
+                                <p>Represents a value which can produce user-facing output and may contain
+one or more interned <code>Name</code> values.</p>
+                           </td>
+                       </tr></table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.debug_names.html"
+                                  title='fn ketos::name::debug_names'>debug_names</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns a <code>NameDebugger</code> wrapper around a value.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.display_names.html"
+                                  title='fn ketos::name::display_names'>display_names</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns a <code>NameDisplayer</code> wrapper around a value.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.get_standard_name.html"
+                                  title='fn ketos::name::get_standard_name'>get_standard_name</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns the standard name for the given integer value, if it exists.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.get_standard_name_for.html"
+                                  title='fn ketos::name::get_standard_name_for'>get_standard_name_for</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns the standard name for the given string representation,
+if one exists.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.get_system_fn.html"
+                                  title='fn ketos::name::get_system_fn'>get_system_fn</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns the system function for the given name, if one exists.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.is_standard_name.html"
+                                  title='fn ketos::name::is_standard_name'>is_standard_name</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns whether the given name is a standard name.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.is_standard_value.html"
+                                  title='fn ketos::name::is_standard_value'>is_standard_value</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns whether a standard value corresponds to the given name.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.is_system_fn.html"
+                                  title='fn ketos::name::is_system_fn'>is_system_fn</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns whether the given name corresponds to a system function.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.is_system_operator.html"
+                                  title='fn ketos::name::is_system_operator'>is_system_operator</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns whether the given name corresponds to a system operator.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.standard_name.html"
+                                  title='fn ketos::name::standard_name'>standard_name</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns the string representation of the given name,
+if it is a standard name.</p>
+                           </td>
+                       </tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "ketos";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

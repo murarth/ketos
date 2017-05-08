@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Instruction` enum in crate `ketos`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Instruction">
+
+    <title>ketos::bytecode::Instruction - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc enum">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../index.html'>ketos</a>::<wbr><a href='index.html'>bytecode</a></p><script>window.sidebarCurrent = {name: 'Instruction', ty: 'enum', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Enum <a href='../index.html'>ketos</a>::<wbr><a href='index.html'>bytecode</a>::<wbr><a class="enum" href=''>Instruction</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/ketos/bytecode.rs.html#43-183' title='goto source code'>[src]</a></span></h1>
+<pre class='rust enum'>pub enum Instruction {
+    Load(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    LoadC(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    UnboundToUnit(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    GetDef(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    Push,
+    Unit,
+    True,
+    False,
+    Const(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    Store(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    LoadPush(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    LoadCPush(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    GetDefPush(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    UnitPush,
+    TruePush,
+    FalsePush,
+    ConstPush(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    SetDef(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    List(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    Quote(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    Quasiquote(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    Comma(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    CommaAt(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    BuildClosure(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>,&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    Jump(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    JumpIf(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    JumpIfBound(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>,&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    JumpIfNot(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    JumpIfNull(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    JumpIfNotNull(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    JumpIfEq(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    JumpIfNotEq(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    JumpIfEqConst(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>,&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    JumpIfNotEqConst(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>,&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    Null,
+    NotNull,
+    Eq,
+    NotEq,
+    EqConst(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    NotEqConst(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    Not,
+    Inc,
+    Dec,
+    Append,
+    First,
+    Tail,
+    Init,
+    Last,
+    FirstPush,
+    TailPush,
+    InitPush,
+    LastPush,
+    CallSys(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    CallSysArgs(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>,&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    CallConst(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>,&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    Call(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    Apply(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    ApplyConst(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>,&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    ApplySelf(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    TailApplySelf(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    CallSelf(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    TailCallSelf(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    Skip(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>),
+    Return,
+}</pre><div class='docblock'><p>Represents an instruction and any immediate parameters.</p>
+
+<p>Any addition, deletion, or modification to this enum constitutes
+a breaking change to the bytecode format.</p>
+</div><h2 class='variants'>Variants</h2>
+<span id='variant.Load' class='variant'><span id='Load.v' class='invisible'><code>Load(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Load a value from the stack</p>
+</div><span id='variant.LoadC' class='variant'><span id='LoadC.v' class='invisible'><code>LoadC(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Load a value from enclosed values</p>
+</div><span id='variant.UnboundToUnit' class='variant'><span id='UnboundToUnit.v' class='invisible'><code>UnboundToUnit(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>If value <em>n</em> on the stack is <code>Unbound</code>, replace it with <code>()</code>.</p>
+</div><span id='variant.GetDef' class='variant'><span id='GetDef.v' class='invisible'><code>GetDef(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Load a named value from global scope</p>
+</div><span id='variant.Push' class='variant'><span id='Push.v' class='invisible'><code>Push</code></span></span><div class='docblock'><p>Push a value onto the stack; value is invalidated.</p>
+</div><span id='variant.Unit' class='variant'><span id='Unit.v' class='invisible'><code>Unit</code></span></span><div class='docblock'><p>Load <code>()</code> into value</p>
+</div><span id='variant.True' class='variant'><span id='True.v' class='invisible'><code>True</code></span></span><div class='docblock'><p>Load <code>true</code> into value</p>
+</div><span id='variant.False' class='variant'><span id='False.v' class='invisible'><code>False</code></span></span><div class='docblock'><p>Load <code>false</code> into value</p>
+</div><span id='variant.Const' class='variant'><span id='Const.v' class='invisible'><code>Const(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Load a const into value</p>
+</div><span id='variant.Store' class='variant'><span id='Store.v' class='invisible'><code>Store(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Store a value in the stack; value is invalidated.</p>
+</div><span id='variant.LoadPush' class='variant'><span id='LoadPush.v' class='invisible'><code>LoadPush(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Load, then push</p>
+</div><span id='variant.LoadCPush' class='variant'><span id='LoadCPush.v' class='invisible'><code>LoadCPush(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Load enclosed value, then push</p>
+</div><span id='variant.GetDefPush' class='variant'><span id='GetDefPush.v' class='invisible'><code>GetDefPush(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Load a name from global scope, then push</p>
+</div><span id='variant.UnitPush' class='variant'><span id='UnitPush.v' class='invisible'><code>UnitPush</code></span></span><div class='docblock'><p>Load <code>()</code>, then push</p>
+</div><span id='variant.TruePush' class='variant'><span id='TruePush.v' class='invisible'><code>TruePush</code></span></span><div class='docblock'><p>Load <code>true</code>, then push</p>
+</div><span id='variant.FalsePush' class='variant'><span id='FalsePush.v' class='invisible'><code>FalsePush</code></span></span><div class='docblock'><p>Load <code>false</code>, then push</p>
+</div><span id='variant.ConstPush' class='variant'><span id='ConstPush.v' class='invisible'><code>ConstPush(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Load a const, then push</p>
+</div><span id='variant.SetDef' class='variant'><span id='SetDef.v' class='invisible'><code>SetDef(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Assign a value to a name into global scope</p>
+</div><span id='variant.List' class='variant'><span id='List.v' class='invisible'><code>List(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Build a list of <em>n</em> values from the stack</p>
+</div><span id='variant.Quote' class='variant'><span id='Quote.v' class='invisible'><code>Quote(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Transform value into an <em>n</em>-quoted value</p>
+</div><span id='variant.Quasiquote' class='variant'><span id='Quasiquote.v' class='invisible'><code>Quasiquote(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Transform value into an <em>n</em>-quasiquoted value</p>
+</div><span id='variant.Comma' class='variant'><span id='Comma.v' class='invisible'><code>Comma(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Transform value into an <em>n</em>-comma&#39;d value</p>
+</div><span id='variant.CommaAt' class='variant'><span id='CommaAt.v' class='invisible'><code>CommaAt(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Transform value into an <em>n</em>-comma-at&#39;d value</p>
+</div><span id='variant.BuildClosure' class='variant'><span id='BuildClosure.v' class='invisible'><code>BuildClosure(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>,&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Create a closure from code object in <em>n_const</em> and a list of
+<em>n_values</em> values on the stack; parameters are <code>(n_const, n_values)</code>.</p>
+</div><span id='variant.Jump' class='variant'><span id='Jump.v' class='invisible'><code>Jump(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Jump to a label</p>
+</div><span id='variant.JumpIf' class='variant'><span id='JumpIf.v' class='invisible'><code>JumpIf(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Jump if value is <code>true</code></p>
+</div><span id='variant.JumpIfBound' class='variant'><span id='JumpIfBound.v' class='invisible'><code>JumpIfBound(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>,&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Jump if value <em>n</em> from the stack is bound; parameters are <code>(label, n)</code></p>
+</div><span id='variant.JumpIfNot' class='variant'><span id='JumpIfNot.v' class='invisible'><code>JumpIfNot(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Jump if value is <code>false</code></p>
+</div><span id='variant.JumpIfNull' class='variant'><span id='JumpIfNull.v' class='invisible'><code>JumpIfNull(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Jump if value is <code>()</code></p>
+</div><span id='variant.JumpIfNotNull' class='variant'><span id='JumpIfNotNull.v' class='invisible'><code>JumpIfNotNull(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Jump if value is not <code>()</code></p>
+</div><span id='variant.JumpIfEq' class='variant'><span id='JumpIfEq.v' class='invisible'><code>JumpIfEq(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Jump if value is equal to top of stack</p>
+</div><span id='variant.JumpIfNotEq' class='variant'><span id='JumpIfNotEq.v' class='invisible'><code>JumpIfNotEq(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Jump if value is not equal to top of stack</p>
+</div><span id='variant.JumpIfEqConst' class='variant'><span id='JumpIfEqConst.v' class='invisible'><code>JumpIfEqConst(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>,&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Jump if value is equal to const; parameters are <code>(label, n)</code></p>
+</div><span id='variant.JumpIfNotEqConst' class='variant'><span id='JumpIfNotEqConst.v' class='invisible'><code>JumpIfNotEqConst(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>,&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Jump if value is not equal to const; parameters are <code>(label, n)</code></p>
+</div><span id='variant.Null' class='variant'><span id='Null.v' class='invisible'><code>Null</code></span></span><div class='docblock'><p>Test whether value is <code>()</code></p>
+</div><span id='variant.NotNull' class='variant'><span id='NotNull.v' class='invisible'><code>NotNull</code></span></span><div class='docblock'><p>Test whether value is not <code>()</code></p>
+</div><span id='variant.Eq' class='variant'><span id='Eq.v' class='invisible'><code>Eq</code></span></span><div class='docblock'><p>Pops from the top of the stack and tests for equality with value.</p>
+</div><span id='variant.NotEq' class='variant'><span id='NotEq.v' class='invisible'><code>NotEq</code></span></span><div class='docblock'><p>Pops from the top of the stack and tesst for inequality with value.</p>
+</div><span id='variant.EqConst' class='variant'><span id='EqConst.v' class='invisible'><code>EqConst(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Tests value for equality with const <em>n</em></p>
+</div><span id='variant.NotEqConst' class='variant'><span id='NotEqConst.v' class='invisible'><code>NotEqConst(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Tests value for inequality with const <em>n</em></p>
+</div><span id='variant.Not' class='variant'><span id='Not.v' class='invisible'><code>Not</code></span></span><div class='docblock'><p>Negate boolean value</p>
+</div><span id='variant.Inc' class='variant'><span id='Inc.v' class='invisible'><code>Inc</code></span></span><div class='docblock'><p>Increment integer value</p>
+</div><span id='variant.Dec' class='variant'><span id='Dec.v' class='invisible'><code>Dec</code></span></span><div class='docblock'><p>Decrement integer value</p>
+</div><span id='variant.Append' class='variant'><span id='Append.v' class='invisible'><code>Append</code></span></span><div class='docblock'><p>Append value to list on top of stack; result will be in value</p>
+</div><span id='variant.First' class='variant'><span id='First.v' class='invisible'><code>First</code></span></span><div class='docblock'><p>Take first element of list or string and assign to value</p>
+</div><span id='variant.Tail' class='variant'><span id='Tail.v' class='invisible'><code>Tail</code></span></span><div class='docblock'><p>Take tail of list or string and assign to value</p>
+</div><span id='variant.Init' class='variant'><span id='Init.v' class='invisible'><code>Init</code></span></span><div class='docblock'><p>Take head of list or string and assign to value</p>
+</div><span id='variant.Last' class='variant'><span id='Last.v' class='invisible'><code>Last</code></span></span><div class='docblock'><p>Take last element of list or string and assign to value</p>
+</div><span id='variant.FirstPush' class='variant'><span id='FirstPush.v' class='invisible'><code>FirstPush</code></span></span><div class='docblock'><p>Push first value from list or string</p>
+</div><span id='variant.TailPush' class='variant'><span id='TailPush.v' class='invisible'><code>TailPush</code></span></span><div class='docblock'><p>Push tail from list or string</p>
+</div><span id='variant.InitPush' class='variant'><span id='InitPush.v' class='invisible'><code>InitPush</code></span></span><div class='docblock'><p>Push head from list or string</p>
+</div><span id='variant.LastPush' class='variant'><span id='LastPush.v' class='invisible'><code>LastPush</code></span></span><div class='docblock'><p>Push last value from list or string</p>
+</div><span id='variant.CallSys' class='variant'><span id='CallSys.v' class='invisible'><code>CallSys(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Call system function <em>n</em> with known number of arguments on stack.
+Only functions with <code>Exact</code> arity may be called in this manner.</p>
+</div><span id='variant.CallSysArgs' class='variant'><span id='CallSysArgs.v' class='invisible'><code>CallSysArgs(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>,&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Call system function with <em>n</em> arguments on the stack;
+parameters are <code>(sys_fn, n_args)</code>.</p>
+</div><span id='variant.CallConst' class='variant'><span id='CallConst.v' class='invisible'><code>CallConst(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>,&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Call const function with arguments on the stack;
+parameters are <code>(const, n_args)</code>.</p>
+</div><span id='variant.Call' class='variant'><span id='Call.v' class='invisible'><code>Call(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Call function on the stack with <em>n</em> arguments from the top of the stack</p>
+</div><span id='variant.Apply' class='variant'><span id='Apply.v' class='invisible'><code>Apply(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Call function on the stack with <em>n</em> stack arguments,
+plus additional arguments from list value</p>
+</div><span id='variant.ApplyConst' class='variant'><span id='ApplyConst.v' class='invisible'><code>ApplyConst(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>,&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Call const function with <em>n</em> stack arguments,
+plus additional arguments from list value;
+parameters are <code>(const, n_args)</code>.</p>
+</div><span id='variant.ApplySelf' class='variant'><span id='ApplySelf.v' class='invisible'><code>ApplySelf(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Call current code object with <em>n</em> stack arguments,
+plus additional arguments from list value;
+does not perform a tail call</p>
+</div><span id='variant.TailApplySelf' class='variant'><span id='TailApplySelf.v' class='invisible'><code>TailApplySelf(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Call current code object with <em>n</em> stack arguments,
+plus additional arguments from list value</p>
+</div><span id='variant.CallSelf' class='variant'><span id='CallSelf.v' class='invisible'><code>CallSelf(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Call current code object with <em>n</em> arguments from the top of the stack;
+this does not perform a tail call</p>
+</div><span id='variant.TailCallSelf' class='variant'><span id='TailCallSelf.v' class='invisible'><code>TailCallSelf(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Perform tail-recursive call with <em>n</em> arguments from the top of the stack</p>
+</div><span id='variant.Skip' class='variant'><span id='Skip.v' class='invisible'><code>Skip(<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>)</code></span></span><div class='docblock'><p>Remove <em>n</em> values from the top of the stack</p>
+</div><span id='variant.Return' class='variant'><span id='Return.v' class='invisible'><code>Return</code></span></span><div class='docblock'><p>Return value from function</p>
+</div><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class="enum" href="../../ketos/bytecode/enum.Instruction.html" title="enum ketos::bytecode::Instruction">Instruction</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/ketos/bytecode.rs.html#325-658' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.decode' class="method"><span id='decode.v' class='invisible'><code>fn <a href='#method.decode' class='fnname'>decode</a>(r: &amp;mut <a class="struct" href="../../ketos/bytecode/struct.CodeReader.html" title="struct ketos::bytecode::CodeReader">CodeReader</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="enum" href="../../ketos/bytecode/enum.Instruction.html" title="enum ketos::bytecode::Instruction">Instruction</a>, <a class="enum" href="../../ketos/exec/enum.ExecError.html" title="enum ketos::exec::ExecError">ExecError</a>&gt;</code></span></h4>
+<div class='docblock'><p>Decodes a single <code>Instruction</code> from a <code>CodeReader</code>.</p>
+</div><h4 id='method.encode' class="method"><span id='encode.v' class='invisible'><code>fn <a href='#method.encode' class='fnname'>encode</a>(&amp;self, w: &amp;mut <a class="struct" href="../../ketos/bytecode/struct.CodeBlock.html" title="struct ketos::bytecode::CodeBlock">CodeBlock</a>, short: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>, <a class="enum" href="../../ketos/compile/enum.CompileError.html" title="enum ketos::compile::CompileError">CompileError</a>&gt;</code></span></h4>
+<div class='docblock'><p>Encodes a single <code>Instruction</code> into a <code>CodeBlock</code>.</p>
+</div><h4 id='method.is_trivial' class="method"><span id='is_trivial.v' class='invisible'><code>fn <a href='#method.is_trivial' class='fnname'>is_trivial</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+<div class='docblock'><p>Returns whether the <code>Instruction</code> is trivial;
+that is, in valid top-level code, it does not produce any side effects.</p>
+</div><h4 id='method.jump_label' class="method"><span id='jump_label.v' class='invisible'><code>fn <a href='#method.jump_label' class='fnname'>jump_label</a>(&amp;self) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>&gt;</code></span></h4>
+<div class='docblock'><p>If the instruction is a jump instruction, returns the jump offset.
+Otherwise, returns <code>None</code>.</p>
+</div><h4 id='method.max_len' class="method"><span id='max_len.v' class='invisible'><code>fn <a href='#method.max_len' class='fnname'>max_len</a>() -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a></code></span></h4>
+<div class='docblock'><p>Returns the maximum length, in bytes, of an encoded instruction.</p>
+</div></div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html" title="trait core::marker::Copy">Copy</a> for <a class="enum" href="../../ketos/bytecode/enum.Instruction.html" title="enum ketos::bytecode::Instruction">Instruction</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/ketos/bytecode.rs.html#42' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'></div><h3 class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html" title="trait core::clone::Clone">Clone</a> for <a class="enum" href="../../ketos/bytecode/enum.Instruction.html" title="enum ketos::bytecode::Instruction">Instruction</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/ketos/bytecode.rs.html#42' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.clone' class="method"><span id='clone.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone' class='fnname'>clone</a>(&amp;self) -&gt; <a class="enum" href="../../ketos/bytecode/enum.Instruction.html" title="enum ketos::bytecode::Instruction">Instruction</a></code></span></h4>
+<div class='docblock'><p>Returns a copy of the value. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone">Read more</a></p>
+</div><h4 id='method.clone_from' class="method"><span id='clone_from.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from' class='fnname'>clone_from</a>(&amp;mut self, source: &amp;Self)</code><div class='since' title='Stable since Rust version 1.0.0'>1.0.0</div></span></h4>
+<div class='docblock'><p>Performs copy-assignment from <code>source</code>. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from">Read more</a></p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html" title="trait core::fmt::Debug">Debug</a> for <a class="enum" href="../../ketos/bytecode/enum.Instruction.html" title="enum ketos::bytecode::Instruction">Instruction</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/ketos/bytecode.rs.html#42' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt' class="method"><span id='fmt.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, __arg_0: &amp;mut <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html" title="struct core::fmt::Formatter">Formatter</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/core/fmt/type.Result.html" title="type core::fmt::Result">Result</a></code></span></h4>
+<div class='docblock'><p>Formats the value using the given formatter.</p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html" title="trait core::cmp::Eq">Eq</a> for <a class="enum" href="../../ketos/bytecode/enum.Instruction.html" title="enum ketos::bytecode::Instruction">Instruction</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/ketos/bytecode.rs.html#42' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'></div><h3 class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html" title="trait core::cmp::PartialEq">PartialEq</a> for <a class="enum" href="../../ketos/bytecode/enum.Instruction.html" title="enum ketos::bytecode::Instruction">Instruction</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/ketos/bytecode.rs.html#42' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.eq' class="method"><span id='eq.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#tymethod.eq' class='fnname'>eq</a>(&amp;self, __arg_0: &amp;<a class="enum" href="../../ketos/bytecode/enum.Instruction.html" title="enum ketos::bytecode::Instruction">Instruction</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+<div class='docblock'><p>This method tests for <code>self</code> and <code>other</code> values to be equal, and is used by <code>==</code>. <a href="https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#tymethod.eq">Read more</a></p>
+</div><h4 id='method.ne' class="method"><span id='ne.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#method.ne' class='fnname'>ne</a>(&amp;self, __arg_0: &amp;<a class="enum" href="../../ketos/bytecode/enum.Instruction.html" title="enum ketos::bytecode::Instruction">Instruction</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+<div class='docblock'><p>This method tests for <code>!=</code>.</p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "ketos";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

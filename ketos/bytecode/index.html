@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `bytecode` mod in crate `ketos`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, bytecode">
+
+    <title>ketos::bytecode - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc mod">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../index.html'>ketos</a></p><script>window.sidebarCurrent = {name: 'bytecode', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Module <a href='../index.html'>ketos</a>::<wbr><a class="mod" href=''>bytecode</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/ketos/bytecode.rs.html#1-1086' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>Implements encoding and decoding of bytecode instruction format.</p>
+
+<p>Bytecode instructions consist of a one-byte operand, followed by zero or more
+unsigned integer operands in the range <code>[0, 0x7fff]</code> (15 bits).</p>
+
+<p>Operands in the range <code>[0, 0x7f]</code> are encoded as a single byte. Operands in
+the range <code>[0x80, 0x7fff]</code> are encoded as two bytes: the first containing
+the higher 7 bits of the operand with the 8th bit set; the second containing
+the lower 8 bits of the operand.</p>
+
+<p>Combination instructions exist to combine the operation of two or more
+instructions which commonly follow, e.g. <code>ConstPush(n)</code> operates as
+<code>Const(n)</code> followed by <code>Push</code>.</p>
+
+<p>Shortcut opcodes exist for common instructions that accept operands,
+such as <code>Const</code> and <code>Load</code>. These opcodes replace a long-form instruction
+with a single opcode, e.g. the <code>CONST_0</code> opcode replaces the two-byte
+sequence <code>CONST</code>, followed by operand <code>0</code>.</p>
+</div><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="mod" href="code_flags/index.html"
+                                  title='mod ketos::bytecode::code_flags'>code_flags</a></td>
+                           <td class='docblock-short'>
+                                <p>Bit flag values for <code>Code::flags</code></p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="mod" href="opcodes/index.html"
+                                  title='mod ketos::bytecode::opcodes'>opcodes</a></td>
+                           <td class='docblock-short'>
+                                <p>Opcode values of compiled bytecode.</p>
+                           </td>
+                       </tr></table><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Code.html"
+                                  title='struct ketos::bytecode::Code'>Code</a></td>
+                           <td class='docblock-short'>
+                                <p>Represents a compiled bytecode function or expression.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.CodeBlock.html"
+                                  title='struct ketos::bytecode::CodeBlock'>CodeBlock</a></td>
+                           <td class='docblock-short'>
+                                <p>Contains a series of bytecode instructions</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.CodeReader.html"
+                                  title='struct ketos::bytecode::CodeReader'>CodeReader</a></td>
+                           <td class='docblock-short'>
+                                <p>Reads <code>Instruction</code> values from a stream of bytes.</p>
+                           </td>
+                       </tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.Instruction.html"
+                                  title='enum ketos::bytecode::Instruction'>Instruction</a></td>
+                           <td class='docblock-short'>
+                                <p>Represents an instruction and any immediate parameters.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.JumpInstruction.html"
+                                  title='enum ketos::bytecode::JumpInstruction'>JumpInstruction</a></td>
+                           <td class='docblock-short'>
+                                <p>Partial representation of jump <code>Instruction</code> variants before label values
+have been determined.</p>
+                           </td>
+                       </tr></table><h2 id='constants' class='section-header'><a href="#constants">Constants</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.BYTECODE_VERSION.html"
+                                  title='constant ketos::bytecode::BYTECODE_VERSION'>BYTECODE_VERSION</a></td>
+                           <td class='docblock-short'>
+                                <p>Bytecode version number, indicating the version of the most recent breaking
+change to the bytecode format. The version represents a <code>ketos</code> version
+number, e.g. <code>0x01_02_03_00</code> corresponds to version <code>1.2.3</code>.
+(The least significant 8 bits don&#39;t mean anything yet.)</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.MAX_LONG_OPERAND.html"
+                                  title='constant ketos::bytecode::MAX_LONG_OPERAND'>MAX_LONG_OPERAND</a></td>
+                           <td class='docblock-short'>
+                                <p>Maximum value of a long-encoded operand.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.MAX_SHORT_OPERAND.html"
+                                  title='constant ketos::bytecode::MAX_SHORT_OPERAND'>MAX_SHORT_OPERAND</a></td>
+                           <td class='docblock-short'>
+                                <p>Maximum value of a short-encoded operand.</p>
+                           </td>
+                       </tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "ketos";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>
