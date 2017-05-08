@@ -433,10 +433,10 @@ impl NameStore {
         if name == Name::dummy() {
             "<dummy name>"
         } else {
-            match standard_name(name) {
-                Some(s) => s,
-                None => &self.names[(name.0 - NUM_STANDARD_NAMES) as usize]
-            }
+            standard_name(name)
+                .or_else(|| self.names.get((name.0 - NUM_STANDARD_NAMES) as usize)
+                    .map(|s| &s[..]))
+                .unwrap_or("<invalid name>")
         }
     }
 
