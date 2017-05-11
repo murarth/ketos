@@ -7,7 +7,7 @@ programs written in the [Rust programming language](https://www.rust-lang.org).
 
 Ketos is compiled to bytecode and interpreted by pure Rust code.
 
-[API Documentation](https://murarth.github.io/ketos/ketos/index.html)
+[API Documentation](https://docs.rs/ketos/)
 
 [Language Documentation](docs/README.md)
 

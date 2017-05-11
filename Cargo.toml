@@ -2,7 +2,7 @@
 name = "ketos"
 description = "Lisp dialect scripting and extension language"
 
-documentation = "http://murarth.github.io/ketos/ketos/index.html"
+documentation = "https://docs.rs/ketos/"
 homepage = "https://github.com/murarth/ketos"
 repository = "https://github.com/murarth/ketos"
 
