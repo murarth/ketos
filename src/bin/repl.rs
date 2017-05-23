@@ -1,4 +1,5 @@
-extern crate getopts;
+extern crate gumdrop;
+#[macro_use] extern crate gumdrop_derive;
 extern crate ketos;
 extern crate linefeed;
 
@@ -10,7 +11,7 @@ use std::rc::Rc;
 use std::str::FromStr;
 use std::time::Duration;
 
-use getopts::{Options, ParsingStyle};
+use gumdrop::{Options, ParsingStyle};
 use ketos::{
     Builder, Interpreter, complete_name,
     Error, RestrictConfig,
@@ -24,36 +25,48 @@ fn main() {
     std::process::exit(status);
 }
 
+#[derive(Default, Options)]
+struct KetosOpts {
+    #[options(free)]
+    free: Vec<String>,
+
+    #[options(help = "Print this help message and exit")]
+    help: bool,
+    #[options(short = "V", help = "Print version and exit")]
+    version: bool,
+
+    #[options(no_long, help = "Evaluate one expression and exit", meta = "EXPR")]
+    expr: Option<String>,
+    #[options(help = "Run interactively even with a file")]
+    interactive: bool,
+    #[options(no_long, help = "Add DIR to list of module search paths", meta = "DIR")]
+    include: Vec<String>,
+    #[options(short = "R",
+        help = "Configure execution restrictions; see `-R help` for more details",
+        meta = "SPEC")]
+    restrict: Option<String>,
+    #[options(no_short, help = "Do not run ~/.ketosrc.ket on startup")]
+    no_rc: bool,
+}
+
 fn run() -> i32 {
     let args = std::env::args().collect::<Vec<_>>();
-    let mut opts = Options::new();
 
     // Allow arguments that appear to be options to be passed to scripts
-    opts.parsing_style(ParsingStyle::StopAtFirstFree);
-
-    opts.optopt  ("e", "", "Evaluate one expression and exit", "EXPR");
-    opts.optflag ("h", "help", "Print this help message and exit");
-    opts.optflag ("i", "interactive", "Run interactively even with a file");
-    opts.optmulti("I", "", "Add DIR to list of module search paths", "DIR");
-    opts.optopt  ("R", "restrict", "Configure execution restrictions; \
-                                    see `-R help` for more details", "SPEC");
-    opts.optflag ("", "no-rc", "Do not run ~/.ketosrc.ket on startup");
-    opts.optflag ("V", "version", "Print version and exit");
-
-    let matches = match opts.parse(&args[1..]) {
-        Ok(m) => m,
+    let opts = match KetosOpts::parse_args(&args[1..], ParsingStyle::StopAtFirstFree) {
+        Ok(opts) => opts,
         Err(e) => {
             let _ = writeln!(stderr(), "{}: {}", args[0], e);
             return 1;
         }
     };
 
-    if matches.opt_present("version") {
+    if opts.version {
         print_version();
         return 0;
     }
-    if matches.opt_present("help") {
-        print_usage(&args[0], &opts);
+    if opts.help {
+        print_usage(&args[0]);
         return 0;
     }
 
@@ -64,18 +77,18 @@ fn run() -> i32 {
         paths.extend(split_paths(&p));
     }
 
-    paths.extend(matches.opt_strs("I").into_iter().map(PathBuf::from));
+    paths.extend(opts.include.into_iter().map(PathBuf::from));
 
     let mut builder = Builder::new()
         .search_paths(paths);
 
-    if let Some(res) = matches.opt_str("restrict") {
+    if let Some(ref res) = opts.restrict {
         if res == "help" {
             print_restrict_usage();
             return 0;
         }
 
-        builder = match parse_restrict(&res) {
+        builder = match parse_restrict(res) {
             Ok(res) => builder.restrict(res),
             Err(e) => {
                 println!("{}: {}", args[0], e);
@@ -86,23 +99,23 @@ fn run() -> i32 {
 
     let interp = builder.finish();
 
-    let interactive = matches.opt_present("interactive") ||
-        (matches.free.is_empty() && !matches.opt_present("e"));
+    let interactive = opts.interactive ||
+        (opts.free.is_empty() && opts.expr.is_none());
 
-    if let Some(expr) = matches.opt_str("e") {
+    if let Some(ref expr) = opts.expr {
         if !run_expr(&interp, &expr) && !interactive {
             return 1;
         }
-    } else if !matches.free.is_empty() {
-        interp.set_args(&matches.free);
+    } else if !opts.free.is_empty() {
+        interp.set_args(&opts.free);
 
-        if !run_file(&interp, Path::new(&matches.free[0])) && !interactive {
+        if !run_file(&interp, Path::new(&opts.free[0])) && !interactive {
             return 1;
         }
     }
 
     if interactive {
-        if !matches.opt_present("no-rc") {
+        if !opts.no_rc {
             if let Some(p) = std::env::home_dir() {
                 let rc = p.join(".ketosrc.ket");
                 if rc.is_file() {
@@ -288,8 +301,10 @@ fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
 
-fn print_usage(arg0: &str, opts: &Options) {
-    print!("{}", opts.usage(&format!("Usage: {} [OPTIONS] [FILE] [ARGS]", arg0)));
+fn print_usage(arg0: &str) {
+    println!("Usage: {} [OPTIONS] [FILE] [ARGS]", arg0);
+    println!();
+    println!("{}", KetosOpts::usage());
 }
 
 fn print_restrict_usage() {

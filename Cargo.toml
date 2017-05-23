@@ -24,7 +24,8 @@ path = "src/ketos/lib.rs"
 
 [dependencies]
 byteorder = "0.5.1"
-getopts = "0.2"
+gumdrop = "0.1"
+gumdrop_derive = "0.1"
 linefeed = "0.2"
 num = "0.1.32"
 rand = "0.3"
