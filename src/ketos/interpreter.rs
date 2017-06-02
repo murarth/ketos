@@ -15,8 +15,9 @@ use lexer::{CodeMap, Lexer};
 use module::{BuiltinModuleLoader, FileModuleLoader, ModuleLoader, ModuleRegistry};
 use name::{debug_names, display_names, NameStore};
 use parser::{ParseError, Parser};
-use scope::{GlobalScope, Scope};
 use restrict::RestrictConfig;
+use scope::{GlobalScope, Scope};
+use structs::{StructDefMap};
 use trace::{get_traceback, take_traceback, Trace};
 use value::Value;
 
@@ -45,6 +46,7 @@ pub struct Builder {
     scope: Option<Scope>,
     restrict: Option<RestrictConfig>,
     io: Option<Rc<GlobalIo>>,
+    struct_defs: Option<Rc<RefCell<StructDefMap>>>,
     module_loader: Option<Box<ModuleLoader>>,
     search_paths: Option<Vec<PathBuf>>,
 }
@@ -66,6 +68,7 @@ impl Builder {
             scope: None,
             restrict: None,
             io: None,
+            struct_defs: None,
             module_loader: None,
             search_paths: None,
         }
@@ -93,6 +96,14 @@ impl Builder {
         self
     }
 
+    /// Sets the restriction configuration in the new context.
+    pub fn restrict(mut self, restrict: RestrictConfig) -> Self {
+        exclude!(self.context, "restrict", "context");
+
+        self.restrict = Some(restrict);
+        self
+    }
+
     /// Sets the scope in the new context.
     pub fn scope(mut self, scope: Scope) -> Self {
         exclude!(self.name, "scope", "name");
@@ -105,11 +116,12 @@ impl Builder {
         self
     }
 
-    /// Sets the restriction configuration in the new context.
-    pub fn restrict(mut self, restrict: RestrictConfig) -> Self {
-        exclude!(self.context, "restrict", "context");
+    /// Sets the struct definitions in the new context.
+    pub fn struct_defs(mut self, defs: Rc<RefCell<StructDefMap>>) -> Self {
+        exclude!(self.context, "struct_defs", "context");
+        exclude!(self.scope, "struct_defs", "scope");
 
-        self.restrict = Some(restrict);
+        self.struct_defs = Some(defs);
         self
     }
 
@@ -168,8 +180,10 @@ impl Builder {
         let codemap = Rc::new(RefCell::new(CodeMap::new()));
         let modules = Rc::new(ModuleRegistry::new(loader));
         let io = self.io.take().unwrap_or_else(|| Rc::new(GlobalIo::default()));
+        let defs = self.struct_defs.take().unwrap_or_else(
+            || Rc::new(RefCell::new(StructDefMap::new())));
 
-        Rc::new(GlobalScope::new(name, names, codemap, modules, io))
+        Rc::new(GlobalScope::new(name, names, codemap, modules, io, defs))
     }
 
     fn build_loader(&mut self) -> Box<ModuleLoader> {
@@ -211,6 +225,7 @@ impl Interpreter {
         let codemap = Rc::new(RefCell::new(CodeMap::new()));
         let modules = Rc::new(ModuleRegistry::new(loader));
         let io = Rc::new(GlobalIo::default());
+        let defs = Rc::new(RefCell::new(StructDefMap::new()));
 
         Interpreter::with_scope(
             Rc::new(GlobalScope::new(
@@ -218,7 +233,8 @@ impl Interpreter {
                 names.clone(),
                 codemap.clone(),
                 modules,
-                io)))
+                io,
+                defs)))
     }
 
     /// Creates a new `Interpreter` using the given `Context` instance.

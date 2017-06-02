@@ -1,5 +1,6 @@
 //! Contains values associated with names in a given execution context.
 
+use std::any::TypeId;
 use std::cell::{Ref, RefMut, RefCell};
 use std::rc::{Rc, Weak};
 
@@ -10,6 +11,7 @@ use module::{BuiltinModuleLoader, ModuleRegistry};
 use name::{get_standard_name, get_system_fn, is_system_operator,
     is_standard_value, NUM_STANDARD_VALUES,
     SYSTEM_OPERATORS_END, Name, NameMap, NameSetSlice, NameStore};
+use structs::{ForeignStructDef, StructDef, StructDefMap, StructValue};
 use value::Value;
 
 /// Represents the global namespace of an execution context.
@@ -20,6 +22,7 @@ pub struct GlobalScope {
     codemap: Rc<RefCell<CodeMap>>,
     modules: Rc<ModuleRegistry>,
     io: Rc<GlobalIo>,
+    struct_defs: Rc<RefCell<StructDefMap>>,
 }
 
 #[derive(Clone)]
@@ -72,7 +75,8 @@ impl GlobalScope {
             names: Rc<RefCell<NameStore>>,
             codemap: Rc<RefCell<CodeMap>>,
             registry: Rc<ModuleRegistry>,
-            io: Rc<GlobalIo>) -> GlobalScope {
+            io: Rc<GlobalIo>,
+            struct_defs: Rc<RefCell<StructDefMap>>) -> GlobalScope {
         GlobalScope{
             name: name,
             namespace: RefCell::new(Namespace::new()),
@@ -80,6 +84,7 @@ impl GlobalScope {
             codemap: codemap,
             modules: registry,
             io: io,
+            struct_defs: struct_defs,
         }
     }
 
@@ -92,8 +97,9 @@ impl GlobalScope {
         let codemap = Rc::new(RefCell::new(CodeMap::new()));
         let modules = Rc::new(ModuleRegistry::new(Box::new(BuiltinModuleLoader)));
         let io = Rc::new(GlobalIo::default());
+        let struct_defs = Rc::new(RefCell::new(StructDefMap::new()));
 
-        GlobalScope::new(name, names, codemap, modules, io)
+        GlobalScope::new(name, names, codemap, modules, io, struct_defs)
     }
 
     /// Creates a new global scope using the shared data from the given scope.
@@ -103,7 +109,8 @@ impl GlobalScope {
             scope.name_store.clone(),
             scope.codemap.clone(),
             scope.modules.clone(),
-            scope.io.clone()))
+            scope.io.clone(),
+            scope.struct_defs.clone()))
     }
 
     /// Creates a semi-"deep" clone of the `GlobalScope` object.
@@ -119,6 +126,7 @@ impl GlobalScope {
             codemap: self.codemap.clone(),
             modules: self.modules.clone(),
             io: self.io.clone(),
+            struct_defs: self.struct_defs.clone(),
         })
     }
 
@@ -215,6 +223,27 @@ impl GlobalScope {
     pub fn get_named_constant(&self, name: &str) -> Option<Value> {
         let name = self.borrow_names().get_name(name);
         name.and_then(|name| self.get_constant(name))
+    }
+
+    /// Returns a `StructDef` for a given type.
+    pub fn get_struct_def(&self, id: TypeId) -> Option<Rc<StructDef>> {
+        self.struct_defs.borrow().get(&id).cloned()
+    }
+
+    /// Creates a `StructDef` for the given type, inserting the definition
+    /// into the global namespace.
+    pub fn register_struct_value<T: StructValue>(&self) {
+        let name = self.add_name(T::struct_name());
+
+        let def = Rc::new(StructDef::new(name,
+            Box::new(ForeignStructDef::<T>::new(&mut self.name_store.borrow_mut()))));
+
+        self.insert_struct_def(TypeId::of::<T>(), def.clone());
+        self.add_value(name, Value::StructDef(def));
+    }
+
+    fn insert_struct_def(&self, id: TypeId, def: Rc<StructDef>) {
+        self.struct_defs.borrow_mut().insert(id, def);
     }
 
     /// Returns a borrowed reference to the contained `GlobalIo`.

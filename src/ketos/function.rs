@@ -18,7 +18,8 @@ use name::{Name, NUM_SYSTEM_FNS};
 use restrict::RestrictError;
 use scope::{Scope, WeakScope};
 use string_fmt::format_string;
-use value::{FromValueRef, Struct, StructDef, Value};
+use structs::StructDef;
+use value::{FromValueRef, Value};
 
 use self::Arity::*;
 
@@ -381,10 +382,21 @@ fn get_string(v: &Value) -> Result<&str, ExecError> {
     FromValueRef::from_value_ref(v)
 }
 
-fn get_struct(v: &Value) -> Result<&Struct, ExecError> {
+fn get_struct_def_for(scope: &Scope, v: &Value) -> Result<Rc<StructDef>, ExecError> {
     match *v {
-        Value::Struct(ref s) => Ok(s),
+        Value::Struct(ref s) => Ok(s.def().clone()),
+        ref fv @ Value::Foreign(_) => get_foreign_value_struct_def(scope, fv),
         ref v => Err(ExecError::expected("struct", v))
+    }
+}
+
+fn get_foreign_value_struct_def(scope: &Scope, v: &Value) -> Result<Rc<StructDef>, ExecError> {
+    match *v {
+        Value::Foreign(ref fv) => {
+            scope.get_struct_def(fv.type_id())
+                .ok_or_else(|| ExecError::expected("struct", v))
+        }
+        _ => unreachable!()
     }
 }
 
@@ -417,7 +429,10 @@ fn test_zero<T: Zero>(t: &T) -> Result<(), ExecError> {
     }
 }
 
-fn value_is(scope: &Scope, a: &Value, ty: Name) -> bool {
+/// Returns whether a `Value` matches a given type.
+///
+/// The type name `number` will match `integer`, `float`, or `ratio` values.
+pub fn value_is(scope: &Scope, a: &Value, ty: Name) -> bool {
     use name::standard_names::*;
 
     match *a {
@@ -1117,8 +1132,10 @@ fn fn_is(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 /// the named struct definition.
 fn fn_is_instance(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let def = try!(get_struct_def(&args[0]));
-    let s = try!(get_struct(&args[1]));
-    Ok((def == s.def()).into())
+
+    let sv = &args[1];
+
+    Ok(def.def().is_instance(sv, def).into())
 }
 
 /// `null` returns whether the given value is unit, `()`.
@@ -1172,18 +1189,11 @@ fn fn_type_of(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 /// ```lisp
 /// (. foo :bar)
 /// ```
-fn fn_dot(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let s = try!(get_struct(&args[0]));
+fn fn_dot(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
+    let def = try!(get_struct_def_for(ctx.scope(), &args[0]));
+    let field = try!(get_keyword(&args[1]));
 
-    let name = try!(get_keyword(&args[1]));
-
-    match s.get_field(name) {
-        Some(v) => Ok(v.clone()),
-        None => Err(From::from(ExecError::FieldError{
-            struct_name: s.def().name(),
-            field: name,
-        }))
-    }
+    def.def().get_field(ctx.scope(), &def, &args[0], field)
 }
 
 /// `.=` assigns a value to one or more fields of a struct value.
@@ -1192,43 +1202,30 @@ fn fn_dot(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 /// (.= foo :bar 1)
 /// ```
 fn fn_dot_eq(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let mut s = match args[0].take() {
-        Value::Struct(s) => s,
-        ref v => return Err(From::from(ExecError::expected("struct", v)))
-    };
+    let value = args[0].take();
 
-    {
-        let def = s.def().clone();
-        let mut s = Rc::make_mut(&mut s);
+    let def = try!(get_struct_def_for(ctx.scope(), &value));
 
-        let mut iter = args[1..].iter_mut();
+    let mut fields = Vec::with_capacity(args.len() / 2);
 
-        while let Some(name) = iter.next() {
-            let name = try!(get_keyword(name));
+    let mut iter = args[1..].iter_mut();
 
-            let value = match iter.next() {
-                Some(v) => v.take(),
-                None => return Err(From::from(ExecError::OddKeywordParams))
-            };
+    while let Some(name) = iter.next() {
+        let name = try!(get_keyword(name));
 
-            match def.field_type(name) {
-                Some(ty) => {
-                    if !value_is(ctx.scope(), &value, ty) {
-                        return Err(From::from(ExecError::expected_field(
-                            def.name(), name, ty, &value)));
-                    }
-                }
-                None => return Err(From::from(ExecError::FieldError{
-                    struct_name: def.name(),
-                    field: name,
-                }))
-            }
+        let value = match iter.next() {
+            Some(v) => v.take(),
+            None => return Err(From::from(ExecError::OddKeywordParams))
+        };
 
-            *s.get_field_mut(name).unwrap() = value;
+        if fields.iter().any(|&(n, _)| n == name) {
+            return Err(ExecError::DuplicateField(name).into());
         }
+
+        fields.push((name, value));
     }
 
-    Ok(Value::Struct(s))
+    def.def().replace_fields(ctx.scope(), &def, value, &mut fields)
 }
 
 /// `new` creates a struct value.
@@ -1239,55 +1236,25 @@ fn fn_dot_eq(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 fn fn_new(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let def = try!(get_struct_def(&args[0])).clone();
 
-    let n_fields = def.fields().len();
-    let mut fields = vec![Value::Unbound; n_fields].into_boxed_slice();
+    let mut fields = Vec::with_capacity(args.len() / 2);
     let mut iter = args[1..].iter_mut();
 
-    while let Some(fname) = iter.next() {
-        let fname = try!(get_keyword(fname));
-
-        let idx = match def.field_index(fname) {
-            Some(idx) => idx,
-            None => return Err(From::from(ExecError::FieldError{
-                struct_name: def.name(),
-                field: fname,
-            }))
-        };
-
-        if let Value::Unbound = fields[idx] {
-            // Nothing
-        } else {
-            return Err(From::from(ExecError::DuplicateField(fname)));
-        }
+    while let Some(name) = iter.next() {
+        let name = try!(get_keyword(name));
 
         let value = match iter.next() {
             Some(value) => value.take(),
             None => return Err(From::from(ExecError::OddKeywordParams))
         };
 
-        match def.field_type(fname) {
-            Some(ty) => {
-                if !value_is(ctx.scope(), &value, ty) {
-                    return Err(From::from(ExecError::expected_field(
-                        def.name(), fname, ty, &value)));
-                } else {
-                    fields[idx] = value;
-                }
-            }
-            None => unreachable!()
+        if fields.iter().any(|&(n, _)| n == name) {
+            return Err(ExecError::DuplicateField(name).into());
         }
+
+        fields.push((name, value));
     }
 
-    for (n, &(fname, _)) in def.fields().iter().enumerate() {
-        if let Value::Unbound = fields[n] {
-            return Err(From::from(ExecError::MissingField{
-                struct_name: def.name(),
-                field: fname,
-            }));
-        }
-    }
-
-    Ok(Value::Struct(Rc::new(Struct::new(def, fields))))
+    def.def().from_fields(ctx.scope(), &def, &mut fields)
 }
 
 /// `format` returns a formatted string.

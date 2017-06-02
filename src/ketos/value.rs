@@ -1,6 +1,5 @@
 //! Represents any possible value type.
 
-use std::any::{Any, TypeId};
 use std::cmp::Ordering;
 use std::f64::{INFINITY, NEG_INFINITY};
 use std::ffi::{OsStr, OsString};
@@ -9,13 +8,15 @@ use std::mem::{replace, transmute};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
+use any::AnyValue;
 use bytes::Bytes;
 use error::Error;
 use exec::{Context, ExecError};
 use function::{Function, Lambda};
 use integer::{Integer, Ratio};
-use name::{Name, NameDebug, NameDisplay, NameMapSlice, NameStore};
+use name::{Name, NameDebug, NameDisplay, NameStore};
 use rc_vec::{RcString, RcVec};
+use structs::{Struct, StructDef, StructValueDef};
 
 /// Represents a value.
 #[derive(Clone, Debug)]
@@ -76,7 +77,7 @@ impl Value {
 
     /// Returns a value containing a foreign function.
     pub fn new_foreign_fn<F>(name: Name, f: F) -> Value
-            where F: Any + Fn(&Context, &mut [Value]) -> Result<Value, Error> {
+            where F: AnyValue + Fn(&Context, &mut [Value]) -> Result<Value, Error> {
         Value::new_foreign(ForeignFn{
             name: name,
             f: f,
@@ -103,12 +104,12 @@ impl Value {
             (&Value::List(ref a), &Value::List(ref b)) =>
                 try!(cmp_value_slice(a, b)),
             (&Value::Struct(ref a), &Value::Struct(ref b)) => {
-                if a.def == b.def {
-                    try!(cmp_value_slice(&a.fields, &b.fields))
+                if a.def() == b.def() {
+                    try!(cmp_value_slice(a.fields(), b.fields()))
                 } else {
                     return Err(ExecError::StructMismatch{
-                        lhs: a.def.name,
-                        rhs: b.def.name,
+                        lhs: a.def().name(),
+                        rhs: b.def().name(),
                     });
                 }
             }
@@ -208,12 +209,12 @@ impl Value {
             (&Value::List(ref a), &Value::List(ref b)) =>
                 try!(eq_value_slice(a, b)),
             (&Value::Struct(ref a), &Value::Struct(ref b)) => {
-                if a.def == b.def {
-                    try!(eq_value_slice(&a.fields, &b.fields))
+                if a.def() == b.def() {
+                    try!(eq_value_slice(a.fields(), b.fields()))
                 } else {
                     return Err(ExecError::StructMismatch{
-                        lhs: a.def.name,
-                        rhs: b.def.name,
+                        lhs: a.def().name(),
+                        rhs: b.def().name(),
                     });
                 }
             }
@@ -245,8 +246,8 @@ impl Value {
             (&Value::Integer(ref a), &Value::Integer(ref b)) => a == b,
             (&Value::Ratio(ref a), &Value::Ratio(ref b)) => a == b,
             (&Value::Struct(ref a), &Value::Struct(ref b)) =>
-                a.def == b.def &&
-                    a.fields.iter().zip(b.fields.iter())
+                a.def() == b.def() &&
+                    a.fields().iter().zip(b.fields().iter())
                         .all(|(a, b)| a.is_identical(b)),
             (&Value::Name(a), &Value::Name(b)) => a == b,
             (&Value::Keyword(a), &Value::Keyword(b)) => a == b,
@@ -302,8 +303,8 @@ impl Value {
                 1 + numer + denom
             }
             Value::Struct(ref s) =>
-                1 + s.fields.iter().map(|f| f.size()).fold(0, |a, b| a + b),
-            Value::StructDef(ref d) => 1 + d.fields.len(),
+                1 + s.fields().iter().map(|f| f.size()).fold(0, |a, b| a + b),
+            Value::StructDef(ref d) => d.def().size(),
             Value::String(ref s) => 1 + s.len(),
             Value::Bytes(ref s) => 1 + s.len(),
             Value::Path(ref p) => 1 + p.as_os_str().len(),
@@ -389,25 +390,6 @@ impl Value {
             Value::Foreign(ref a) => a.type_name(),
         }
     }
-}
-
-/// A helper trait that is necessary as long as `Any::get_type_id` is unstable.
-pub trait AnyValue: Any {
-    /// Returns the `TypeId` value for the type.
-    fn type_id(&self) -> TypeId;
-}
-
-impl<T: Any> AnyValue for T {
-    fn type_id(&self) -> TypeId {
-        TypeId::of::<Self>()
-    }
-}
-
-/// Duplicate definition of `std::raw::TraitObject`, which is unstable.
-#[repr(C)]
-struct TraitObject {
-    pub data: *mut (),
-    pub vtable: *mut (),
 }
 
 /// Represents a type of value defined outside the core interpreter.
@@ -509,48 +491,7 @@ pub trait ForeignValue: AnyValue + fmt::Debug {
     fn size(&self) -> usize { 2 }
 }
 
-impl ForeignValue {
-    /// Returns whether the contained value is of the given type.
-    pub fn is<T: Any>(&self) -> bool {
-        self.type_id() == TypeId::of::<T>()
-    }
-
-    /// Returns an owned `Rc` reference to the contained value,
-    /// if it is os the given type.
-    pub fn downcast<T: Any>(rc: Rc<Self>) -> Result<Rc<T>, Rc<Self>> {
-        if rc.is::<T>() {
-            let obj: TraitObject = unsafe { transmute(rc) };
-            Ok(unsafe { transmute(obj.data) })
-        } else {
-            Err(rc)
-        }
-    }
-
-    /// Returns a reference to the contained value, if it is of the given type.
-    pub fn downcast_ref<T: Any>(&self) -> Option<&T> {
-        if self.is::<T>() {
-            unsafe {
-                let obj: TraitObject = transmute(self);
-                Some(&*(obj.data as *const T))
-            }
-        } else {
-            None
-        }
-    }
-
-    /// Returns a mutable reference to the contained value,
-    /// if it is of the given type.
-    pub fn downcast_mut<T: Any>(&mut self) -> Option<&mut T> {
-        if self.is::<T>() {
-            unsafe {
-                let obj: TraitObject = transmute(self);
-                Some(&mut *(obj.data as *mut T))
-            }
-        } else {
-            None
-        }
-    }
-}
+impl_any_cast!{ ForeignValue }
 
 /// Represents a foreign value that contains a callable function or closure
 pub struct ForeignFn<F> {
@@ -565,7 +506,7 @@ impl<F> fmt::Debug for ForeignFn<F> {
 }
 
 impl<F> ForeignValue for ForeignFn<F>
-        where F: Any + Fn(&Context, &mut [Value]) -> Result<Value, Error> {
+        where F: AnyValue + Fn(&Context, &mut [Value]) -> Result<Value, Error> {
     fn compare_to(&self, _rhs: &ForeignValue) -> Result<Ordering, ExecError> {
         Err(ExecError::CannotCompare("foreign-fn"))
     }
@@ -693,16 +634,15 @@ impl NameDebug for Value {
             // TODO: This output doesn't match the way structs are built.
             // Write out "(new 'name ...)"? Implement a shortcut syntax?
             Value::Struct(ref s) => {
-                if s.fields.is_empty() {
+                if s.fields().is_empty() {
                     write!(f, "{} {{}}", names.get(s.def().name()))
                 } else {
                     let def = s.def();
 
                     try!(write!(f, "{} {{ ", names.get(def.name())));
 
-                    let mut iter = def.fields.iter()
-                        .zip(s.fields.iter())
-                        .map(|(&(name, _), f)| (name, f));
+                    let mut iter = def.def().field_names().into_iter()
+                        .zip(s.fields().iter());
 
                     if let Some((name, value)) = iter.next() {
                         try!(write!(f, "{}: ", names.get(name)));
@@ -717,13 +657,11 @@ impl NameDebug for Value {
                     write!(f, " }}")
                 }
             }
-            Value::StructDef(ref d) => {
-                if d.fields.is_empty() {
-                    write!(f, "{} def {{}}", names.get(d.name))
-                } else {
-                    try!(write!(f, "{} def {{ ", names.get(d.name)));
+            Value::StructDef(ref def) => {
+                if let Some(vdef) = def.def().downcast_ref::<StructValueDef>() {
+                    try!(write!(f, "{} def {{ ", names.get(def.name())));
 
-                    let mut iter = d.fields.iter();
+                    let mut iter = vdef.fields().iter();
 
                     if let Some(&(name, ty)) = iter.next() {
                         try!(write!(f, "{}: {}", names.get(name), names.get(ty)));
@@ -734,6 +672,8 @@ impl NameDebug for Value {
                     }
 
                     write!(f, " }}")
+                } else {
+                    write!(f, "<struct-def {}>", names.get(def.name()))
                 }
             }
             Value::Function(ref fun) =>
@@ -1259,135 +1199,3 @@ conv_tuple!{  9 => A B C D E F G H I }
 conv_tuple!{ 10 => A B C D E F G H I J }
 conv_tuple!{ 11 => A B C D E F G H I J K }
 conv_tuple!{ 12 => A B C D E F G H I J K L }
-
-/// Represents a structure value containing named fields
-#[derive(Clone, Debug)]
-pub struct Struct {
-    /// Struct definition
-    def: Rc<StructDef>,
-    /// Struct fields
-    fields: Box<[Value]>,
-}
-
-impl Struct {
-    /// Creates a new `Struct` value with the given `StructDef` and field values.
-    pub fn new(def: Rc<StructDef>, fields: Box<[Value]>) -> Struct {
-        Struct{
-            def: def,
-            fields: fields,
-        }
-    }
-
-    /// Returns the value for the named field, if present.
-    pub fn get_field(&self, name: Name) -> Option<&Value> {
-        self.def.field_index(name).map(|idx| &self.fields[idx])
-    }
-
-    /// Returns a mutable reference to the named field, if present.
-    pub fn get_field_mut(&mut self, name: Name) -> Option<&mut Value> {
-        match self.def.field_index(name) {
-            Some(idx) => Some(&mut self.fields[idx]),
-            None => None
-        }
-    }
-
-    /// Returns the struct definition.
-    pub fn def(&self) -> &Rc<StructDef> {
-        &self.def
-    }
-
-    /// Returns the field values.
-    pub fn fields(&self) -> &[Value] {
-        &self.fields
-    }
-}
-
-/// Represents the definition of a class of struct value
-#[derive(Clone, Debug)]
-pub struct StructDef {
-    /// Struct name
-    name: Name,
-    /// Struct fields, mapped to names of expected types
-    // TODO: Name-based type-checking prevents a StructDef from requiring
-    // a specific class of Struct value for a field.
-    fields: NameMapSlice<Name>,
-}
-
-impl PartialEq for StructDef {
-    fn eq(&self, rhs: &StructDef) -> bool {
-        (self as *const _) == (rhs as *const _)
-    }
-}
-
-impl StructDef {
-    /// Creates a new `StructDef` with the given name and fields.
-    pub fn new(name: Name, fields: NameMapSlice<Name>) -> StructDef {
-        StructDef{
-            name: name,
-            fields: fields,
-        }
-    }
-
-    /// Returns the field index of the named field.
-    pub fn field_index(&self, name: Name) -> Option<usize> {
-        self.fields.index(name)
-    }
-
-    /// Returns the type of the named field.
-    pub fn field_type(&self, name: Name) -> Option<Name> {
-        self.fields.get(name).cloned()
-    }
-
-    /// Returns the struct name.
-    pub fn name(&self) -> Name {
-        self.name
-    }
-
-    /// Returns the map of struct fields.
-    pub fn fields(&self) -> &NameMapSlice<Name> {
-        &self.fields
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::ForeignValue;
-
-    use std::rc::Rc;
-
-    #[derive(Debug)]
-    struct Dummy {
-        a: i32,
-    }
-
-    #[derive(Debug)]
-    struct Dumber;
-
-    impl ForeignValue for Dummy {
-        fn type_name(&self) -> &'static str { panic!() }
-    }
-
-    #[test]
-    fn test_downcast() {
-        let a: Rc<ForeignValue> = Rc::new(Dummy{a: 0});
-
-        let b = ForeignValue::downcast::<Dumber>(a).unwrap_err();
-        let c = ForeignValue::downcast::<Dummy>(b).unwrap();
-
-        assert_eq!(c.a, 0);
-    }
-
-    #[test]
-    fn test_downcast_ref() {
-        let mut a: Box<ForeignValue> = Box::new(Dummy{a: 0});
-
-        {
-            let mut r = a.downcast_mut::<Dummy>().unwrap();
-            r.a = 123;
-        }
-
-        let r = a.downcast_ref::<Dummy>().unwrap();
-
-        assert_eq!(r.a, 123);
-    }
-}

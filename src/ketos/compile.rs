@@ -17,8 +17,9 @@ use name::{get_system_fn, is_system_operator, standard_names,
     Name, NameDisplay, NameMap, NameSet, NameStore,
     NUM_SYSTEM_OPERATORS, SYSTEM_OPERATORS_BEGIN};
 use scope::{GlobalScope, ImportSet, MasterScope, Scope};
+use structs::{StructDef, StructValueDef};
 use trace::{Trace, TraceItem, set_traceback, take_traceback};
-use value::{StructDef, Value, FromValueRef};
+use value::{Value, FromValueRef};
 
 const MAX_MACRO_RECURSION: u32 = 100;
 
@@ -1929,7 +1930,9 @@ fn op_struct(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
         }
     }
 
-    let def = Value::StructDef(Rc::new(StructDef::new(name, fields.into_slice())));
+    let def = StructValueDef::new(fields.into_slice());
+    let def = Value::StructDef(Rc::new(StructDef::new(name, Box::new(def))));
+
     if let Some(doc) = doc {
         compiler.scope().add_doc_string(name, doc.to_owned());
     }

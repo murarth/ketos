@@ -21,7 +21,8 @@ use module::ModuleCode;
 use name::{Name, NameDisplay, NameMap, NameSet, NameStore,
     NameInputConversion, NameOutputConversion};
 use scope::ImportSet;
-use value::{StructDef, Value};
+use structs::{StructDef, StructValueDef};
+use value::Value;
 
 /// First four bytes written to a compiled bytecode file.
 pub const MAGIC_NUMBER: &'static [u8; 4] = b"\0MUR";
@@ -444,8 +445,9 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
                     fields.insert(field, ty);
                 }
 
-                Ok(Value::StructDef(Rc::new(
-                    StructDef::new(name, fields.into_slice()))))
+                let def = StructValueDef::new(fields.into_slice());
+
+                Ok(Value::StructDef(Rc::new(StructDef::new(name, Box::new(def)))))
             }
             QUASI_QUOTE => {
                 let n = try!(self.read_u8()) as u32;
@@ -732,16 +734,20 @@ impl ValueEncoder {
             // definition which is found in another module.
             Value::Struct(_) => return Err(EncodeError::UnencodableType("struct")),
             Value::StructDef(ref def) => {
-                self.write_u8(STRUCT_DEF);
+                if let Some(vdef) = def.def().downcast_ref::<StructValueDef>() {
+                    self.write_u8(STRUCT_DEF);
 
-                let fields = def.fields();
+                    let fields = vdef.fields();
 
-                try!(self.write_name(def.name(), names));
-                try!(self.write_len(fields.len()));
+                    try!(self.write_name(def.name(), names));
+                    try!(self.write_len(fields.len()));
 
-                for &(name, ty) in fields {
-                    try!(self.write_name(name, names));
-                    try!(self.write_name(ty, names));
+                    for &(name, ty) in fields {
+                        try!(self.write_name(name, names));
+                        try!(self.write_name(ty, names));
+                    }
+                } else {
+                    return Err(EncodeError::UnencodableType("struct-def"));
                 }
             }
             Value::Quasiquote(ref v, 1) => {

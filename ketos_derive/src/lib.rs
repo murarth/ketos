@@ -30,7 +30,7 @@
 //! for the given type.
 //!
 //! The generated implementation requires that the instance of the type held by the
-//! Ketos `Value` is unique, i.e. that the contained `Rc` has a reference count of `1`.
+//! Ketos `Value` is unique, i.e. the contained `Rc` has a reference count of `1`.
 //!
 //! If your type implements `Clone`, `derive(FromValueClone)` will instead generate
 //! an implementation of `FromValue` that clones the contained value, if necessary.
@@ -51,8 +51,17 @@
 //! ## `derive(IntoValue)`
 //!
 //! Implements `Into<Value>` for the given type.
+//!
+//! ## `derive(StructValue)`
+//!
+//! Implements [`StructValue`](https://docs.rs/ketos/*/ketos/structs/trait.StructValue.html)
+//! for the given type, provided that the type implements `Clone` and all fields
+//! implement `Clone`, `FromValue`, and `Into<Value>`.
+//!
+//! Types implementing `StructValue` can be constructed with `new` in Ketos code
+//! and have their fields accessed and modified with the `.` and `.=` functions.
 
-#![recursion_limit = "128"]
+#![recursion_limit = "256"]
 
 extern crate proc_macro;
 #[macro_use] extern crate quote;
@@ -60,7 +69,10 @@ extern crate syn;
 
 use proc_macro::TokenStream;
 use quote::{ToTokens, Tokens};
-use syn::{Generics, TyGenerics, WhereClause};
+use syn::{
+    Attribute, AttrStyle, Body, Ident, Lit, MetaItem, NestedMetaItem,
+    Generics, TyGenerics, WhereClause, VariantData,
+};
 
 #[proc_macro_derive(ForeignValue)]
 pub fn derive_foreign_value(input: TokenStream) -> TokenStream {
@@ -91,24 +103,26 @@ pub fn derive_from_value(input: TokenStream) -> TokenStream {
 
     let expr = quote!{
         impl #impl_generics ::ketos::FromValue for #name #ty_generics #where_clause {
-            fn from_value(v: ::ketos::Value) -> Result<Self, ::ketos::ExecError> {
+            fn from_value(v: ::ketos::Value) -> ::std::result::Result<Self, ::ketos::ExecError> {
                 match v {
                     ::ketos::Value::Foreign(fv) => {
-                        match ::ketos::ForeignValue::downcast(fv) {
-                            Ok(v) => {
+                        match ::ketos::ForeignValue::downcast_rc(fv) {
+                            ::std::result::Result::Ok(v) => {
                                 match ::std::rc::Rc::try_unwrap(v) {
-                                    Ok(v) => Ok(v),
-                                    Err(_) => Err(::ketos::panic(
-                                        concat!(#name_str, " value is not unique")))
+                                    ::std::result::Result::Ok(v) => ::std::result::Result::Ok(v),
+                                    ::std::result::Result::Err(_) => ::std::result::Result::Err(
+                                        ::ketos::panic(concat!(#name_str, " value is not unique")))
                                 }
                             }
-                            Err(rc) => {
-                                Err(::ketos::ExecError::expected(#name_str,
-                                    &::ketos::Value::Foreign(rc)))
+                            ::std::result::Result::Err(rc) => {
+                                ::std::result::Result::Err(
+                                    ::ketos::ExecError::expected(#name_str,
+                                        &::ketos::Value::Foreign(rc)))
                             }
                         }
                     }
-                    ref v => Err(::ketos::ExecError::expected(#name_str, v))
+                    ref v => ::std::result::Result::Err(
+                        ::ketos::ExecError::expected(#name_str, v))
                 }
             }
         }
@@ -128,23 +142,25 @@ pub fn derive_from_value_clone(input: TokenStream) -> TokenStream {
 
     let expr = quote!{
         impl #impl_generics ::ketos::FromValue for #name #ty_generics #where_clause {
-            fn from_value(v: ::ketos::Value) -> Result<Self, ::ketos::ExecError> {
+            fn from_value(v: ::ketos::Value) -> ::std::result::Result<Self, ::ketos::ExecError> {
                 match v {
                     ::ketos::Value::Foreign(fv) => {
-                        match ::ketos::ForeignValue::downcast(fv) {
-                            Ok(v) => {
+                        match ::ketos::ForeignValue::downcast_rc(fv) {
+                            ::std::result::Result::Ok(v) => {
                                 match ::std::rc::Rc::try_unwrap(v) {
-                                    Ok(v) => Ok(v),
-                                    Err(rc) => Ok((*rc).clone())
+                                    ::std::result::Result::Ok(v) => ::std::result::Result::Ok(v),
+                                    ::std::result::Result::Err(rc) => ::std::result::Result::Ok((*rc).clone())
                                 }
                             }
-                            Err(rc) => {
-                                Err(::ketos::ExecError::expected(#name_str,
-                                    &::ketos::Value::Foreign(rc)))
+                            ::std::result::Result::Err(rc) => {
+                                ::std::result::Result::Err(
+                                    ::ketos::ExecError::expected(#name_str,
+                                        &::ketos::Value::Foreign(rc)))
                             }
                         }
                     }
-                    ref v => Err(::ketos::ExecError::expected(#name_str, v))
+                    ref v => ::std::result::Result::Err(
+                        ::ketos::ExecError::expected(#name_str, v))
                 }
             }
         }
@@ -164,14 +180,15 @@ pub fn derive_from_value_ref(input: TokenStream) -> TokenStream {
 
     let expr = quote!{
         impl #impl_generics ::ketos::FromValueRef<'value> for &'value #name #ty_generics #where_clause {
-            fn from_value_ref(v: &'value ::ketos::Value) -> Result<Self, ::ketos::ExecError> {
+            fn from_value_ref(v: &'value ::ketos::Value) -> ::std::result::Result<Self, ::ketos::ExecError> {
                 if let ::ketos::Value::Foreign(ref fv) = *v {
-                    if let Some(v) = fv.downcast_ref() {
-                        return Ok(v);
+                    if let ::std::option::Option::Some(v) = fv.downcast_ref() {
+                        return ::std::result::Result::Ok(v);
                     }
                 }
 
-                Err(::ketos::ExecError::expected(#name_str, v))
+                ::std::result::Result::Err(
+                    ::ketos::ExecError::expected(#name_str, v))
             }
         }
     };
@@ -196,6 +213,211 @@ pub fn derive_into_value(input: TokenStream) -> TokenStream {
     };
 
     expr.to_string().parse().expect("parse quote!")
+}
+
+#[proc_macro_derive(StructValue, attributes(ketos))]
+pub fn derive_struct_value(input: TokenStream) -> TokenStream {
+    let ast = syn::parse_derive_input(&input.to_string())
+        .expect("parse_derive_input");
+
+    let name = ast.ident;
+    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
+
+    let fields = match ast.body {
+        Body::Enum(_) => panic!("cannot derive StructValue for enum types"),
+        Body::Struct(VariantData::Unit) =>
+            panic!("cannot derive StructValue for unit struct types"),
+        Body::Struct(VariantData::Tuple(_)) =>
+            panic!("cannot derive StructValue for tuple struct types"),
+        Body::Struct(VariantData::Struct(fields)) => fields
+    };
+
+    let name_str = Lit::from(name.to_string());
+    let mut local = Vec::new();
+    let mut field_name = Vec::new();
+    let mut field_str = Vec::new();
+    let mut handle_field = Vec::new();
+    let mut handle_set_field = Vec::new();
+
+    for field in fields {
+        let opts = parse_attrs(&field.attrs);
+
+        let ident = field.ident.as_ref().unwrap();
+        let ty = &field.ty;
+
+        let field_s = opts.rename.unwrap_or_else(
+            || make_field_name(ident.as_ref()));
+
+        // A local binding is created for each field name.
+        // It must not conflict with any other bindings in method implementations.
+        let local_ident = Ident::from(format!("__{}", ident));
+
+        local.push(local_ident.clone());
+        field_name.push(ident.clone());
+        field_str.push(field_s);
+
+        handle_field.push(quote!{
+            let v = try!(<#ty as ::ketos::FromValue>::from_value(value));
+            #local_ident = ::std::option::Option::Some(v);
+        });
+
+        handle_set_field.push(quote!{
+            self.#ident = try!(<#ty as ::ketos::FromValue>::from_value(value));
+        });
+    }
+
+    // Explicitly borrow these so they may be used in multiple quote! expressions
+    let field_name = &field_name;
+    let local = &local;
+    let field_str = &field_str;
+
+    let expr = quote!{
+        impl #impl_generics ::ketos::StructValue for #name #ty_generics #where_clause {
+            fn struct_name() -> &'static str {
+                #name_str
+            }
+
+            fn from_fields(scope: &::ketos::Scope,
+                    def: &::std::rc::Rc<::ketos::StructDef>,
+                    fields: &mut [(::ketos::Name, ::ketos::Value)])
+                    -> ::std::result::Result<Self, ::ketos::Error> {
+                #( let mut #local = None; )*
+
+                let mut iter = fields.iter_mut();
+
+                while let ::std::option::Option::Some(
+                        &mut (name, ref mut field)) = iter.next() {
+                    let value = field.take();
+
+                    try!(scope.with_name(name, |name_str| {
+                        match name_str {
+                            #( #field_str => { #handle_field } , )*
+                            _ => return ::std::result::Result::Err(::ketos::Error::ExecError(
+                                ::ketos::ExecError::MissingField{
+                                    struct_name: def.name(),
+                                    field: name,
+                                }))
+                        }
+
+                        ::std::result::Result::Ok(())
+                    }));
+                }
+
+                ::std::result::Result::Ok(#name{
+                    #( #field_name : try!(#local.ok_or_else(
+                        || ::ketos::Error::ExecError(::ketos::ExecError::MissingField{
+                            struct_name: def.name(),
+                            field: scope.add_name(#field_str),
+                        }))) ),*
+                })
+            }
+
+            fn field_names() -> &'static [&'static str] {
+                static FIELDS: &'static [&'static str] = &[ #( #field_str ),* ];
+                FIELDS
+            }
+
+            fn get_field(&self, scope: &::ketos::Scope,
+                    def: &::std::rc::Rc<::ketos::StructDef>,
+                    name: ::ketos::Name)
+                    -> ::std::result::Result<::ketos::Value, ::ketos::Error> {
+                scope.with_name(name, |name_str| {
+                    match name_str {
+                        #( #field_str => { ::std::result::Result::Ok(self.#field_name.clone().into()) } , )*
+                        _ => ::std::result::Result::Err(::ketos::Error::ExecError(
+                            ::ketos::ExecError::FieldError{
+                                struct_name: def.name(),
+                                field: name,
+                            }))
+                    }
+                })
+            }
+
+            fn replace_fields(&mut self, scope: &::ketos::Scope,
+                    def: &::std::rc::Rc<::ketos::StructDef>,
+                    fields: &mut [(::ketos::Name, ::ketos::Value)])
+                    -> ::std::result::Result<(), ::ketos::Error> {
+                for &mut (name, ref mut value) in fields {
+                    let value = value.take();
+
+                    try!(scope.with_name(name, |name_str| {
+                        match name_str {
+                            #( #field_str => { #handle_set_field } , )*
+                            _ => return ::std::result::Result::Err(::ketos::Error::ExecError(
+                                ::ketos::ExecError::FieldError{
+                                    struct_name: def.name(),
+                                    field: name,
+                                }))
+                        }
+
+                        ::std::result::Result::Ok(())
+                    }));
+                }
+
+                ::std::result::Result::Ok(())
+            }
+        }
+    };
+
+    expr.to_string().parse().expect("parse quote!")
+}
+
+#[derive(Default)]
+struct AttrOpts {
+    rename: Option<String>,
+}
+
+fn parse_attrs(attrs: &[Attribute]) -> AttrOpts {
+    let mut opts = AttrOpts::default();
+
+    for attr in attrs {
+        if attr.style == AttrStyle::Outer && attr.value.name() == "ketos" {
+            match attr.value {
+                MetaItem::Word(_) =>
+                    panic!("#[ketos] is not a valid attribute"),
+                MetaItem::NameValue(..) =>
+                    panic!("#[ketos = ...] is not a valid attribute"),
+                MetaItem::List(_, ref items) => {
+                    for item in items {
+                        match *item {
+                            NestedMetaItem::Literal(_) =>
+                                panic!("unexpected meta item `{}`", tokens_str(item)),
+                            NestedMetaItem::MetaItem(ref item) => {
+                                match *item {
+                                    MetaItem::NameValue(ref name, ref value) => {
+                                        match name.as_ref() {
+                                            "rename" => opts.rename = Some(lit_str(value)),
+                                            _ => panic!("unexpected meta item `{}`", tokens_str(item))
+                                        }
+                                    }
+                                    _ => panic!("unexpected meta item `{}`", tokens_str(item))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    opts
+}
+
+fn lit_str(lit: &Lit) -> String {
+    match *lit {
+        Lit::Str(ref s, _) => s.clone(),
+        _ => panic!("unexpected literal `{}`", tokens_str(lit))
+    }
+}
+
+fn make_field_name(name: &str) -> String {
+    name.replace("_", "-")
+}
+
+fn tokens_str<T: ToTokens>(t: &T) -> String {
+    let mut tok = Tokens::new();
+    t.to_tokens(&mut tok);
+    tok.into_string()
 }
 
 fn split_with_lifetime(generics: &Generics)
