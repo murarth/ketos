@@ -1,5 +1,8 @@
 [package]
 name = "ketos"
+version = "0.10.0"
+authors = ["Murarth <murarth@gmail.com>"]
+
 description = "Lisp dialect scripting and extension language"
 
 documentation = "https://docs.rs/ketos/"
@@ -10,8 +13,6 @@ keywords = [ "scripting", "extension", "functional", "language", "lisp" ]
 license = "MIT/Apache-2.0"
 readme = "README.md"
 
-version = "0.9.0"
-authors = ["Murarth <murarth@gmail.com>"]
 
 [[bin]]
 name = "ketos"
@@ -35,4 +36,4 @@ serde_derive = { version = "1.0", optional = true }
 
 [dev-dependencies]
 assert_matches = "1.0"
-ketos_derive = { version = "0.1", path = "ketos_derive" }
+ketos_derive = { version = "0.10", path = "ketos_derive" }

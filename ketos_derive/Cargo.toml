@@ -1,6 +1,6 @@
 [package]
 name = "ketos_derive"
-version = "0.1.0"
+version = "0.10.0"
 authors = ["Murarth <murarth@gmail.com>"]
 
 description = "Derive traits for Ketos scripting language"
@@ -23,4 +23,4 @@ syn = "0.11"
 
 [dev-dependencies]
 assert_matches = "1.1"
-ketos = { version = "0.9", path = ".." }
+ketos = { version = "0.10", path = ".." }
