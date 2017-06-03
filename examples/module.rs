@@ -7,7 +7,7 @@ use ketos::{
     Context,
     Error,
     Interpreter,
-    BuiltinModuleLoader, Module, ModuleLoader,
+    BuiltinModuleLoader, Module, ModuleBuilder, ModuleLoader,
     Name,
     Scope,
     FromValue,
@@ -49,7 +49,7 @@ impl ModuleLoader for CustomModuleLoader {
 fn load_mod(scope: &Scope) -> Module {
     ketos_fn!{ scope => "hello" => fn hello(what: &str) -> String }
 
-    Module::new("custom", scope.clone())
+    ModuleBuilder::new("custom", scope.clone()).finish()
 }
 
 fn hello(what: &str) -> Result<String, Error> {
