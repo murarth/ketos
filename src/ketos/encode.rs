@@ -10,7 +10,7 @@ use std::str::from_utf8;
 
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
 
-use bytecode::{BYTECODE_VERSION, Code};
+use bytecode::{BYTECODE_VERSION, Code, CodeReader, CodeWriter};
 use bytes::Bytes;
 use error::Error;
 use exec::Context;
@@ -40,6 +40,8 @@ pub enum DecodeError {
     IncorrectVersion(u32),
     /// Invalid unicode character value
     InvalidChar(u32),
+    /// Invalid bytecode object
+    InvalidCode,
     /// Invalid flags in code object
     InvalidCodeFlags(u32),
     /// Invalid name value
@@ -54,6 +56,8 @@ pub enum DecodeError {
     UnbalancedComma,
     /// Unexpected end-of-file
     UnexpectedEof,
+    /// Unrecognized opcode
+    UnrecognizedOpCode(u8),
 }
 
 impl fmt::Display for DecodeError {
@@ -70,6 +74,7 @@ impl fmt::Display for DecodeError {
                 "incorrect version number: expected {:08x}; found {:08x}",
                 BYTECODE_VERSION, n),
             InvalidChar(n) => write!(f, "\\u{{{:x}}} is not a valid char", n),
+            InvalidCode => f.write_str("invalid bytecode object"),
             InvalidCodeFlags(flags) =>
                 write!(f, "invalid code object flags: {:#x}", flags),
             InvalidName(n) => write!(f, "invalid name: {}", n),
@@ -78,6 +83,7 @@ impl fmt::Display for DecodeError {
             InvalidUtf8 => f.write_str("invalid UTF-8 in string"),
             UnbalancedComma => f.write_str("unbalanced quasiquote and comma values"),
             UnexpectedEof => f.write_str("unexpected end-of-file"),
+            UnrecognizedOpCode(n) => write!(f, "unrecognized opcode {} ({:x})", n, n),
         }
     }
 }
@@ -93,6 +99,8 @@ impl NameDisplay for DecodeError {
 pub enum EncodeError {
     /// A `Path` value contains invalid UTF-8
     InvalidUtf8,
+    /// Operand value overflow
+    OperandOverflow(u32),
     /// Integer overflow in encoding value
     Overflow,
     /// Attempt to encode a type that cannot be encoded
@@ -107,6 +115,7 @@ impl fmt::Display for EncodeError {
 
         match *self {
             InvalidUtf8 => f.write_str("invalid utf-8"),
+            OperandOverflow(n) => write!(f, "operand overflow: {}", n),
             Overflow => f.write_str("integer overflow"),
             UnencodableType(ty) => write!(f, "cannot encode value of type `{}`", ty),
             UnencodableValue(v) => write!(f, "cannot encode value {}", v),
@@ -527,7 +536,7 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
         }
 
         let code_bytes = try!(self.read_len());
-        let code = try!(self.read_bytes(code_bytes)).to_vec();
+        let code = try!(self.read_bytes(code_bytes));
 
         let n_params = try!(self.read_uint());
         let req_params = try!(self.read_uint());
@@ -559,7 +568,7 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
         Ok(Code{
             name: name,
             consts: consts.into_boxed_slice(),
-            code: code.into_boxed_slice(),
+            instructions: CodeReader::decode(code)?.into_boxed_slice(),
             kw_params: kw_params.into_boxed_slice(),
             n_params: n_params,
             req_params: req_params,
@@ -842,8 +851,10 @@ impl ValueEncoder {
             try!(self.write_value(c, names));
         }
 
-        try!(self.write_len(code.code.len()));
-        self.write_bytes(&code.code);
+        let bytecode = CodeWriter::encode(&code.instructions)?;
+
+        try!(self.write_len(bytecode.len()));
+        self.write_bytes(&bytecode);
 
         try!(self.write_uint(code.n_params));
         try!(self.write_uint(code.req_params));

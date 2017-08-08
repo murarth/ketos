@@ -5,17 +5,20 @@ use std::fmt;
 use std::mem::replace;
 use std::rc::Rc;
 
-use bytecode::{code_flags, Code, CodeBlock,
-    Instruction, JumpInstruction, MAX_SHORT_OPERAND};
-use const_fold::{is_one, is_negative_one,
-    FoldOp, FoldAdd, FoldSub, FoldDiv, FoldMul, FoldFloorDiv};
+use bytecode::{code_flags, Code, CodeBlock, Instruction, JumpInstruction};
+use const_fold::{
+    is_one, is_negative_one,
+    FoldOp, FoldAdd, FoldSub, FoldDiv, FoldMul, FoldFloorDiv,
+};
 use error::Error;
 use exec::{Context, ExecError, execute_lambda};
 use function::{Arity, Lambda};
 use function::Arity::*;
-use name::{get_system_fn, is_system_operator, standard_names,
+use name::{
+    get_system_fn, is_system_operator, standard_names,
     Name, NameDisplay, NameMap, NameSet, NameStore,
-    NUM_SYSTEM_OPERATORS, SYSTEM_OPERATORS_BEGIN};
+    NUM_SYSTEM_OPERATORS, SYSTEM_OPERATORS_BEGIN,
+};
 use scope::{GlobalScope, ImportSet, MasterScope, Scope};
 use structs::{StructDef, StructValueDef};
 use trace::{Trace, TraceItem, set_traceback, take_traceback};
@@ -77,8 +80,6 @@ pub enum CompileError {
     ModuleError(Name),
     /// `const` operator value is not constant
     NotConstant(Name),
-    /// Operand value overflow
-    OperandOverflow(u32),
     /// Attempt to import value that is not exported
     PrivacyError{
         /// Module name
@@ -119,8 +120,6 @@ impl fmt::Display for CompileError {
             MissingExport => f.write_str("missing `export` declaration"),
             ModuleError(_) => f.write_str("module not found"),
             NotConstant(_) => f.write_str("value is not constant"),
-            OperandOverflow(n) =>
-                write!(f, "operand overflow: {}", n),
             PrivacyError{..} => f.write_str("name is private"),
             SyntaxError(e) => f.write_str(e),
             UnbalancedComma => f.write_str("unbalanced ` and ,"),
@@ -250,24 +249,20 @@ impl<'a> Compiler<'a> {
         self.outer.is_empty() && self.cur_block == 0
     }
 
-    fn assemble_code(&mut self) -> Result<Box<[u8]>, CompileError> {
-        let total = try!(self.write_jumps());
-        let mut res = Vec::with_capacity(total);
+    fn assemble_code(&mut self) -> Result<Box<[Instruction]>, CompileError> {
+        let mut res = Vec::new();
 
-        for block in &mut self.blocks {
-            res.extend(block.bytes());
+        try!(self.write_jumps());
+
+        for block in &self.blocks {
+            res.extend(block.instructions());
         }
 
-        assert_eq!(res.len(), total);
         Ok(res.into_boxed_slice())
     }
 
-    /// Writes jump instructions with real offsets to each code blocks.
-    /// Returns the total size, in bytes, of code blocks.
-    fn write_jumps(&mut self) -> Result<usize, CompileError> {
-        // If all possible offsets can be shortened, shorten them.
-        let short = estimate_size(&self.blocks) <= MAX_SHORT_OPERAND as usize;
-
+    /// Writes jump instructions with real offsets to each code block.
+    fn write_jumps(&mut self) -> Result<(), CompileError> {
         let n_blocks = self.blocks.len();
 
         let mut new_blocks = Vec::with_capacity(n_blocks);
@@ -279,7 +274,7 @@ impl<'a> Compiler<'a> {
         let mut i = 0;
 
         loop {
-            let mut b = replace(&mut self.blocks[i], CodeBlock::empty());
+            let mut b = replace(&mut self.blocks[i], CodeBlock::new());
             let next = b.next;
             let mut skip_block = false;
 
@@ -300,16 +295,16 @@ impl<'a> Compiler<'a> {
                     // If the block returns, its jump could not possibly have
                     // pointed anywhere but an empty, returning block.
                     b.jump = None;
-                    try!(b.push_instruction(Instruction::Return));
+                    b.push_instruction(Instruction::Return);
                 }
             }
 
             if !skip_block {
-                try!(b.flush());
+                b.flush();
 
                 // Jump block numbers refer to initial ordering
                 offsets[i] = off as u32;
-                off += b.calculate_size(short);
+                off += b.size() as u32;
                 new_blocks.push(b);
             }
 
@@ -325,22 +320,22 @@ impl<'a> Compiler<'a> {
             if let Some((_, dest)) = block.jump {
                 let dest_off = offsets[dest as usize];
                 assert!(dest_off != !0, "jump to dead block {}", dest);
-                try!(block.write_jump(dest_off, short));
+                block.push_jump(dest_off);
             }
         }
 
-        Ok(off)
+        Ok(())
     }
 
     fn compile(&mut self, value: &Value) -> Result<Code, Error> {
         try!(self.compile_value(value));
 
-        let code = try!(self.assemble_code());
+        let instructions = try!(self.assemble_code());
         let consts = replace(&mut self.consts, Vec::new());
 
         Ok(Code{
             name: None,
-            code: code,
+            instructions: instructions,
             consts: consts.into_boxed_slice(),
             kw_params: vec![].into_boxed_slice(),
             n_params: 0,
@@ -404,8 +399,8 @@ impl<'a> Compiler<'a> {
                 if let Some(default) = default {
                     try!(self.branch_if_unbound(i as u32, &default));
                 } else {
-                    try!(self.push_instruction(
-                        Instruction::UnboundToUnit(i as u32)));
+                    self.push_instruction(
+                        Instruction::UnboundToUnit(i as u32));
                 }
             }
 
@@ -416,8 +411,8 @@ impl<'a> Compiler<'a> {
             if let Some(default) = default {
                 try!(self.branch_if_unbound((n_params + i) as u32, &default));
             } else {
-                try!(self.push_instruction(
-                    Instruction::UnboundToUnit((n_params + i) as u32)));
+                self.push_instruction(
+                    Instruction::UnboundToUnit((n_params + i) as u32));
             }
 
             self.stack[n_params + i].0 = name;
@@ -431,13 +426,13 @@ impl<'a> Compiler<'a> {
 
         try!(self.compile_value(value));
 
-        let code = try!(self.assemble_code());
+        let instructions = try!(self.assemble_code());
         let consts = replace(&mut self.consts, Vec::new());
         let captures = replace(&mut self.captures, Vec::new());
 
         let code = Code{
             name: name,
-            code: code,
+            instructions: instructions,
             consts: consts.into_boxed_slice(),
             kw_params: kw_names.into_boxed_slice(),
             n_params: n_params as u32,
@@ -457,18 +452,18 @@ impl<'a> Compiler<'a> {
             ConstResult::IsRuntime => (),
             ConstResult::Partial(v) => value = Owned(v),
             ConstResult::Constant(v) => {
-                try!(self.load_quoted_value(Owned(v)));
+                self.load_quoted_value(Owned(v));
                 return Ok(());
             }
         }
 
         match *value {
             Value::Name(name) => {
-                let loaded = try!(self.load_local_name(name));
+                let loaded = self.load_local_name(name);
 
                 if !loaded {
                     let c = self.add_const(Owned(Value::Name(name)));
-                    try!(self.push_instruction(Instruction::GetDef(c)));
+                    self.push_instruction(Instruction::GetDef(c));
                 }
             }
             Value::List(ref li) => {
@@ -478,8 +473,8 @@ impl<'a> Compiler<'a> {
 
                 match *fn_v {
                     Value::Name(name) => {
-                        if try!(self.load_local_name(name)) {
-                            try!(self.push_instruction(Instruction::Push));
+                        if self.load_local_name(name) {
+                            self.push_instruction(Instruction::Push);
                             pushed_fn = true;
                         } else if self.self_name == Some(name) {
                             () // This is handled later
@@ -506,7 +501,7 @@ impl<'a> Compiler<'a> {
                     }
                     Value::List(_) => {
                         try!(self.compile_value(fn_v));
-                        try!(self.push_instruction(Instruction::Push));
+                        self.push_instruction(Instruction::Push);
                         pushed_fn = true;
 
                         self.trace.push(
@@ -521,18 +516,17 @@ impl<'a> Compiler<'a> {
 
                 for v in &li[1..] {
                     try!(self.compile_value(v));
-                    try!(self.push_instruction(Instruction::Push));
+                    self.push_instruction(Instruction::Push);
                 }
 
                 let n_args = (li.len() - 1) as u32;
 
                 if pushed_fn {
-                    try!(self.push_instruction(Instruction::Call(n_args)));
+                    self.push_instruction(Instruction::Call(n_args));
                 } else {
                     if let Value::Name(name) = *fn_v {
                         if self.self_name == Some(name) {
-                            try!(self.push_instruction(
-                                Instruction::CallSelf(n_args)));
+                            self.push_instruction(Instruction::CallSelf(n_args));
                         } else {
                             match get_system_fn(name) {
                                 Some(sys_fn) => {
@@ -545,12 +539,12 @@ impl<'a> Compiler<'a> {
                                         }));
                                     }
 
-                                    try!(self.write_call_sys(name, sys_fn.arity, n_args));
+                                    self.write_call_sys(name, sys_fn.arity, n_args);
                                 }
                                 None => {
                                     let c = self.add_const(Owned(Value::Name(name)));
-                                    try!(self.push_instruction(
-                                        Instruction::CallConst(c, n_args)));
+                                    self.push_instruction(
+                                        Instruction::CallConst(c, n_args));
                                 }
                             }
                         }
@@ -565,7 +559,7 @@ impl<'a> Compiler<'a> {
             }
             Value::Quasiquote(ref v, n) =>
                 try!(self.compile_quasiquote(v, n)),
-            _ => try!(self.load_const_value(&value))
+            _ => self.load_const_value(&value)
         }
 
         Ok(())
@@ -887,14 +881,14 @@ impl<'a> Compiler<'a> {
     fn compile_quasiquote(&mut self, value: &Value, depth: u32) -> Result<(), Error> {
         if try!(self.is_quasi_const(value, depth)) {
             match depth {
-                1 => try!(self.load_quoted_value(Borrowed(value))),
-                _ => try!(self.load_quoted_value(Owned(
-                    value.clone().quasiquote(depth - 1))))
+                1 => self.load_quoted_value(Borrowed(value)),
+                _ => self.load_quoted_value(Owned(
+                    value.clone().quasiquote(depth - 1)))
             }
         } else {
             try!(self.compile_quasi_value(value, depth));
             if depth != 1 {
-                try!(self.push_instruction(Instruction::Quasiquote(depth - 1)));
+                self.push_instruction(Instruction::Quasiquote(depth - 1));
             }
         }
 
@@ -904,7 +898,7 @@ impl<'a> Compiler<'a> {
     /// Compiles a value found within a quasiquoted expression
     fn compile_quasi_value(&mut self, value: &Value, depth: u32) -> Result<(), Error> {
         if try!(self.is_quasi_const(value, depth)) {
-            try!(self.load_quoted_value(Borrowed(value)));
+            self.load_quoted_value(Borrowed(value));
             return Ok(());
         }
 
@@ -917,7 +911,7 @@ impl<'a> Compiler<'a> {
             }
             Value::Comma(ref v, n) => {
                 try!(self.compile_quasi_value(v, depth - n));
-                try!(self.push_instruction(Instruction::Comma(n)));
+                self.push_instruction(Instruction::Comma(n));
                 Ok(())
             }
             Value::CommaAt(_, n) if n == depth => {
@@ -928,17 +922,17 @@ impl<'a> Compiler<'a> {
                 self.compile_quasiquote_list(li, depth),
             Value::Quote(ref v, n) => {
                 try!(self.compile_quasi_value(v, depth));
-                try!(self.push_instruction(Instruction::Quote(n)));
+                self.push_instruction(Instruction::Quote(n));
                 Ok(())
             }
             Value::Quasiquote(ref v, n) => {
                 if try!(self.is_quasi_const(v, n)) {
                     match n {
-                        1 => try!(self.load_const_value(v)),
+                        1 => self.load_const_value(v),
                         _ => {
                             let c = self.add_const(Owned(
                                 Value::Quasiquote(v.clone(), n - 1)));
-                            try!(self.push_instruction(Instruction::Const(c)));
+                            self.push_instruction(Instruction::Const(c));
                         }
                     }
 
@@ -947,10 +941,10 @@ impl<'a> Compiler<'a> {
                     try!(self.compile_quasi_value(v, depth + n));
                     if depth == 0 {
                         if n != 1 {
-                            try!(self.push_instruction(Instruction::Quasiquote(n - 1)));
+                            self.push_instruction(Instruction::Quasiquote(n - 1));
                         }
                     } else {
-                        try!(self.push_instruction(Instruction::Quasiquote(n)));
+                        self.push_instruction(Instruction::Quasiquote(n));
                     }
                     Ok(())
                 }
@@ -966,20 +960,20 @@ impl<'a> Compiler<'a> {
 
         for v in li {
             if n_items == 0 && n_lists == 1 {
-                try!(self.push_instruction(Instruction::Push));
+                self.push_instruction(Instruction::Push);
             }
 
             match *v {
                 Value::CommaAt(ref v, n) if n == depth => {
                     if n_items != 0 {
-                        try!(self.push_instruction(Instruction::List(n_items)));
-                        try!(self.push_instruction(Instruction::Push));
+                        self.push_instruction(Instruction::List(n_items));
+                        self.push_instruction(Instruction::Push);
                         n_lists += 1;
                         n_items = 0;
                     }
                     try!(self.compile_value(v));
                     if n_lists != 0 {
-                        try!(self.push_instruction(Instruction::Push));
+                        self.push_instruction(Instruction::Push);
                     }
                     n_lists += 1;
                 }
@@ -990,30 +984,30 @@ impl<'a> Compiler<'a> {
                 Value::CommaAt(ref v, n) => {
                     n_items += 1;
                     try!(self.compile_quasi_value(v, depth - n));
-                    try!(self.push_instruction(
-                        Instruction::CommaAt(depth - n)));
-                    try!(self.push_instruction(Instruction::Push));
+                    self.push_instruction(
+                        Instruction::CommaAt(depth - n));
+                    self.push_instruction(Instruction::Push);
                 }
                 _ => {
                     n_items += 1;
                     try!(self.compile_quasi_value(v, depth));
-                    try!(self.push_instruction(Instruction::Push));
+                    self.push_instruction(Instruction::Push);
                 }
             }
         }
 
         if n_items != 0 {
-            try!(self.push_instruction(Instruction::List(n_items)));
+            self.push_instruction(Instruction::List(n_items));
 
             if n_lists != 0 {
-                try!(self.push_instruction(Instruction::Push));
+                self.push_instruction(Instruction::Push);
                 n_lists += 1;
             }
         }
 
         if n_lists > 1 {
-            try!(self.push_instruction(Instruction::CallSysArgs(
-                standard_names::CONCAT.get(), n_lists)));
+            self.push_instruction(Instruction::CallSysArgs(
+                standard_names::CONCAT.get(), n_lists));
         }
 
         Ok(())
@@ -1060,16 +1054,16 @@ impl<'a> Compiler<'a> {
 
                 if is_one(lhs) {
                     try!(self.compile_value(rhs));
-                    try!(self.push_instruction(Instruction::Inc));
+                    self.push_instruction(Instruction::Inc);
                 } else if is_one(rhs) {
                     try!(self.compile_value(lhs));
-                    try!(self.push_instruction(Instruction::Inc));
+                    self.push_instruction(Instruction::Inc);
                 } else if is_negative_one(lhs) {
                     try!(self.compile_value(rhs));
-                    try!(self.push_instruction(Instruction::Dec));
+                    self.push_instruction(Instruction::Dec);
                 } else if is_negative_one(rhs) {
                     try!(self.compile_value(lhs));
-                    try!(self.push_instruction(Instruction::Dec));
+                    self.push_instruction(Instruction::Dec);
                 } else {
                     return Ok(false);
                 }
@@ -1080,17 +1074,17 @@ impl<'a> Compiler<'a> {
 
                 if is_one(rhs) {
                     try!(self.compile_value(lhs));
-                    try!(self.push_instruction(Instruction::Dec));
+                    self.push_instruction(Instruction::Dec);
                 } else if is_negative_one(rhs) {
                     try!(self.compile_value(lhs));
-                    try!(self.push_instruction(Instruction::Inc));
+                    self.push_instruction(Instruction::Inc);
                 } else {
                     return Ok(false);
                 }
             }
             standard_names::NULL if args.len() == 1 => {
                 try!(self.compile_value(&args[0]));
-                try!(self.push_instruction(Instruction::Null));
+                self.push_instruction(Instruction::Null);
             }
             standard_names::EQ if args.len() == 2 => {
                 let lhs = &args[0];
@@ -1111,16 +1105,16 @@ impl<'a> Compiler<'a> {
                 if let Some(rhs) = rhs_const {
                     try!(self.compile_value(lhs));
                     let c = self.add_const(rhs);
-                    try!(self.push_instruction(Instruction::EqConst(c)));
+                    self.push_instruction(Instruction::EqConst(c));
                 } else if let Some(lhs) = lhs_const {
                     let c = self.add_const(lhs);
                     try!(self.compile_value(rhs));
-                    try!(self.push_instruction(Instruction::EqConst(c)));
+                    self.push_instruction(Instruction::EqConst(c));
                 } else {
                     try!(self.compile_value(lhs));
-                    try!(self.push_instruction(Instruction::Push));
+                    self.push_instruction(Instruction::Push);
                     try!(self.compile_value(rhs));
-                    try!(self.push_instruction(Instruction::Eq));
+                    self.push_instruction(Instruction::Eq);
                 }
             }
             standard_names::NOT_EQ if args.len() == 2 => {
@@ -1142,54 +1136,53 @@ impl<'a> Compiler<'a> {
                 if let Some(rhs) = rhs_const {
                     try!(self.compile_value(lhs));
                     let c = self.add_const(rhs);
-                    try!(self.push_instruction(Instruction::NotEqConst(c)));
+                    self.push_instruction(Instruction::NotEqConst(c));
                 } else if let Some(lhs) = lhs_const {
                     let c = self.add_const(lhs);
                     try!(self.compile_value(rhs));
-                    try!(self.push_instruction(Instruction::NotEqConst(c)));
+                    self.push_instruction(Instruction::NotEqConst(c));
                 } else {
                     try!(self.compile_value(lhs));
-                    try!(self.push_instruction(Instruction::Push));
+                    self.push_instruction(Instruction::Push);
                     try!(self.compile_value(rhs));
-                    try!(self.push_instruction(Instruction::NotEq));
+                    self.push_instruction(Instruction::NotEq);
                 }
             }
             standard_names::NOT if args.len() == 1 => {
                 try!(self.compile_value(&args[0]));
-                try!(self.push_instruction(Instruction::Not));
+                self.push_instruction(Instruction::Not);
             }
             standard_names::APPEND if args.len() == 2 => {
                 try!(self.compile_value(&args[0]));
-                try!(self.push_instruction(Instruction::Push));
+                self.push_instruction(Instruction::Push);
                 try!(self.compile_value(&args[1]));
-                try!(self.push_instruction(Instruction::Append));
+                self.push_instruction(Instruction::Append);
             }
             standard_names::FIRST if args.len() == 1 => {
                 try!(self.compile_value(&args[0]));
-                try!(self.push_instruction(Instruction::First));
+                self.push_instruction(Instruction::First);
             }
             standard_names::TAIL if args.len() == 1 => {
                 try!(self.compile_value(&args[0]));
-                try!(self.push_instruction(Instruction::Tail));
+                self.push_instruction(Instruction::Tail);
             }
             standard_names::INIT if args.len() == 1 => {
                 try!(self.compile_value(&args[0]));
-                try!(self.push_instruction(Instruction::Init));
+                self.push_instruction(Instruction::Init);
             }
             standard_names::LAST if args.len() == 1 => {
                 try!(self.compile_value(&args[0]));
-                try!(self.push_instruction(Instruction::Last));
+                self.push_instruction(Instruction::Last);
             }
             standard_names::LIST => {
                 if args.is_empty() {
-                    try!(self.push_instruction(Instruction::Unit));
+                    self.push_instruction(Instruction::Unit);
                 } else {
                     for arg in args {
                         try!(self.compile_value(arg));
-                        try!(self.push_instruction(Instruction::Push));
+                        self.push_instruction(Instruction::Push);
                     }
-                    try!(self.push_instruction(
-                        Instruction::List(args.len() as u32)));
+                    self.push_instruction(Instruction::List(args.len() as u32));
                 }
             }
             standard_names::ID if args.len() == 1 => {
@@ -1220,19 +1213,19 @@ impl<'a> Compiler<'a> {
 
         self.use_next(bind_block);
         try!(self.compile_value(value));
-        try!(self.push_instruction(Instruction::Store(pos)));
+        self.push_instruction(Instruction::Store(pos));
         self.use_next(final_block);
         Ok(())
     }
 
-    fn load_lambda(&mut self, n: u32, captures: &[Name]) -> Result<(), CompileError> {
+    fn load_lambda(&mut self, n: u32, captures: &[Name]) {
         if captures.is_empty() {
-            self.push_instruction(Instruction::Const(n))
+            self.push_instruction(Instruction::Const(n));
         } else {
             for &name in captures {
-                let _loaded = try!(self.load_local_name(name));
+                let _loaded = self.load_local_name(name);
                 assert!(_loaded);
-                try!(self.push_instruction(Instruction::Push));
+                self.push_instruction(Instruction::Push);
             }
 
             self.push_instruction(
@@ -1241,24 +1234,24 @@ impl<'a> Compiler<'a> {
     }
 
     /// Emits code to load a local value from the stack or closure values.
-    /// Returns `Ok(true)` if a named value was found and loaded.
-    fn load_local_name(&mut self, name: Name) -> Result<bool, CompileError> {
+    /// Returns `true` if a named value was found and loaded.
+    fn load_local_name(&mut self, name: Name) -> bool {
         if let Some(&(_, pos)) = self.stack.iter().rev().find(|&&(n, _)| n == name) {
-            try!(self.push_instruction(Instruction::Load(pos)));
-            return Ok(true);
+            self.push_instruction(Instruction::Load(pos));
+            return true;
         }
 
         // self name is more local than enclosed values
         if self.self_name == Some(name) {
-            return Ok(false);
+            return false;
         }
 
         match self.closure_value(name) {
             Some(n) => {
-                try!(self.push_instruction(Instruction::LoadC(n)));
-                Ok(true)
+                self.push_instruction(Instruction::LoadC(n));
+                true
             }
-            None => Ok(false)
+            None => false
         }
     }
 
@@ -1283,26 +1276,26 @@ impl<'a> Compiler<'a> {
     }
 
     /// Generates instructions to load a constant value.
-    fn load_const_value(&mut self, value: &Value) -> Result<(), CompileError> {
+    fn load_const_value(&mut self, value: &Value) {
         match *value {
             Value::Unit => self.push_instruction(Instruction::Unit),
             Value::Bool(true) => self.push_instruction(Instruction::True),
             Value::Bool(false) => self.push_instruction(Instruction::False),
             Value::Quote(ref v, 1) => {
-                self.load_quoted_value(Borrowed(v))
+                self.load_quoted_value(Borrowed(v));
             }
             Value::Quote(ref v, n) => {
                 let v = Value::Quote(v.clone(), n - 1);
-                self.load_quoted_value(Owned(v))
+                self.load_quoted_value(Owned(v));
             }
             ref v => {
                 let c = self.add_const(Borrowed(v));
-                self.push_instruction(Instruction::Const(c))
+                self.push_instruction(Instruction::Const(c));
             }
         }
     }
 
-    fn load_quoted_value(&mut self, value: Cow<Value>) -> Result<(), CompileError> {
+    fn load_quoted_value(&mut self, value: Cow<Value>) {
         match *value {
             Value::Unit => self.push_instruction(Instruction::Unit),
             Value::Bool(true) => self.push_instruction(Instruction::True),
@@ -1327,12 +1320,12 @@ impl<'a> Compiler<'a> {
         let _ = self.stack.drain(n..);
     }
 
-    fn write_call_sys(&mut self, name: Name, arity: Arity, n_args: u32) -> Result<(), CompileError> {
+    fn write_call_sys(&mut self, name: Name, arity: Arity, n_args: u32) {
         match arity {
             Arity::Exact(n) => {
                 // The only stack_offset adjustment that's done manually.
                 self.stack_offset -= n;
-                self.push_instruction(Instruction::CallSys(name.get()))
+                self.push_instruction(Instruction::CallSys(name.get()));
             }
             _ => self.push_instruction(
                 Instruction::CallSysArgs(name.get(), n_args))
@@ -1358,11 +1351,11 @@ impl<'a> Compiler<'a> {
         self.use_block(block);
     }
 
-    fn flush_instructions(&mut self) -> Result<(), CompileError> {
-        self.current_block().flush()
+    fn flush_instructions(&mut self) {
+        self.current_block().flush();
     }
 
-    fn push_instruction(&mut self, instr: Instruction) -> Result<(), CompileError> {
+    fn push_instruction(&mut self, instr: Instruction) {
         match instr {
             Instruction::Push => {
                 self.stack_offset += 1;
@@ -1395,7 +1388,7 @@ impl<'a> Compiler<'a> {
             _ => ()
         }
 
-        self.current_block().push_instruction(instr)
+        self.current_block().push_instruction(instr);
     }
 }
 
@@ -1633,11 +1626,6 @@ fn block_returns<'a>(mut b: &'a CodeBlock, blocks: &'a [CodeBlock]) -> bool {
     }
 }
 
-fn estimate_size(blocks: &[CodeBlock]) -> usize {
-    blocks.iter().map(|b| b.calculate_size(false))
-        .fold(0, |a, b| a + b) + 1 // Plus one for final Return
-}
-
 struct Operator {
     arity: Arity,
     callback: OperatorCallback,
@@ -1703,8 +1691,8 @@ fn op_apply(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 
         if compiler.self_name() == Some(name) {
             apply_self = true;
-        } else if try!(compiler.load_local_name(name)) {
-            try!(compiler.push_instruction(Instruction::Push));
+        } else if compiler.load_local_name(name) {
+            compiler.push_instruction(Instruction::Push);
         } else {
             let c = compiler.add_const(Owned(Value::Name(name)));
             apply_const = Some(c);
@@ -1713,17 +1701,17 @@ fn op_apply(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 
     for arg in iter {
         try!(compiler.compile_value(arg));
-        try!(compiler.push_instruction(Instruction::Push));
+        compiler.push_instruction(Instruction::Push);
     }
 
     try!(compiler.compile_value(&args[last]));
 
     if let Some(c) = apply_const {
-        try!(compiler.push_instruction(Instruction::ApplyConst(c, n_args)));
+        compiler.push_instruction(Instruction::ApplyConst(c, n_args));
     } else if apply_self {
-        try!(compiler.push_instruction(Instruction::ApplySelf(n_args)));
+        compiler.push_instruction(Instruction::ApplySelf(n_args));
     } else {
-        try!(compiler.push_instruction(Instruction::Apply(n_args)));
+        compiler.push_instruction(Instruction::Apply(n_args));
     }
 
     Ok(())
@@ -1759,7 +1747,7 @@ fn op_let(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 
                         try!(compiler.compile_value(&li[1]));
                         compiler.push_var(name);
-                        try!(compiler.push_instruction(Instruction::Push));
+                        compiler.push_instruction(Instruction::Push);
                     }
                     _ => {
                         compiler.set_trace_expr(v);
@@ -1782,7 +1770,7 @@ fn op_let(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     let next_block = compiler.new_block();
     compiler.use_next(next_block);
 
-    try!(compiler.push_instruction(Instruction::Skip(n_vars)));
+    compiler.push_instruction(Instruction::Skip(n_vars));
     compiler.pop_vars(n_vars);
 
     Ok(())
@@ -1811,7 +1799,7 @@ fn op_define(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
             }
 
             let c = compiler.add_const(Owned(Value::Name(name)));
-            try!(compiler.push_instruction(Instruction::SetDef(c)));
+            compiler.push_instruction(Instruction::SetDef(c));
             Ok(())
         }
         Value::List(ref li) => {
@@ -1833,11 +1821,11 @@ fn op_define(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
                 // Add top-level, non-capturing lambdas to global scope immediately.
                 compiler.scope().add_value(name, Value::Lambda(lambda));
                 let c = compiler.add_const(Owned(Value::Name(name)));
-                try!(compiler.push_instruction(Instruction::Const(c)));
+                compiler.push_instruction(Instruction::Const(c));
             } else {
                 let code_c = compiler.add_const(Owned(Value::Lambda(lambda)));
-                try!(compiler.load_lambda(code_c, &captures));
-                try!(compiler.push_instruction(Instruction::SetDef(c)));
+                compiler.load_lambda(code_c, &captures);
+                compiler.push_instruction(Instruction::SetDef(c));
             }
 
             Ok(())
@@ -1882,7 +1870,7 @@ fn op_macro(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     compiler.scope().add_macro(name, lambda);
 
     let c = compiler.add_const(Owned(Value::Name(name)));
-    try!(compiler.push_instruction(Instruction::Const(c)));
+    compiler.push_instruction(Instruction::Const(c));
     Ok(())
 }
 
@@ -1939,8 +1927,8 @@ fn op_struct(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 
     let name_c = compiler.add_const(Owned(Value::Name(name)));
     let c = compiler.add_const(Owned(def));
-    try!(compiler.push_instruction(Instruction::Const(c)));
-    try!(compiler.push_instruction(Instruction::SetDef(name_c)));
+    compiler.push_instruction(Instruction::Const(c));
+    compiler.push_instruction(Instruction::SetDef(name_c));
     Ok(())
 }
 
@@ -1967,7 +1955,7 @@ fn op_if(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     compiler.use_next(else_block);
     match args.get(2) {
         Some(value) => try!(compiler.compile_value(value)),
-        None => try!(compiler.push_instruction(Instruction::Unit))
+        None => compiler.push_instruction(Instruction::Unit)
     }
 
     compiler.use_next(final_block);
@@ -1988,7 +1976,7 @@ fn op_and(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
         // after this jump instruction is run. Therefore, we must prevent
         // the compiler from merging it with a previous instruction,
         // which might result in a different value, e.g. () for JumpIfNotNull.
-        try!(compiler.flush_instructions());
+        compiler.flush_instructions();
         compiler.current_block().jump_to(JumpInstruction::JumpIfNot, last_block);
 
         let block = compiler.new_block();
@@ -2014,7 +2002,7 @@ fn op_or(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
         // after this jump instruction is run. Therefore, we must prevent
         // the compiler from merging it with a previous instruction,
         // which might result in a different value, e.g. () for JumpIfNull.
-        try!(compiler.flush_instructions());
+        compiler.flush_instructions();
         compiler.current_block().jump_to(JumpInstruction::JumpIf, last_block);
 
         let block = compiler.new_block();
@@ -2113,7 +2101,7 @@ fn op_case(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     }
 
     if !else_case {
-        try!(compiler.push_instruction(Instruction::Unit));
+        compiler.push_instruction(Instruction::Unit);
         compiler.current_block().jump_to(JumpInstruction::Jump, final_block);
     }
 
@@ -2187,7 +2175,7 @@ fn op_cond(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     }
 
     if !else_case {
-        try!(compiler.push_instruction(Instruction::Unit));
+        compiler.push_instruction(Instruction::Unit);
         compiler.current_block().jump_to(JumpInstruction::Jump, final_block);
     }
 
@@ -2227,7 +2215,7 @@ fn op_lambda(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
         compiler, None, li, body, doc));
 
     let c = compiler.add_const(Owned(Value::Lambda(lambda)));
-    try!(compiler.load_lambda(c, &captures));
+    compiler.load_lambda(c, &captures);
     Ok(())
 }
 
@@ -2259,7 +2247,7 @@ fn op_export(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 
     compiler.scope().set_exports(names.into_slice());
 
-    try!(compiler.push_instruction(Instruction::Unit));
+    compiler.push_instruction(Instruction::Unit);
     Ok(())
 }
 
@@ -2301,7 +2289,7 @@ fn op_use(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 
     compiler.scope().add_imports(imp_set);
 
-    try!(compiler.push_instruction(Instruction::Unit));
+    compiler.push_instruction(Instruction::Unit);
     Ok(())
 }
 
@@ -2356,7 +2344,7 @@ fn op_const(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
         compiler.scope().add_doc_string(name, doc.to_owned());
     }
 
-    try!(compiler.load_quoted_value(Owned(Value::Name(name))));
+    compiler.load_quoted_value(Owned(Value::Name(name)));
     Ok(())
 }
 
@@ -2374,7 +2362,7 @@ fn op_set_module_doc(compiler: &mut Compiler, args: &[Value]) -> Result<(), Erro
     scope.with_module_doc_mut(|d| {
         if d.is_none() {
             *d = Some(doc.to_owned());
-            try!(compiler.push_instruction(Instruction::Unit));
+            compiler.push_instruction(Instruction::Unit);
             Ok(())
         } else {
             Err(From::from(CompileError::DuplicateModuleDoc))

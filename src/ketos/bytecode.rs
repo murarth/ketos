@@ -17,8 +17,7 @@
 //! with a single opcode, e.g. the `CONST_0` opcode replaces the two-byte
 //! sequence `CONST`, followed by operand `0`.
 
-use compile::CompileError;
-use exec::ExecError;
+use encode::{DecodeError, EncodeError};
 use function::Arity;
 use name::Name;
 use value::Value;
@@ -27,7 +26,7 @@ use value::Value;
 /// change to the bytecode format. The version represents a `ketos` version
 /// number, e.g. `0x01_02_03_00` corresponds to version `1.2.3`.
 /// (The least significant 8 bits don't mean anything yet.)
-pub const BYTECODE_VERSION: u32 = 0x00_06_00_00;
+pub const BYTECODE_VERSION: u32 = 0x00_11_00_00;
 
 /// Maximum value of a short-encoded operand.
 pub const MAX_SHORT_OPERAND: u32 = 0x7f;
@@ -324,7 +323,7 @@ opcodes!{
 
 impl Instruction {
     /// Decodes a single `Instruction` from a `CodeReader`.
-    pub fn decode(r: &mut CodeReader) -> Result<Instruction, ExecError> {
+    pub fn decode(r: &mut CodeReader) -> Result<Instruction, DecodeError> {
         use self::opcodes::*;
         use self::Instruction::*;
 
@@ -459,14 +458,14 @@ impl Instruction {
             SKIP_3 => Skip(3),
             SKIP_4 => Skip(4),
             RETURN => Return,
-            _ => return Err(ExecError::UnrecognizedOpCode(op))
+            _ => return Err(DecodeError::UnrecognizedOpCode(op))
         };
 
         Ok(instr)
     }
 
-    /// Encodes a single `Instruction` into a `CodeBlock`.
-    pub fn encode(&self, w: &mut CodeBlock, short: bool) -> Result<(), CompileError> {
+    /// Encodes a single `Instruction` into a `CodeWriter`.
+    pub fn encode(&self, w: &mut CodeWriter) -> Result<(), EncodeError> {
         use self::opcodes::*;
         use self::Instruction::*;
 
@@ -477,19 +476,6 @@ impl Instruction {
             };
             ( $opcode:expr , $( $opr:expr ),+ ) => {
                 w.write_byte($opcode)
-                    $( .and_then(|_| w.write_operand($opr)) )+
-            }
-        }
-
-        // Writes jump instructions and operands; label always comes first.
-        macro_rules! jump_op {
-            ( $opcode:expr, $label:expr ) => {
-                w.write_byte($opcode)
-                    .and_then(|_| w.write_label_operand($label, short))
-            };
-            ( $opcode:expr, $label:expr , $( $opr:expr ),+ ) => {
-                w.write_byte($opcode)
-                    .and_then(|_| w.write_label_operand($label, short))
                     $( .and_then(|_| w.write_operand($opr)) )+
             }
         }
@@ -567,16 +553,16 @@ impl Instruction {
             CommaAt(1) => op!(COMMA_AT_1),
             CommaAt(n) => op!(COMMA_AT, n),
             BuildClosure(n_const, n_values) => op!(BUILD_CLOSURE, n_const, n_values),
-            Jump(label) => jump_op!(JUMP, label),
-            JumpIf(label) => jump_op!(JUMP_IF, label),
-            JumpIfBound(label, n) => jump_op!(JUMP_IF_BOUND, label, n),
-            JumpIfNot(label) => jump_op!(JUMP_IF_NOT, label),
-            JumpIfNull(label) => jump_op!(JUMP_IF_NULL, label),
-            JumpIfNotNull(label) => jump_op!(JUMP_IF_NOT_NULL, label),
-            JumpIfEq(label) => jump_op!(JUMP_IF_EQ, label),
-            JumpIfNotEq(label) => jump_op!(JUMP_IF_NOT_EQ, label),
-            JumpIfEqConst(label, n) => jump_op!(JUMP_IF_EQ_CONST, label, n),
-            JumpIfNotEqConst(label, n) => jump_op!(JUMP_IF_NOT_EQ_CONST, label, n),
+            Jump(label) => op!(JUMP, label),
+            JumpIf(label) => op!(JUMP_IF, label),
+            JumpIfBound(label, n) => op!(JUMP_IF_BOUND, label, n),
+            JumpIfNot(label) => op!(JUMP_IF_NOT, label),
+            JumpIfNull(label) => op!(JUMP_IF_NULL, label),
+            JumpIfNotNull(label) => op!(JUMP_IF_NOT_NULL, label),
+            JumpIfEq(label) => op!(JUMP_IF_EQ, label),
+            JumpIfNotEq(label) => op!(JUMP_IF_NOT_EQ, label),
+            JumpIfEqConst(label, n) => op!(JUMP_IF_EQ_CONST, label, n),
+            JumpIfNotEqConst(label, n) => op!(JUMP_IF_NOT_EQ_CONST, label, n),
             Null => op!(NULL),
             NotNull => op!(NOT_NULL),
             Eq => op!(EQ),
@@ -652,9 +638,6 @@ impl Instruction {
             _ => None
         }
     }
-
-    /// Returns the maximum length, in bytes, of an encoded instruction.
-    pub fn max_len() -> usize { 5 }
 }
 
 /// Partial representation of jump `Instruction` variants before label values
@@ -676,7 +659,7 @@ pub enum JumpInstruction {
 
 impl JumpInstruction {
     /// Returns an `Instruction` by inserting the given label value.
-    pub fn set_label(self, label: u32) -> Instruction {
+    pub fn with_label(self, label: u32) -> Instruction {
         use self::JumpInstruction::*;
 
         match self {
@@ -692,28 +675,6 @@ impl JumpInstruction {
             JumpIfNotEqConst(n) => Instruction::JumpIfNotEqConst(label, n),
         }
     }
-
-    /// Length, in bytes, of this jump instruction.
-    pub fn len(&self, short: bool) -> usize {
-        use self::JumpInstruction::*;
-        let len = if short { 1 } else { 2 };
-
-        match *self {
-            Jump |
-            JumpIf |
-            JumpIfNot |
-            JumpIfNull |
-            JumpIfNotNull |
-            JumpIfEq |
-            JumpIfNotEq => 1 + len,
-            JumpIfBound(n) |
-            JumpIfEqConst(n) |
-            JumpIfNotEqConst(n) => {
-                let op_len = if is_short_operand(n) { 1 } else { 2 };
-                1 + len + op_len
-            }
-        }
-    }
 }
 
 /// Represents a compiled bytecode function or expression.
@@ -724,8 +685,8 @@ pub struct Code {
     pub name: Option<Name>,
     /// Const values referenced in bytecode
     pub consts: Box<[Value]>,
-    /// Function body bytecode
-    pub code: Box<[u8]>,
+    /// Function body instructions
+    pub instructions: Box<[Instruction]>,
     /// Names of keyword parameters accepted in the order in which they are
     /// expected.
     pub kw_params: Box<[Name]>,
@@ -773,17 +734,7 @@ impl Code {
     /// Such a code object typically results from compilation of compile-time
     /// operators.
     pub fn is_trivial(&self) -> bool {
-        let mut r = CodeReader::new(&self.code, 0);
-        let end = self.code.len();
-
-        while r.offset() != end {
-            match r.read_instruction() {
-                Ok(instr) if instr.is_trivial() => (),
-                _ => return false
-            }
-        }
-
-        true
+        self.instructions.iter().all(|instr| instr.is_trivial())
     }
 }
 
@@ -817,27 +768,39 @@ impl<'a> CodeReader<'a> {
         CodeReader{bytes: bytes, offset: offset}
     }
 
+    /// Convenience method; decodes bytes into a series of instructions.
+    pub fn decode(bytes: &[u8]) -> Result<Vec<Instruction>, DecodeError> {
+        let mut r = CodeReader::new(bytes, 0);
+        let mut res = Vec::new();
+
+        while r.offset != bytes.len() {
+            res.push(r.read_instruction()?);
+        }
+
+        Ok(res)
+    }
+
     /// Returns the offset, in bytes, at which the next instruction will be read.
     pub fn offset(&self) -> usize {
         self.offset
     }
 
     /// Reads an `Instruction` value from the byte stream.
-    pub fn read_instruction(&mut self) -> Result<Instruction, ExecError> {
+    pub fn read_instruction(&mut self) -> Result<Instruction, DecodeError> {
         Instruction::decode(self)
     }
 
-    fn read_byte(&mut self) -> Result<u8, ExecError> {
+    fn read_byte(&mut self) -> Result<u8, DecodeError> {
         match self.bytes.get(self.offset).cloned() {
             Some(b) => {
                 self.offset += 1;
                 Ok(b)
             }
-            None => Err(ExecError::UnexpectedEnd)
+            None => Err(DecodeError::InvalidCode)
         }
     }
 
-    fn read_operand(&mut self) -> Result<u32, ExecError> {
+    fn read_operand(&mut self) -> Result<u32, DecodeError> {
         let a = try!(self.read_byte()) as u32;
         if a & 0x80 == 0 {
             Ok(a)
@@ -849,11 +812,78 @@ impl<'a> CodeReader<'a> {
     }
 }
 
+/// Encodes `Instruction` values to a binary representation
+pub struct CodeWriter {
+    bytes: Vec<u8>,
+}
+
+impl CodeWriter {
+    /// Creates a new `CodeWriter`.
+    pub fn new() -> CodeWriter {
+        CodeWriter{
+            bytes: Vec::new(),
+        }
+    }
+
+    /// Convenience method; encodes a series of instructions into bytes.
+    pub fn encode(instrs: &[Instruction]) -> Result<Vec<u8>, EncodeError> {
+        let mut w = CodeWriter::new();
+
+        for &i in instrs {
+            w.write_instruction(i)?;
+        }
+
+        Ok(w.into_bytes())
+    }
+
+    /// Consumes `self` and returns the encoded bytes.
+    pub fn into_bytes(self) -> Vec<u8> {
+        self.bytes
+    }
+
+    /// Writes a single `Instruction` to the writer.
+    pub fn write_instruction(&mut self, instr: Instruction) -> Result<(), EncodeError> {
+        instr.encode(self)
+    }
+
+    fn write_byte(&mut self, byte: u8) -> Result<(), EncodeError> {
+        self.bytes.push(byte);
+        Ok(())
+    }
+
+    fn write_operand(&mut self, op: u32) -> Result<(), EncodeError> {
+        if is_short_operand(op) {
+            self.write_short_operand(op)
+        } else {
+            self.write_long_operand(op)
+        }
+    }
+
+    fn write_short_operand(&mut self, op: u32) -> Result<(), EncodeError> {
+        if is_short_operand(op) {
+            self.write_byte(op as u8)
+        } else {
+            Err(EncodeError::OperandOverflow(op))
+        }
+    }
+
+    fn write_long_operand(&mut self, op: u32) -> Result<(), EncodeError> {
+        if op <= MAX_LONG_OPERAND {
+            let lo = op as u8;
+            let hi = (op >> 8) as u8;
+            try!(self.write_byte(hi | 0x80));
+            self.write_byte(lo)
+        } else {
+            Err(EncodeError::OperandOverflow(op))
+        }
+    }
+}
+
 /// Contains a series of bytecode instructions
 #[derive(Debug)]
 pub struct CodeBlock {
-    /// Encoded bytecode instructions
-    bytes: Vec<u8>,
+    /// Contained instructions
+    instructions: Vec<Instruction>,
     /// Most recently added instruction; may be merged with next instruction
     instr_part: Option<Instruction>,
     /// Jump instruction added to the end of the block
@@ -863,54 +893,26 @@ pub struct CodeBlock {
 }
 
 impl CodeBlock {
-    /// Creates an empty `CodeBlock` with a small reserved buffer.
+    /// Creates an empty `CodeBlock`.
     pub fn new() -> CodeBlock {
         CodeBlock{
-            bytes: Vec::with_capacity(16),
+            instructions: Vec::new(),
             instr_part: None,
             jump: None,
             next: None,
         }
     }
 
-    /// Creates an empty `CodeBlock` without reserving data.
-    pub fn empty() -> CodeBlock {
-        CodeBlock{
-            bytes: Vec::new(),
-            instr_part: None,
-            jump: None,
-            next: None,
-        }
+    /// Returns contained instructions.
+    pub fn instructions(&self) -> &[Instruction] {
+        &self.instructions
     }
 
-    /// Returns the final size of the block, including all encoded instructions
-    /// and final jump instruction.
-    /// `short` indicates whether jump instruction offsets are encoded in
-    /// short format.
-    ///
-    /// If there is an unencoded instruction, its size is estimated.
-    pub fn calculate_size(&self, short: bool) -> usize {
-        let jump_len = self.jump.map_or(0, |(j, _)| j.len(short));
-        let part_len = self.instr_part.map_or(0, |_| Instruction::max_len());
+    /// Returns the total size of the code block.
+    pub fn size(&self) -> usize {
+        let jump_len = if self.jump.is_some() { 1 } else { 0 };
 
-        self.bytes.len() + jump_len + part_len
-    }
-
-    /// Returns the size of all encoded instructions.
-    pub fn len(&self) -> usize {
-        self.bytes.len()
-    }
-
-    /// Returns whether any intruction was encoded.
-    pub fn is_empty(&self) -> bool {
-        self.bytes.is_empty()
-    }
-
-    /// Returns encoded bytecode data.
-    ///
-    /// `flush` should be called first to ensure all instructions are encoded.
-    pub fn bytes(&self) -> &[u8] {
-        &self.bytes
+        self.instructions.len() + jump_len
     }
 
     /// Returns whether the code block is mostly empty, permitting the compiler
@@ -918,7 +920,7 @@ impl CodeBlock {
     pub fn is_mostly_empty(&self) -> bool {
         use self::Instruction::*;
 
-        self.bytes.is_empty() && match self.instr_part {
+        self.instructions.is_empty() && match self.instr_part {
             Some(Skip(_)) | Some(Return) | None => true,
             _ => false
         }
@@ -935,94 +937,44 @@ impl CodeBlock {
     /// Sets the jump instruction at the end of the block.
     ///
     /// May only be called once.
-    pub fn jump_to(&mut self, instr: JumpInstruction, block: u32) {
+    pub fn jump_to(&mut self, mut jump: JumpInstruction, block: u32) {
         assert!(self.jump.is_none());
 
-        match self.instr_part.and_then(|i| merge_jump_instruction(i, instr)) {
-            Some(j) => {
-                self.instr_part = None;
-                self.jump = Some((j, block));
-            }
-            None => self.jump = Some((instr, block))
-        }
-    }
-
-    /// Write stored jump instruction to buffer, if present.
-    pub fn write_jump(&mut self, label: u32, short: bool) -> Result<(), CompileError> {
-        if let Some((instr, _)) = self.jump.take() {
-            try!(instr.set_label(label).encode(self, short));
-        }
-        Ok(())
-    }
-
-    /// Forcibly encodes a pending instruction.
-    /// Does not encode a jump instruction.
-    pub fn flush(&mut self) -> Result<(), CompileError> {
-        if let Some(instr) = self.instr_part.take() {
-            self.write_instruction(instr)
-        } else {
-            Ok(())
-        }
-    }
-
-    /// Adds an instruction the block. The instruction may be stored until later
-    /// to be merged into a combination instruction.
-    pub fn push_instruction(&mut self, instr: Instruction) -> Result<(), CompileError> {
         if let Some(part) = self.instr_part {
-            match merge_instructions(part, instr) {
-                Some(new) => self.instr_part = Some(new),
-                None => {
-                    try!(self.write_instruction(part));
-                    self.instr_part = Some(instr);
-                }
+            if let Some(merged) = merge_jump_instruction(part, jump) {
+                self.instr_part = None;
+                jump = merged;
+            }
+        }
+
+        self.jump = Some((jump, block));
+    }
+
+    /// Pushes an instruction to the end of the code block.
+    pub fn push_instruction(&mut self, instr: Instruction) {
+        if let Some(part) = self.instr_part {
+            if let Some(merged) = merge_instruction(part, instr) {
+                self.instr_part = Some(merged);
+            } else {
+                self.instructions.push(part);
+                self.instr_part = Some(instr);
             }
         } else {
             self.instr_part = Some(instr);
         }
-        Ok(())
     }
 
-    fn write_instruction(&mut self, instr: Instruction) -> Result<(), CompileError> {
-        instr.encode(self, false)
-    }
-
-    fn write_byte(&mut self, byte: u8) -> Result<(), CompileError> {
-        self.bytes.push(byte);
-        Ok(())
-    }
-
-    fn write_operand(&mut self, op: u32) -> Result<(), CompileError> {
-        if is_short_operand(op) {
-            self.write_short_operand(op)
-        } else {
-            self.write_long_operand(op)
+    /// Flush a pending instruction.
+    pub fn flush(&mut self) {
+        if let Some(instr) = self.instr_part.take() {
+            self.instructions.push(instr);
         }
     }
 
-    fn write_short_operand(&mut self, op: u32) -> Result<(), CompileError> {
-        if is_short_operand(op) {
-            self.write_byte(op as u8)
-        } else {
-            Err(CompileError::OperandOverflow(op))
-        }
-    }
-
-    fn write_long_operand(&mut self, op: u32) -> Result<(), CompileError> {
-        if op <= MAX_LONG_OPERAND {
-            let lo = op as u8;
-            let hi = (op >> 8) as u8;
-            try!(self.write_byte(hi | 0x80));
-            self.write_byte(lo)
-        } else {
-            Err(CompileError::OperandOverflow(op))
-        }
-    }
-
-    fn write_label_operand(&mut self, op: u32, short: bool) -> Result<(), CompileError> {
-        if short {
-            self.write_short_operand(op)
-        } else {
-            self.write_long_operand(op)
+    /// Write stored jump instruction to buffer, if present.
+    pub fn push_jump(&mut self, label: u32) {
+        if let Some((instr, _)) = self.jump.take() {
+            self.instructions.push(instr.with_label(label));
         }
     }
 }
@@ -1051,7 +1003,7 @@ fn merge_jump_instruction(a: Instruction, b: JumpInstruction) -> Option<JumpInst
     Some(j)
 }
 
-fn merge_instructions(a: Instruction, b: Instruction) -> Option<Instruction> {
+fn merge_instruction(a: Instruction, b: Instruction) -> Option<Instruction> {
     use self::Instruction::*;
 
     let new = match (a, b) {

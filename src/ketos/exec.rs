@@ -31,7 +31,7 @@ use std::rc::Rc;
 use std::time::Instant;
 use std::vec::Drain;
 
-use bytecode::{Code, CodeReader};
+use bytecode::Code;
 use error::Error;
 use function::{Arity, Function, Lambda, SystemFn, first, last, init, tail};
 use integer::{Integer, Ratio};
@@ -236,8 +236,6 @@ pub enum ExecError {
     UnexpectedEnd,
     /// Unrecognized keyword passed to function
     UnrecognizedKeyword(Name),
-    /// Unrecognized opcode
-    UnrecognizedOpCode(u8),
 }
 
 impl StdError for ExecError {
@@ -328,7 +326,6 @@ impl fmt::Display for ExecError {
                 write!(f, "type mismatch; {} and {}", lhs, rhs),
             UnexpectedEnd => f.write_str("unexpected end of bytecode"),
             UnrecognizedKeyword(_) => f.write_str("unrecognized keyword argument"),
-            UnrecognizedOpCode(n) => write!(f, "unrecognized opcode {} ({:x})", n, n),
         }
     }
 }
@@ -595,13 +592,10 @@ impl Machine {
         let mut n_instructions = 0;
 
         loop {
-            let instr = {
-                let mut r = CodeReader::new(&frame.code.code, frame.iptr as usize);
-                let instr = try!(r.read_instruction());
-                frame.iptr = r.offset() as u32;
-                instr
-            };
+            let instr = frame.code.instructions.get(frame.iptr as usize).cloned()
+                .ok_or(ExecError::UnexpectedEnd)?;
 
+            frame.iptr += 1;
             n_instructions += 1;
 
             if n_instructions % TIME_CHECK_INTERVAL == 0 {
@@ -1266,7 +1260,7 @@ impl Machine {
     }
 
     fn jump(&mut self, frame: &mut StackFrame, label: u32) -> Result<(), ExecError> {
-        if label as usize >= frame.code.code.len() {
+        if label as usize >= frame.code.instructions.len() {
             Err(ExecError::InvalidJump(label))
         } else {
             frame.iptr = label;

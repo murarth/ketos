@@ -2,7 +2,7 @@
 
 use std::rc::Rc;
 
-use bytecode::{CodeReader, Instruction};
+use bytecode::Instruction;
 use compile::compile;
 use error::Error;
 use exec::{Context, ExecError};
@@ -105,47 +105,28 @@ fn fn_disassemble(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
         try!(writeln!(out, "0 enclosed values"));
     }
 
-    let instrs = try!(get_instructions(&code.code));
     let mut jumps = Vec::with_capacity(16);
 
     // Collect all jump labels
-    for &(_, ref instr) in &instrs {
-        if let Some(off) = instr.jump_label() {
-            match jumps.binary_search(&off) {
+    for instr in code.instructions.iter() {
+        if let Some(idx) = instr.jump_label() {
+            match jumps.binary_search(&(idx as u32)) {
                 Ok(_) => (),
-                Err(pos) => jumps.insert(pos, off)
+                Err(pos) => jumps.insert(pos, idx)
             }
         }
     }
 
-    try!(writeln!(out, "{} bytecode instruction{}:", instrs.len(), plural(instrs.len() as u32)));
+    try!(writeln!(out, "{} bytecode instruction{}:",
+        code.instructions.len(), plural(code.instructions.len() as u32)));
 
-    for (off, instr) in instrs {
-        let is_label = jumps.binary_search(&off).is_ok();
-        try!(print_instruction(ctx, l, off, instr, is_label));
+    for (idx, &instr) in code.instructions.iter().enumerate() {
+        let is_label = jumps.binary_search(&(idx as u32)).is_ok();
+        try!(print_instruction(ctx, l, idx as u32, instr, is_label));
     }
 
     try!(out.flush());
     Ok(().into())
-}
-
-fn get_instructions(code: &[u8]) -> Result<Vec<(u32, Instruction)>, ExecError> {
-    let mut res = Vec::new();
-    let mut r = CodeReader::new(code, 0);
-
-    loop {
-        let off = r.offset() as u32;
-
-        let instr = match r.read_instruction() {
-            Ok(instr) => instr,
-            Err(ExecError::UnexpectedEnd) => break,
-            Err(e) => return Err(e)
-        };
-
-        res.push((off, instr));
-    }
-
-    Ok(res)
 }
 
 fn print_instruction(ctx: &Context, lambda: &Lambda,
