@@ -360,10 +360,12 @@ impl<'a> StringReader<'a> {
             ParseErrorKind::InvalidNumericEscape('u'))));
 
         let mut n_digits = 0;
+        let mut n_pad = 0;
         let mut total = 0;
 
         loop {
             match try!(self.consume_char()) {
+                '_' => { n_pad += 1; }
                 '}' if n_digits != 0 => break,
                 ch if ch.is_digit(16) => {
                     if n_digits == 6 {
@@ -380,7 +382,7 @@ impl<'a> StringReader<'a> {
 
         ::std::char::from_u32(total)
             .ok_or_else(|| ParseError::new(
-                self.back_span(n_digits, n_digits),
+                self.back_span(n_digits + n_pad, n_digits + n_pad),
                 ParseErrorKind::InvalidNumericEscape('u')))
     }
 
@@ -442,6 +444,7 @@ mod test {
         assert_eq!(parse_char(r"#'\''").unwrap(), '\'');
         assert_eq!(parse_char(r"#'\x7f'").unwrap(), '\x7f');
         assert_eq!(parse_char(r"#'\u{1234}'").unwrap(), '\u{1234}');
+        assert_eq!(parse_char(r"#'\u{1_2__3_4}'").unwrap(), '\u{1234}');
 
         assert_eq!(parse_string(r#""foo""#, n).unwrap(), "foo");
         assert_eq!(parse_string(r#"r"foo""#, r).unwrap(), "foo");
