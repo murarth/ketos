@@ -135,7 +135,7 @@ mod test {
         let mut a: Box<SomeTrait> = Box::new(Dummy{a: 0});
 
         {
-            let mut r = a.downcast_mut::<Dummy>().unwrap();
+            let r = a.downcast_mut::<Dummy>().unwrap();
             r.a = 123;
         }
 

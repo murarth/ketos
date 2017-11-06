@@ -116,7 +116,7 @@ impl RcString {
     }
 
     fn make_mut(&mut self) -> &mut String {
-        let mut s = Rc::make_mut(&mut self.data);
+        let s = Rc::make_mut(&mut self.data);
 
         let _ = s.drain(self.end..);
         let _ = s.drain(..self.start);
@@ -301,7 +301,7 @@ impl<T: Clone> RcVec<T> {
     /// If the length of the `Vec` is modified, the `end` field of `RcVec`
     /// must be adjusted manually. That's why this method is private.
     fn make_mut(&mut self) -> &mut Vec<T> {
-        let mut v = Rc::make_mut(&mut self.data);
+        let v = Rc::make_mut(&mut self.data);
 
         let _ = v.drain(self.end..);
         let _ = v.drain(..self.start);
