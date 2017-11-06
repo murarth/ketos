@@ -243,8 +243,8 @@ impl StructDefinition for StructValueDef {
         };
 
         {
-            let mut struc_inner = Rc::make_mut(&mut struc);
-            let mut values = struc_inner.fields_mut();
+            let struc_inner = Rc::make_mut(&mut struc);
+            let values = struc_inner.fields_mut();
 
             for &mut (name, ref mut value) in fields {
                 let (idx, ty) = try!(self.get(name, def));

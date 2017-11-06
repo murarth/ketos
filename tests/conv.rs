@@ -59,7 +59,7 @@ fn test_from_value_ref() {
 fn test_into_value() {
     assert_matches!(into(()), Value::Unit);
     assert_matches!(into(true), Value::Bool(true));
-    assert_matches!(into(1.0_f64), Value::Float(1.0));
+    assert_matches!(into(1.0_f64), Value::Float(f) if f == 1.0);
     assert_matches!(into(123),
         Value::Integer(ref i) if i.to_u32() == Some(123));
     assert_matches!(into("foo"), Value::String(ref s) if s == "foo");
