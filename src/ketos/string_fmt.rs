@@ -1,5 +1,6 @@
 //! Implements string formatting syntax.
 
+#[allow(unused_imports)]
 use std::ascii::AsciiExt;
 use std::borrow::Cow::{self, Borrowed, Owned};
 use std::cmp::max;
