@@ -64,23 +64,25 @@
 #![recursion_limit = "256"]
 
 extern crate proc_macro;
+extern crate proc_macro2;
 #[macro_use] extern crate quote;
 extern crate syn;
 
 use proc_macro::TokenStream;
+use proc_macro2::{Span, Term};
 use quote::{ToTokens, Tokens};
 use syn::{
-    Attribute, AttrStyle, Body, Ident, Lit, MetaItem, NestedMetaItem,
-    Generics, TyGenerics, WhereClause, VariantData,
+    AttrStyle, Attribute, Data, DataStruct, DeriveInput, Fields,
+    GenericParam, Generics, Ident, Lifetime, LifetimeDef, Lit, Meta, NestedMeta,
+    Path, PathArguments, TypeGenerics, WhereClause,
 };
 
 #[proc_macro_derive(ForeignValue)]
 pub fn derive_foreign_value(input: TokenStream) -> TokenStream {
-    let ast = syn::parse_derive_input(&input.to_string())
-        .expect("parse_derive_input");
+    let ast: DeriveInput = syn::parse(input).expect("syn::parse");
 
     let name = ast.ident;
-    let name_str = syn::Lit::from(name.to_string());
+    let name_str: &str = name.as_ref();
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
     let expr = quote!{
@@ -94,11 +96,10 @@ pub fn derive_foreign_value(input: TokenStream) -> TokenStream {
 
 #[proc_macro_derive(FromValue)]
 pub fn derive_from_value(input: TokenStream) -> TokenStream {
-    let ast = syn::parse_derive_input(&input.to_string())
-        .expect("parse_derive_input");
+    let ast: DeriveInput = syn::parse(input).expect("syn::parse");
 
     let name = ast.ident;
-    let name_str = syn::Lit::from(name.to_string());
+    let name_str: &str = name.as_ref();
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
     let expr = quote!{
@@ -133,11 +134,10 @@ pub fn derive_from_value(input: TokenStream) -> TokenStream {
 
 #[proc_macro_derive(FromValueClone)]
 pub fn derive_from_value_clone(input: TokenStream) -> TokenStream {
-    let ast = syn::parse_derive_input(&input.to_string())
-        .expect("parse_derive_input");
+    let ast: DeriveInput = syn::parse(input).expect("syn::parse");
 
     let name = ast.ident;
-    let name_str = syn::Lit::from(name.to_string());
+    let name_str: &str = name.as_ref();
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
     let expr = quote!{
@@ -171,11 +171,10 @@ pub fn derive_from_value_clone(input: TokenStream) -> TokenStream {
 
 #[proc_macro_derive(FromValueRef)]
 pub fn derive_from_value_ref(input: TokenStream) -> TokenStream {
-    let ast = syn::parse_derive_input(&input.to_string())
-        .expect("parse_derive_input");
+    let ast: DeriveInput = syn::parse(input).expect("syn::parse");
 
     let name = ast.ident;
-    let name_str = syn::Lit::from(name.to_string());
+    let name_str: &str = name.as_ref();
     let (impl_generics, ty_generics, where_clause) = split_with_lifetime(&ast.generics);
 
     let expr = quote!{
@@ -198,8 +197,7 @@ pub fn derive_from_value_ref(input: TokenStream) -> TokenStream {
 
 #[proc_macro_derive(IntoValue)]
 pub fn derive_into_value(input: TokenStream) -> TokenStream {
-    let ast = syn::parse_derive_input(&input.to_string())
-        .expect("parse_derive_input");
+    let ast: DeriveInput = syn::parse(input).expect("syn::parse");
 
     let name = ast.ident;
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
@@ -217,22 +215,22 @@ pub fn derive_into_value(input: TokenStream) -> TokenStream {
 
 #[proc_macro_derive(StructValue, attributes(ketos))]
 pub fn derive_struct_value(input: TokenStream) -> TokenStream {
-    let ast = syn::parse_derive_input(&input.to_string())
-        .expect("parse_derive_input");
+    let ast: DeriveInput = syn::parse(input).expect("syn::parse");
 
     let name = ast.ident;
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
-    let fields = match ast.body {
-        Body::Enum(_) => panic!("cannot derive StructValue for enum types"),
-        Body::Struct(VariantData::Unit) =>
+    let fields = match ast.data {
+        Data::Enum(_) => panic!("cannot derive StructValue for enum types"),
+        Data::Struct(DataStruct{fields: Fields::Unit, ..}) =>
             panic!("cannot derive StructValue for unit struct types"),
-        Body::Struct(VariantData::Tuple(_)) =>
+        Data::Struct(DataStruct{fields: Fields::Unnamed(..), ..}) =>
             panic!("cannot derive StructValue for tuple struct types"),
-        Body::Struct(VariantData::Struct(fields)) => fields
+        Data::Struct(DataStruct{ref fields, ..}) => fields,
+        Data::Union(_) => panic!("cannot derive StructValue for union types"),
     };
 
-    let name_str = Lit::from(name.to_string());
+    let name_str: &str = name.as_ref();
     let mut local = Vec::new();
     let mut field_name = Vec::new();
     let mut field_str = Vec::new();
@@ -371,22 +369,25 @@ fn parse_attrs(attrs: &[Attribute]) -> AttrOpts {
     let mut opts = AttrOpts::default();
 
     for attr in attrs {
-        if attr.style == AttrStyle::Outer && attr.value.name() == "ketos" {
-            match attr.value {
-                MetaItem::Word(_) =>
+        if is_outer(attr.style) && path_eq(&attr.path, "ketos") {
+            let meta = attr.interpret_meta().unwrap_or_else(
+                || panic!("invalid attribute: {}", tokens_str(attr)));
+
+            match meta {
+                Meta::Word(_) =>
                     panic!("#[ketos] is not a valid attribute"),
-                MetaItem::NameValue(..) =>
+                Meta::NameValue(..) =>
                     panic!("#[ketos = ...] is not a valid attribute"),
-                MetaItem::List(_, ref items) => {
-                    for item in items {
+                Meta::List(ref items) => {
+                    for item in &items.nested {
                         match *item {
-                            NestedMetaItem::Literal(_) =>
+                            NestedMeta::Literal(_) =>
                                 panic!("unexpected meta item `{}`", tokens_str(item)),
-                            NestedMetaItem::MetaItem(ref item) => {
+                            NestedMeta::Meta(ref item) => {
                                 match *item {
-                                    MetaItem::NameValue(ref name, ref value) => {
-                                        match name.as_ref() {
-                                            "rename" => opts.rename = Some(lit_str(value)),
+                                    Meta::NameValue(ref nv) => {
+                                        match nv.ident.as_ref() {
+                                            "rename" => opts.rename = Some(lit_str(&nv.lit)),
                                             _ => panic!("unexpected meta item `{}`", tokens_str(item))
                                         }
                                     }
@@ -403,9 +404,27 @@ fn parse_attrs(attrs: &[Attribute]) -> AttrOpts {
     opts
 }
 
+fn path_eq(path: &Path, s: &str) -> bool {
+    path.segments.len() == 1 && {
+        let seg = path.segments.first().unwrap().into_value();
+
+        match seg.arguments {
+            PathArguments::None => seg.ident.as_ref() == s,
+            _ => false
+        }
+    }
+}
+
+fn is_outer(style: AttrStyle) -> bool {
+    match style {
+        AttrStyle::Outer => true,
+        _ => false
+    }
+}
+
 fn lit_str(lit: &Lit) -> String {
     match *lit {
-        Lit::Str(ref s, _) => s.clone(),
+        Lit::Str(ref s) => s.value(),
         _ => panic!("unexpected literal `{}`", tokens_str(lit))
     }
 }
@@ -417,11 +436,11 @@ fn make_field_name(name: &str) -> String {
 fn tokens_str<T: ToTokens>(t: &T) -> String {
     let mut tok = Tokens::new();
     t.to_tokens(&mut tok);
-    tok.into_string()
+    tok.to_string()
 }
 
 fn split_with_lifetime(generics: &Generics)
-        -> (LtImplGenerics, TyGenerics, &WhereClause) {
+        -> (LtImplGenerics, TypeGenerics, Option<&WhereClause>) {
     let (_, ty_generics, where_clause) = generics.split_for_impl();
 
     (LtImplGenerics(generics), ty_generics, where_clause)
@@ -433,7 +452,9 @@ impl<'a> ToTokens for LtImplGenerics<'a> {
     fn to_tokens(&self, tokens: &mut Tokens) {
         let mut generics = self.0.clone();
 
-        generics.lifetimes.insert(0, syn::LifetimeDef::new("'value"));
+        let lt = LifetimeDef::new(Lifetime::new(
+            Term::intern("'value"), Span::def_site()));
+        generics.params.insert(0, GenericParam::Lifetime(lt));
         let (impl_generics, _, _) = generics.split_for_impl();
         impl_generics.to_tokens(tokens);
     }
