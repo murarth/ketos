@@ -568,11 +568,7 @@ impl NameDebug for Value {
             Value::Unit => write!(f, "()"),
             Value::Unbound => write!(f, "<unbound>"),
             Value::Bool(b) => write!(f, "{:?}", b),
-            Value::Float(fl) => if is_normal(fl) && fl.trunc() == fl {
-                write!(f, "{:?}.0", fl)
-            } else {
-                write!(f, "{}", fl)
-            },
+            Value::Float(fl) => display_float(f, fl),
             Value::Integer(ref i) => write!(f, "{}", i),
             Value::Ratio(ref r) => if r.is_integer() {
                 write!(f, "{}/1", r)
@@ -690,11 +686,7 @@ impl NameDebug for Value {
 impl NameDisplay for Value {
     fn fmt(&self, names: &NameStore, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Value::Float(fl) => if is_normal(fl) && fl.trunc() == fl {
-                write!(f, "{}.0", fl)
-            } else {
-                write!(f, "{}", fl)
-            },
+            Value::Float(fl) => display_float(f, fl),
             Value::Char(ch) => write!(f, "{}", ch),
             Value::String(ref s) => write!(f, "{}", s),
             Value::Path(ref p) => write!(f, "{}", p.display()),
@@ -735,6 +727,20 @@ fn coerce_equal_float(f: f64, other: Option<f64>) -> bool {
         false
     } else {
         other.map_or(false, |other| f == other)
+    }
+}
+
+fn display_float(f: &mut fmt::Formatter, v: f64) -> fmt::Result {
+    if is_normal(v) {
+        let s = v.to_string();
+
+        if s.contains('.') {
+            write!(f, "{}", s)
+        } else {
+            write!(f, "{}.0", s)
+        }
+    } else {
+        write!(f, "{}", v)
     }
 }
 
