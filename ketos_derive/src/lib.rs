@@ -69,7 +69,7 @@ extern crate proc_macro2;
 extern crate syn;
 
 use proc_macro::TokenStream;
-use proc_macro2::{Span, Term};
+use proc_macro2::Span;
 use quote::{ToTokens, Tokens};
 use syn::{
     AttrStyle, Attribute, Data, DataStruct, DeriveInput, Fields,
@@ -452,8 +452,7 @@ impl<'a> ToTokens for LtImplGenerics<'a> {
     fn to_tokens(&self, tokens: &mut Tokens) {
         let mut generics = self.0.clone();
 
-        let lt = LifetimeDef::new(Lifetime::new(
-            Term::intern("'value"), Span::def_site()));
+        let lt = LifetimeDef::new(Lifetime::new("'value", Span::call_site()));
         generics.params.insert(0, GenericParam::Lifetime(lt));
         let (impl_generics, _, _) = generics.split_for_impl();
         impl_generics.to_tokens(tokens);
