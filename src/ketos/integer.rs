@@ -536,6 +536,20 @@ macro_rules! impl_ops {
             }
         }
 
+        impl ::std::ops::AddAssign<$ty> for $ty {
+            #[inline]
+            fn add_assign(&mut self, rhs: $ty) {
+                self.0 += rhs.0;
+            }
+        }
+
+        impl<'a> ::std::ops::AddAssign<&'a $ty> for $ty {
+            #[inline]
+            fn add_assign(&mut self, rhs: &$ty) {
+                self.0 += &rhs.0;
+            }
+        }
+
         impl ::std::ops::Sub<$ty> for $ty {
             type Output = $ty;
 
@@ -569,6 +583,20 @@ macro_rules! impl_ops {
             #[inline]
             fn sub(self, rhs: &$ty) -> $ty {
                 $ty(self.0.clone().sub(rhs.0.clone()))
+            }
+        }
+
+        impl ::std::ops::SubAssign<$ty> for $ty {
+            #[inline]
+            fn sub_assign(&mut self, rhs: $ty) {
+                self.0 -= rhs.0;
+            }
+        }
+
+        impl<'a> ::std::ops::SubAssign<&'a $ty> for $ty {
+            #[inline]
+            fn sub_assign(&mut self, rhs: &$ty) {
+                self.0 -= &rhs.0;
             }
         }
 
@@ -608,6 +636,20 @@ macro_rules! impl_ops {
             }
         }
 
+        impl ::std::ops::MulAssign<$ty> for $ty {
+            #[inline]
+            fn mul_assign(&mut self, rhs: $ty) {
+                self.0 *= rhs.0;
+            }
+        }
+
+        impl<'a> ::std::ops::MulAssign<&'a $ty> for $ty {
+            #[inline]
+            fn mul_assign(&mut self, rhs: &$ty) {
+                self.0 *= &rhs.0;
+            }
+        }
+
         impl ::std::ops::Div<$ty> for $ty {
             type Output = $ty;
 
@@ -644,6 +686,20 @@ macro_rules! impl_ops {
             }
         }
 
+        impl ::std::ops::DivAssign<$ty> for $ty {
+            #[inline]
+            fn div_assign(&mut self, rhs: $ty) {
+                self.0 /= rhs.0;
+            }
+        }
+
+        impl<'a> ::std::ops::DivAssign<&'a $ty> for $ty {
+            #[inline]
+            fn div_assign(&mut self, rhs: &$ty) {
+                self.0 /= &rhs.0;
+            }
+        }
+
         impl ::std::ops::Rem<$ty> for $ty {
             type Output = $ty;
 
@@ -677,6 +733,20 @@ macro_rules! impl_ops {
             #[inline]
             fn rem(self, rhs: &$ty) -> $ty {
                 $ty(self.0.clone().rem(rhs.0.clone()))
+            }
+        }
+
+        impl ::std::ops::RemAssign<$ty> for $ty {
+            #[inline]
+            fn rem_assign(&mut self, rhs: $ty) {
+                self.0 %= rhs.0;
+            }
+        }
+
+        impl<'a> ::std::ops::RemAssign<&'a $ty> for $ty {
+            #[inline]
+            fn rem_assign(&mut self, rhs: &$ty) {
+                self.0 %= &rhs.0;
             }
         }
 

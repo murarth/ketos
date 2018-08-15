@@ -637,17 +637,19 @@ fn fn_pow(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 // I'm not aware of any method to directly calculate the bit length of an
 // exponent without calculating the exponent, so we instead employ a test on
 // each multiplication step.
-fn try_pow(ctx: &Context, mut base: Integer, mut exp: u32) -> Result<Integer, Error> {
+fn try_pow(ctx: &Context, base: &Integer, mut exp: u32) -> Result<Integer, Error> {
     if ctx.restrict().max_integer_size == usize::max_value() {
-        return Ok(base.pow(exp as usize));
+        return Ok(base.clone().pow(exp as usize));
     }
 
     if exp == 0 {
         return Ok(Integer::one().into());
     }
 
+    let mut base = base.clone();
+
     while exp & 1 == 0 {
-        base = try_mul(ctx, base.clone(), base)?;
+        base = try_mul(ctx, &base, &base)?;
         exp >>= 1;
     }
 
@@ -659,20 +661,27 @@ fn try_pow(ctx: &Context, mut base: Integer, mut exp: u32) -> Result<Integer, Er
 
     while exp > 1 {
         exp >>= 1;
-        base = try_mul(ctx, base.clone(), base)?;
+        base = try_mul(ctx, &base, &base)?;
 
         if exp & 1 == 1 {
-            acc = try_mul(ctx, acc, base.clone())?;
+            try_mul_assign(ctx, &mut acc, &base)?;
         }
     }
 
     Ok(acc)
 }
 
-fn try_mul(ctx: &Context, lhs: Integer, rhs: Integer) -> Result<Integer, Error> {
+fn try_mul(ctx: &Context, lhs: &Integer, rhs: &Integer) -> Result<Integer, Error> {
     check_bits(ctx, lhs.bits() + rhs.bits())?;
 
     Ok(lhs * rhs)
+}
+
+fn try_mul_assign(ctx: &Context, lhs: &mut Integer, rhs: &Integer) -> Result<(), Error> {
+    check_bits(ctx, lhs.bits() + rhs.bits())?;
+
+    *lhs *= rhs;
+    Ok(())
 }
 
 fn check_bits(ctx: &Context, bits: usize) -> Result<(), RestrictError> {
@@ -705,7 +714,7 @@ fn pow_number(ctx: &Context, lhs: Value, rhs: Value) -> Result<Value, Error> {
                 Ok(a.powf(b).into())
             } else {
                 let exp = b.to_u32().ok_or(ExecError::Overflow)?;
-                try_pow(ctx, a.clone(), exp).map(|i| i.into())
+                try_pow(ctx, a, exp).map(|i| i.into())
             }
         }
         (Value::Ratio(ref a), &Value::Ratio(ref b)) => {
@@ -729,8 +738,8 @@ fn pow_ratio_integer(ctx: &Context, lhs: &Ratio, rhs: &Integer) -> Result<Value,
         Ok(lhs.powf(rhs).into())
     } else {
         let rhs = rhs.to_u32().ok_or(ExecError::Overflow)?;
-        let a = try_pow(ctx, lhs.numer().clone(), rhs)?;
-        let b = try_pow(ctx, lhs.denom().clone(), rhs)?;
+        let a = try_pow(ctx, lhs.numer(), rhs)?;
+        let b = try_pow(ctx, lhs.denom(), rhs)?;
 
         Ok(Ratio::new(a, b).into())
     }
