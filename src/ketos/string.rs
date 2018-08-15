@@ -1,7 +1,5 @@
 //! Parses string tokens from input.
 
-#[allow(unused_imports)]
-use std::ascii::AsciiExt;
 use std::str::CharIndices;
 
 use lexer::{BytePos, Span};
