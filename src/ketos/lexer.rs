@@ -266,30 +266,30 @@ impl<'lex> Lexer<'lex> {
                     _ => Ok((Token::Comma, 1)),
                 },
                 '-' | '0' ... '9' => parse_number(&self.input[ind..]),
-                '"' => Ok(try!(parse_string(&self.input[ind..], self.code_offset + lo))),
+                '"' => Ok(parse_string(&self.input[ind..], self.code_offset + lo)?),
                 '#' => match chars.next() {
                     Some((_, 'b')) => {
                         match chars.next() {
-                            Some((_, 'r')) => Ok(try!(parse_raw_bytes(&self.input[ind..],
-                                self.code_offset + lo))),
-                            Some((_, '"')) => Ok(try!(parse_bytes(&self.input[ind..],
-                                self.code_offset + lo))),
-                            Some((_, '\'')) => Ok(try!(parse_byte(&self.input[ind..],
-                                self.code_offset + lo))),
+                            Some((_, 'r')) => Ok(parse_raw_bytes(&self.input[ind..],
+                                self.code_offset + lo)?),
+                            Some((_, '"')) => Ok(parse_bytes(&self.input[ind..],
+                                self.code_offset + lo)?),
+                            Some((_, '\'')) => Ok(parse_byte(&self.input[ind..],
+                                self.code_offset + lo)?),
                             _ => Err(ParseErrorKind::InvalidToken)
                         }
                     }
                     Some((_, 'p')) => {
                         match chars.next() {
-                            Some((_, 'r')) => Ok(try!(parse_raw_path(&self.input[ind..],
-                                self.code_offset + lo))),
-                            Some((_, '"')) => Ok(try!(parse_path(&self.input[ind..],
-                                self.code_offset + lo))),
+                            Some((_, 'r')) => Ok(parse_raw_path(&self.input[ind..],
+                                self.code_offset + lo)?),
+                            Some((_, '"')) => Ok(parse_path(&self.input[ind..],
+                                self.code_offset + lo)?),
                             _ => Err(ParseErrorKind::InvalidToken)
                         }
                     }
-                    Some((_, '\'')) => Ok(try!(parse_char(&self.input[ind..],
-                        self.code_offset + lo))),
+                    Some((_, '\'')) => Ok(parse_char(&self.input[ind..],
+                        self.code_offset + lo)?),
                     Some((_, '|')) => match consume_block_comment(ind, &mut chars) {
                         Ok(n) => {
                             self.cur_pos += n as BytePos;
@@ -302,8 +302,8 @@ impl<'lex> Lexer<'lex> {
                 },
                 'r' => match chars.next() {
                     Some((_, '"')) | Some((_, '#')) =>
-                        Ok(try!(parse_raw_string(&self.input[ind..],
-                            self.code_offset + lo))),
+                        Ok(parse_raw_string(&self.input[ind..],
+                            self.code_offset + lo)?),
                     _ => parse_name(&self.input[ind..])
                 },
                 ':' => parse_keyword(&self.input[ind..]),
@@ -592,42 +592,42 @@ fn parse_number(input: &str) -> Result<(Token, usize), ParseErrorKind> {
 }
 
 fn parse_byte(input: &str, pos: BytePos) -> Result<(Token, usize), ParseError> {
-    let (_, size) = try!(string::parse_byte(input, pos));
+    let (_, size) = string::parse_byte(input, pos)?;
     Ok((Token::Byte(&input[..size]), size))
 }
 
 fn parse_bytes(input: &str, pos: BytePos) -> Result<(Token, usize), ParseError> {
-    let (_, size) = try!(string::parse_byte_string(&input[2..], pos + 2));
+    let (_, size) = string::parse_byte_string(&input[2..], pos + 2)?;
     Ok((Token::Bytes(&input[..size + 2]), size + 2))
 }
 
 fn parse_raw_bytes(input: &str, pos: BytePos) -> Result<(Token, usize), ParseError> {
-    let (_, size) = try!(string::parse_raw_byte_string(&input[2..], pos + 2));
+    let (_, size) = string::parse_raw_byte_string(&input[2..], pos + 2)?;
     Ok((Token::Bytes(&input[..size + 2]), size + 2))
 }
 
 fn parse_path(input: &str, pos: BytePos) -> Result<(Token, usize), ParseError> {
-    let (_, size) = try!(string::parse_string(&input[2..], pos + 2));
+    let (_, size) = string::parse_string(&input[2..], pos + 2)?;
     Ok((Token::Path(&input[..size + 2]), size + 2))
 }
 
 fn parse_raw_path(input: &str, pos: BytePos) -> Result<(Token, usize), ParseError> {
-    let (_, size) = try!(string::parse_raw_string(&input[2..], pos + 2));
+    let (_, size) = string::parse_raw_string(&input[2..], pos + 2)?;
     Ok((Token::Path(&input[..size + 2]), size + 2))
 }
 
 fn parse_char(input: &str, pos: BytePos) -> Result<(Token, usize), ParseError> {
-    let (_, size) = try!(string::parse_char(input, pos));
+    let (_, size) = string::parse_char(input, pos)?;
     Ok((Token::Char(&input[..size]), size))
 }
 
 fn parse_string(input: &str, pos: BytePos) -> Result<(Token, usize), ParseError> {
-    let (_, size) = try!(string::parse_string(input, pos));
+    let (_, size) = string::parse_string(input, pos)?;
     Ok((Token::String(&input[..size]), size))
 }
 
 fn parse_raw_string(input: &str, pos: BytePos) -> Result<(Token, usize), ParseError> {
-    let (_, size) = try!(string::parse_raw_string(input, pos));
+    let (_, size) = string::parse_raw_string(input, pos)?;
     Ok((Token::String(&input[..size]), size))
 }
 

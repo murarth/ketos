@@ -32,7 +32,7 @@ macro_rules! ketos_args {
 
         ( $( {
             let arg = _iter.next().unwrap();
-            try!(<$ty as $crate::value::FromValueRef>::from_value_ref(arg))
+            <$ty as $crate::value::FromValueRef>::from_value_ref(arg)?
         } , )* )
     } };
     // Optional arguments
@@ -53,8 +53,8 @@ macro_rules! ketos_args {
 
         ( $( {
             match _iter.next() {
-                Some(arg) => Some(try!(<$ty as
-                    $crate::value::FromValueRef>::from_value_ref(arg))),
+                Some(arg) => Some(<$ty as
+                    $crate::value::FromValueRef>::from_value_ref(arg)?),
                 None => None
             }
         } , )* )
@@ -80,12 +80,12 @@ macro_rules! ketos_args {
 
         ( $( {
             let arg = _iter.next().unwrap();
-            try!(<$r_ty as $crate::value::FromValueRef>::from_value_ref(arg))
+            <$r_ty as $crate::value::FromValueRef>::from_value_ref(arg)?
         } , )*
         $( {
             match _iter.next() {
-                Some(arg) => Some(try!(<$o_ty as
-                    $crate::value::FromValueRef>::from_value_ref(arg))),
+                Some(arg) => Some(<$o_ty as
+                    $crate::value::FromValueRef>::from_value_ref(arg)?),
                 None => None
             }
         } , )* )

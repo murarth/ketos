@@ -339,7 +339,7 @@ impl Interpreter {
 
     /// Executes a `Rc<Code>` object taking no parameters.
     pub fn execute_code(&self, code: Rc<Code>) -> Result<Value, Error> {
-        let v = try!(execute(&self.context, code));
+        let v = execute(&self.context, code)?;
         Ok(v)
     }
 
@@ -349,7 +349,7 @@ impl Interpreter {
         let mut last_v = Value::Unit;
 
         for c in code {
-            last_v = try!(self.execute(c));
+            last_v = self.execute(c)?;
         }
 
         Ok(last_v)
@@ -359,19 +359,19 @@ impl Interpreter {
     pub fn call(&self, name: &str, args: Vec<Value>) -> Result<Value, Error> {
         let name = self.scope().borrow_names_mut().add(name);
 
-        let v = try!(self.scope().get_value(name).ok_or(ExecError::NameError(name)));
+        let v = self.scope().get_value(name).ok_or(ExecError::NameError(name))?;
         self.call_value(v, args)
     }
 
     /// Calls a function with the given arguments.
     pub fn call_value(&self, value: Value, args: Vec<Value>) -> Result<Value, Error> {
-        let v = try!(call_function(&self.context, value, args));
+        let v = call_function(&self.context, value, args)?;
         Ok(v)
     }
 
     fn call_main(&self) -> Result<(), Error> {
         if let Some(v) = self.get_value("main") {
-            try!(self.call_value(v, Vec::new()));
+            self.call_value(v, Vec::new())?;
         }
         Ok(())
     }
@@ -402,35 +402,35 @@ impl Interpreter {
 
     /// Compiles and executes the contents of a file.
     pub fn run_file(&self, path: &Path) -> Result<(), Error> {
-        let mut f = try!(File::open(path)
-            .map_err(|e| IoError::new(IoMode::Open, path, e)));
+        let mut f = File::open(path)
+            .map_err(|e| IoError::new(IoMode::Open, path, e))?;
 
         let mut buf = String::new();
 
-        try!(f.read_to_string(&mut buf)
-            .map_err(|e| IoError::new(IoMode::Read, path, e)));
+        f.read_to_string(&mut buf)
+            .map_err(|e| IoError::new(IoMode::Read, path, e))?;
 
         self.run_main(&buf, path.to_string_lossy().into_owned())
     }
 
     /// Compiles and executes an input expression.
     pub fn run_single_expr(&self, input: &str, path: Option<String>) -> Result<Value, Error> {
-        let c = try!(self.compile_single_expr(input, path));
+        let c = self.compile_single_expr(input, path)?;
         self.execute(c)
     }
 
     /// Parses and executes a series of expressions and return the last value.
     pub fn run_code(&self, input: &str, path: Option<String>) -> Result<Value, Error> {
-        let code = try!(self.compile_code(input, path));
+        let code = self.compile_code(input, path)?;
         self.execute_program(code)
     }
 
     /// Compiles and compiles a single expression and returns a code object.
     /// If the input string contains more than one expression, an error is returned.
     pub fn compile_single_expr(&self, input: &str, path: Option<String>) -> Result<Code, Error> {
-        let v = try!(self.parse_single_expr(input, path));
+        let v = self.parse_single_expr(input, path)?;
 
-        let code = try!(compile(&self.context, &v));
+        let code = compile(&self.context, &v)?;
         Ok(code)
     }
 
@@ -445,7 +445,7 @@ impl Interpreter {
         let offset = self.scope().borrow_codemap_mut().add_source(input, path);
 
         let mut p = Parser::new(&self.context, Lexer::new(input, offset));
-        let v = try!(p.parse_single_expr());
+        let v = p.parse_single_expr()?;
 
         Ok(v)
     }
@@ -456,7 +456,7 @@ impl Interpreter {
 
         let mut p = Parser::new(&self.context, Lexer::new(input, offset));
 
-        let v = try!(p.parse_exprs());
+        let v = p.parse_exprs()?;
 
         Ok(v)
     }
@@ -469,21 +469,23 @@ impl Interpreter {
         let mut p = Parser::new(&self.context, Lexer::new(input, offset));
         p.skip_shebang();
 
-        let v = try!(p.parse_exprs());
+        let v = p.parse_exprs()?;
 
         Ok(v)
     }
 
     fn compile_code(&self, input: &str, path: Option<String>) -> Result<Vec<Code>, Error> {
-        let v = try!(self.parse_exprs(input, path));
+        let v = self.parse_exprs(input, path)?;
 
         v.iter().map(|v| compile(&self.context, v)).collect()
     }
 
     fn run_main(&self, input: &str, path: String) -> Result<(), Error> {
-        let exprs = try!(self.parse_file(input, Some(path)));
-        let code = try!(exprs.iter().map(|v| compile(&self.context, v)).collect());
-        try!(self.execute_program(code));
+        let exprs = self.parse_file(input, Some(path))?;
+        let code = exprs.iter()
+            .map(|v| compile(&self.context, v))
+            .collect::<Result<Vec<_>, _>>()?;
+        self.execute_program(code)?;
         self.call_main()
     }
 }

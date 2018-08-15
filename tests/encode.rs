@@ -26,11 +26,11 @@ fn run<F>(input: &str, mut f: F) -> Result<(), Error>
         where F: FnMut(&Context) {
     let interp = new_interpreter();
 
-    let code: Vec<_> = try!(interp.compile_exprs(input))
+    let code: Vec<_> = interp.compile_exprs(input)?
         .into_iter().map(Rc::new).collect();
 
     for code in &code {
-        try!(interp.execute_code(code.clone()));
+        interp.execute_code(code.clone())?;
     }
 
     f(interp.context());
@@ -42,13 +42,13 @@ fn run<F>(input: &str, mut f: F) -> Result<(), Error>
         let mcode = ModuleCode::new(code, interp.scope());
         let scope = interp.scope();
         let names = scope.borrow_names();
-        try!(write_bytecode(&mut buf, path, &mcode, &names));
+        write_bytecode(&mut buf, path, &mcode, &names)?;
     }
 
     let sec_interp = new_interpreter();
-    let mcode = try!(read_bytecode(&mut &buf[..], path, sec_interp.context()));
+    let mcode = read_bytecode(&mut &buf[..], path, sec_interp.context())?;
 
-    try!(mcode.load_in_context(sec_interp.context()));
+    mcode.load_in_context(sec_interp.context())?;
 
     f(sec_interp.context());
 

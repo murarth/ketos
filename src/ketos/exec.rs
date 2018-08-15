@@ -373,10 +373,10 @@ impl NameDisplay for ExecError {
             FormatError{ref fmt, span, ref err} => {
                 let hi = highlight_span(fmt, span);
 
-                try!(f.write_str("error in string formatting:\n"));
-                try!(writeln!(f, "{}:{}:error: {}", hi.line, hi.col, err));
-                try!(writeln!(f, "    {}", hi.source));
-                try!(writeln!(f, "    {}", hi.highlight));
+                f.write_str("error in string formatting:\n")?;
+                writeln!(f, "{}:{}:error: {}", hi.line, hi.col, err)?;
+                writeln!(f, "    {}", hi.source)?;
+                writeln!(f, "    {}", hi.highlight)?;
                 Ok(())
             }
             MissingArgCount(name) =>
@@ -533,7 +533,7 @@ impl Machine {
         let scope = lambda.scope.upgrade()
             .expect("Lambda scope has been destroyed");
 
-        try!(self.push_iter(args));
+        self.push_iter(args)?;
 
         let n_args = self.stack.len() as u32;
         let arity = lambda.code.arity();
@@ -549,17 +549,17 @@ impl Machine {
         let n_params = lambda.code.n_params;
 
         if n_params > n_args {
-            try!(self.push_unbound(lambda.code.n_params - n_args));
+            self.push_unbound(lambda.code.n_params - n_args)?;
         }
         if !lambda.code.kw_params.is_empty() {
-            try!(self.push_unbound(lambda.code.kw_params.len() as u32));
+            self.push_unbound(lambda.code.kw_params.len() as u32)?;
         }
         if lambda.code.has_rest_params() {
             if n_params >= n_args {
-                try!(self.push(Value::Unit));
+                self.push(Value::Unit)?;
             } else {
-                try!(self.build_list(n_args - n_params));
-                try!(self.push_value());
+                self.build_list(n_args - n_params)?;
+                self.push_value()?;
             }
         }
 
@@ -597,7 +597,7 @@ impl Machine {
         loop {
             let instr = {
                 let mut r = CodeReader::new(&frame.code.code, frame.iptr as usize);
-                let instr = try!(r.read_instruction());
+                let instr = r.read_instruction()?;
                 frame.iptr = r.offset() as u32;
                 instr
             };
@@ -605,81 +605,81 @@ impl Machine {
             n_instructions += 1;
 
             if n_instructions % TIME_CHECK_INTERVAL == 0 {
-                try!(self.check_time());
+                self.check_time()?;
             }
 
             match instr {
-                Load(n) => try!(self.load(frame.sptr + n)),
-                LoadC(n) => try!(self.load_c(frame, n)),
-                UnboundToUnit(n) => try!(self.unbound_to_unit(frame.sptr + n)),
-                GetDef(n) => try!(self.get_def(frame, n)),
-                Push => try!(self.push_value()),
+                Load(n) => self.load(frame.sptr + n)?,
+                LoadC(n) => self.load_c(frame, n)?,
+                UnboundToUnit(n) => self.unbound_to_unit(frame.sptr + n)?,
+                GetDef(n) => self.get_def(frame, n)?,
+                Push => self.push_value()?,
                 Unit => self.value = Value::Unit,
                 True => self.value = Value::Bool(true),
                 False => self.value = Value::Bool(false),
-                Const(n) => try!(self.load_const(&frame.code, n)),
-                Store(n) => try!(self.store(frame.sptr + n)),
-                LoadPush(n) => try!(self.load_push(frame.sptr + n)),
-                LoadCPush(n) => try!(self.load_c_push(frame, n)),
-                GetDefPush(n) => try!(self.get_def_push(frame, n)),
-                UnitPush => try!(self.push(Value::Unit)),
-                TruePush => try!(self.push(Value::Bool(true))),
-                FalsePush => try!(self.push(Value::Bool(false))),
-                ConstPush(n) => try!(self.push_const(&frame.code, n)),
-                SetDef(n) => try!(self.set_def(frame, n)),
-                List(n) => try!(self.build_list(n)),
-                Quote(n) => try!(self.quote_value(n)),
-                Quasiquote(n) => try!(self.quasiquote_value(n)),
-                Comma(n) => try!(self.comma_value(n)),
-                CommaAt(n) => try!(self.comma_at_value(n)),
+                Const(n) => self.load_const(&frame.code, n)?,
+                Store(n) => self.store(frame.sptr + n)?,
+                LoadPush(n) => self.load_push(frame.sptr + n)?,
+                LoadCPush(n) => self.load_c_push(frame, n)?,
+                GetDefPush(n) => self.get_def_push(frame, n)?,
+                UnitPush => self.push(Value::Unit)?,
+                TruePush => self.push(Value::Bool(true))?,
+                FalsePush => self.push(Value::Bool(false))?,
+                ConstPush(n) => self.push_const(&frame.code, n)?,
+                SetDef(n) => self.set_def(frame, n)?,
+                List(n) => self.build_list(n)?,
+                Quote(n) => self.quote_value(n)?,
+                Quasiquote(n) => self.quasiquote_value(n)?,
+                Comma(n) => self.comma_value(n)?,
+                CommaAt(n) => self.comma_at_value(n)?,
                 BuildClosure(n_const, n_values) =>
-                    try!(self.build_closure(&frame.code, n_const, n_values)),
-                Jump(label) => try!(self.jump(frame, label)),
-                JumpIf(label) => try!(self.jump_if(frame, label)),
+                    self.build_closure(&frame.code, n_const, n_values)?,
+                Jump(label) => self.jump(frame, label)?,
+                JumpIf(label) => self.jump_if(frame, label)?,
                 JumpIfBound(label, n) => {
                     let n = frame.sptr + n;
-                    try!(self.jump_if_bound(frame, label, n))
+                    self.jump_if_bound(frame, label, n)?
                 }
-                JumpIfNot(label) => try!(self.jump_if_not(frame, label)),
-                JumpIfEq(label) => try!(self.jump_if_eq(frame, label)),
-                JumpIfNotEq(label) => try!(self.jump_if_not_eq(frame, label)),
-                JumpIfNull(label) => try!(self.jump_if_null(frame, label)),
-                JumpIfNotNull(label) => try!(self.jump_if_not_null(frame, label)),
+                JumpIfNot(label) => self.jump_if_not(frame, label)?,
+                JumpIfEq(label) => self.jump_if_eq(frame, label)?,
+                JumpIfNotEq(label) => self.jump_if_not_eq(frame, label)?,
+                JumpIfNull(label) => self.jump_if_null(frame, label)?,
+                JumpIfNotNull(label) => self.jump_if_not_null(frame, label)?,
                 JumpIfEqConst(label, n) =>
-                    try!(self.jump_if_eq_const(frame, label, n)),
+                    self.jump_if_eq_const(frame, label, n)?,
                 JumpIfNotEqConst(label, n) =>
-                    try!(self.jump_if_not_eq_const(frame, label, n)),
+                    self.jump_if_not_eq_const(frame, label, n)?,
                 Null => self.is_null(),
                 NotNull => self.is_not_null(),
-                Eq => try!(self.equal()),
-                NotEq => try!(self.not_equal()),
-                EqConst(n) => try!(self.equal_const(&frame.code, n)),
-                NotEqConst(n) => try!(self.not_equal_const(&frame.code, n)),
-                Not => try!(self.negate()),
-                Inc => try!(self.increment()),
-                Dec => try!(self.decrement()),
-                Append => try!(self.append_value()),
-                First => try!(self.first()),
-                Tail => try!(self.tail()),
-                Init => try!(self.init()),
-                Last => try!(self.last()),
-                FirstPush => try!(self.first_push()),
-                TailPush => try!(self.tail_push()),
-                InitPush => try!(self.init_push()),
-                LastPush => try!(self.last_push()),
-                CallSys(n) => try!(self.call_sys(frame, n)),
+                Eq => self.equal()?,
+                NotEq => self.not_equal()?,
+                EqConst(n) => self.equal_const(&frame.code, n)?,
+                NotEqConst(n) => self.not_equal_const(&frame.code, n)?,
+                Not => self.negate()?,
+                Inc => self.increment()?,
+                Dec => self.decrement()?,
+                Append => self.append_value()?,
+                First => self.first()?,
+                Tail => self.tail()?,
+                Init => self.init()?,
+                Last => self.last()?,
+                FirstPush => self.first_push()?,
+                TailPush => self.tail_push()?,
+                InitPush => self.init_push()?,
+                LastPush => self.last_push()?,
+                CallSys(n) => self.call_sys(frame, n)?,
                 CallSysArgs(n, n_args) =>
-                    try!(self.call_sys_args(frame, n, n_args)),
+                    self.call_sys_args(frame, n, n_args)?,
                 CallConst(n, n_args) =>
-                    try!(self.call_const(frame, n, n_args)),
-                Call(n) => try!(self.call_function(frame, n)),
-                Apply(n) => try!(self.apply(frame, n)),
-                ApplyConst(n, n_args) => try!(self.apply_const(frame, n, n_args)),
-                ApplySelf(n) => try!(self.apply_self(frame, n)),
-                TailApplySelf(n) => try!(self.tail_apply_self(frame, n)),
-                CallSelf(n) => try!(self.call_self(frame, n)),
-                TailCallSelf(n) => try!(self.tail_call(frame, n)),
-                Skip(n) => try!(self.skip_stack(n as usize)),
+                    self.call_const(frame, n, n_args)?,
+                Call(n) => self.call_function(frame, n)?,
+                Apply(n) => self.apply(frame, n)?,
+                ApplyConst(n, n_args) => self.apply_const(frame, n, n_args)?,
+                ApplySelf(n) => self.apply_self(frame, n)?,
+                TailApplySelf(n) => self.tail_apply_self(frame, n)?,
+                CallSelf(n) => self.call_self(frame, n)?,
+                TailCallSelf(n) => self.tail_call(frame, n)?,
+                Skip(n) => self.skip_stack(n as usize)?,
                 Return => {
                     match self.call_stack.pop() {
                         None => break,
@@ -687,7 +687,7 @@ impl Machine {
                             self.clean_stack(frame.sptr as usize);
                             if frame.fn_on_stack {
                                 // Pop one more value for the function
-                                try!(self.pop());
+                                self.pop()?;
                             }
                             *frame = call;
                         }
@@ -701,12 +701,12 @@ impl Machine {
 
     fn build_closure(&mut self, code: &Code, n_const: u32, n_values: u32)
             -> Result<(), ExecError> {
-        let (code, scope) = match *try!(get_const(code, n_const)) {
+        let (code, scope) = match *get_const(code, n_const)? {
             Value::Lambda(ref l) => (l.code.clone(), l.scope.clone()),
             ref v => return Err(ExecError::expected("lambda", v))
         };
 
-        let values = try!(self.drain_stack_top(n_values))
+        let values = self.drain_stack_top(n_values)?
             .collect::<Vec<_>>().into_boxed_slice();
 
         self.value = Value::Lambda(Lambda::new_closure(code, scope, values));
@@ -714,7 +714,7 @@ impl Machine {
     }
 
     fn build_list(&mut self, n: u32) -> Result<(), ExecError> {
-        let v = try!(self.drain_stack_top(n)).collect::<Vec<_>>().into();
+        let v = self.drain_stack_top(n)?.collect::<Vec<_>>().into();
         self.value = v;
         Ok(())
     }
@@ -744,7 +744,7 @@ impl Machine {
     }
 
     fn call_sys(&mut self, frame: &mut StackFrame, n: u32) -> Result<(), Error> {
-        let (name, sys_fn) = try!(self.get_sys_fn(n));
+        let (name, sys_fn) = self.get_sys_fn(n)?;
 
         let n_args = match sys_fn.arity {
             Arity::Exact(n) => n,
@@ -756,7 +756,7 @@ impl Machine {
 
     fn call_sys_args(&mut self, frame: &mut StackFrame, sys_fn: u32, n_args: u32)
             -> Result<(), Error> {
-        let (name, sys_fn) = try!(self.get_sys_fn(sys_fn));
+        let (name, sys_fn) = self.get_sys_fn(sys_fn)?;
         self.call_sys_fn(frame, name, sys_fn, n_args, false)
     }
 
@@ -770,11 +770,11 @@ impl Machine {
                 found: n_args,
             }))
         } else {
-                let mut args = try!(self.drain_stack_top(n_args))
+                let mut args = self.drain_stack_top(n_args)?
                     .collect::<Vec<_>>();
 
                 if fn_on_stack {
-                    try!(self.pop());
+                    self.pop()?;
                 }
 
                 // Store the name for traceback if an error is generated
@@ -782,7 +782,7 @@ impl Machine {
 
                 let ctx = self.context.with_scope(frame.scope.clone());
 
-                let v = try!((sys_fn.callback)(&ctx, &mut args));
+                let v = (sys_fn.callback)(&ctx, &mut args)?;
                 self.value = v;
 
                 self.sys_fn_call = None;
@@ -793,8 +793,8 @@ impl Machine {
 
     fn call_const(&mut self, frame: &mut StackFrame,
             n: u32, n_args: u32) -> Result<(), Error> {
-        let name = try!(get_const_name(&frame.code, n));
-        let v = try!(self.get_value(frame, name));
+        let name = get_const_name(&frame.code, n)?;
+        let v = self.get_value(frame, name)?;
 
         self.value = Value::Unit;
         self.call_value(frame, v, n_args, false)
@@ -804,7 +804,7 @@ impl Machine {
     /// The callable value must be on the stack before the given arguments.
     fn call_function(&mut self, frame: &mut StackFrame, n_args: u32)
             -> Result<(), Error> {
-        let v = try!(self.get_stack_top(n_args)).clone();
+        let v = self.get_stack_top(n_args)?.clone();
         self.call_value(frame, v, n_args, true)
     }
 
@@ -816,15 +816,15 @@ impl Machine {
             Value::Lambda(fun) =>
                 self.call_lambda(frame, fun, n_args, fn_on_stack),
             Value::Foreign(ref fv) => {
-                let mut args = try!(self.drain_stack_top(n_args))
+                let mut args = self.drain_stack_top(n_args)?
                     .collect::<Vec<_>>();
 
                 if fn_on_stack {
-                    try!(self.pop());
+                    self.pop()?;
                 }
 
                 let ctx = self.context.with_scope(frame.scope.clone());
-                let v = try!(fv.call_value(&ctx, &mut args));
+                let v = fv.call_value(&ctx, &mut args)?;
                 self.value = v;
 
                 Ok(())
@@ -842,7 +842,7 @@ impl Machine {
             return Err(From::from(RestrictError::ValueStackExceeded));
         }
 
-        let n_args = try!(self.setup_call(&lambda.code, n_args));
+        let n_args = self.setup_call(&lambda.code, n_args)?;
 
         let old_frame = replace(frame, StackFrame{
             code: lambda.code,
@@ -853,7 +853,7 @@ impl Machine {
             fn_on_stack: fn_on_stack,
         });
 
-        try!(self.save_frame(old_frame));
+        self.save_frame(old_frame)?;
         Ok(())
     }
 
@@ -873,17 +873,17 @@ impl Machine {
         }
 
         if n_args < code.n_params {
-            try!(self.push_unbound(code.n_params - n_args));
+            self.push_unbound(code.n_params - n_args)?;
             n_args = code.n_params;
         }
 
         if code.has_rest_params() {
             if n_args > code.n_params {
-                try!(self.build_list(n_args - code.n_params));
-                try!(self.push_value());
+                self.build_list(n_args - code.n_params)?;
+                self.push_value()?;
                 n_args = code.n_params + 1;
             } else {
-                try!(self.push(Value::Unit));
+                self.push(Value::Unit)?;
                 n_args += 1;
             };
         } else if code.has_kw_params() {
@@ -891,10 +891,10 @@ impl Machine {
 
             if n_args > code.n_params {
                 let n_kw_args = n_args - code.n_params;
-                let mut iter = try!(self.drain_stack_top(n_kw_args));
+                let mut iter = self.drain_stack_top(n_kw_args)?;
 
                 while let Some(kw) = iter.next() {
-                    let kw = try!(get_keyword(&kw));
+                    let kw = get_keyword(&kw)?;
                     let v = match iter.next() {
                         Some(v) => v,
                         None => return Err(From::from(ExecError::OddKeywordParams))
@@ -915,7 +915,7 @@ impl Machine {
 
             n_args = code.n_params + kw_values.len() as u32;
             for v in kw_values {
-                try!(self.push(v));
+                self.push(v)?;
             }
         } else if n_args != code.n_params {
             return Err(From::from(ExecError::ArityError{
@@ -938,7 +938,7 @@ impl Machine {
             Value::Unit => Ok(0),
             Value::List(li) => {
                 let n = li.len();
-                try!(self.push_iter(li.to_vec()));
+                self.push_iter(li.to_vec())?;
                 Ok(n)
             }
             ref v => return Err(From::from(ExecError::expected("list", v)))
@@ -946,25 +946,25 @@ impl Machine {
     }
 
     fn apply(&mut self, frame: &mut StackFrame, n_args: u32) -> Result<(), Error> {
-        let n = try!(self.expand_value());
+        let n = self.expand_value()?;
 
         self.call_function(frame, n_args + n as u32)
     }
 
     fn apply_const(&mut self, frame: &mut StackFrame, n: u32, n_args: u32) -> Result<(), Error> {
-        let n_push = try!(self.expand_value());
+        let n_push = self.expand_value()?;
 
         self.call_const(frame, n, n_args + n_push as u32)
     }
 
     fn apply_self(&mut self, frame: &mut StackFrame, n_args: u32) -> Result<(), Error> {
-        let n = try!(self.expand_value());
+        let n = self.expand_value()?;
 
         self.call_self(frame, n_args + n as u32)
     }
 
     fn tail_apply_self(&mut self, frame: &mut StackFrame, n_args: u32) -> Result<(), Error> {
-        let n = try!(self.expand_value());
+        let n = self.expand_value()?;
 
         self.tail_call(frame, n_args + n as u32)
     }
@@ -996,7 +996,7 @@ impl Machine {
         let _ = self.stack.drain(start..end);
         frame.iptr = 0;
 
-        try!(self.setup_call(&frame.code, n_args));
+        self.setup_call(&frame.code, n_args)?;
 
         Ok(())
     }
@@ -1035,13 +1035,13 @@ impl Machine {
 
     /// Load a value from the stack.
     fn load(&mut self, n: u32) -> Result<(), ExecError> {
-        self.value = try!(self.get_stack(n)).clone();
+        self.value = self.get_stack(n)?.clone();
         Ok(())
     }
 
     /// Load an enclosed value.
     fn load_c(&mut self, frame: &StackFrame, n: u32) -> Result<(), ExecError> {
-        self.value = try!(self.get_closure_value(frame, n)).clone();
+        self.value = self.get_closure_value(frame, n)?.clone();
         Ok(())
     }
 
@@ -1087,7 +1087,7 @@ impl Machine {
 
     /// Replace an unbound value on the stack with `()`.
     fn unbound_to_unit(&mut self, n: u32) -> Result<(), ExecError> {
-        let v = try!(self.get_stack_mut(n));
+        let v = self.get_stack_mut(n)?;
         if let Value::Unbound = *v {
             *v = Value::Unit;
         }
@@ -1097,15 +1097,15 @@ impl Machine {
     /// Store value on the stack.
     fn store(&mut self, n: u32) -> Result<(), ExecError> {
         let v = self.value.take();
-        let p = try!(self.get_stack_mut(n));
+        let p = self.get_stack_mut(n)?;
         *p = v;
         Ok(())
     }
 
     /// Load a value from the global scope named by a const value.
     fn get_def(&mut self, frame: &StackFrame, n: u32) -> Result<(), ExecError> {
-        let name = try!(get_const_name(&frame.code, n));
-        self.value = try!(self.get_value(frame, name));
+        let name = get_const_name(&frame.code, n)?;
+        self.value = self.get_value(frame, name)?;
 
         Ok(())
     }
@@ -1118,13 +1118,13 @@ impl Machine {
     }
 
     fn get_def_push(&mut self, frame: &StackFrame, n: u32) -> Result<(), Error> {
-        let name = try!(get_const_name(&frame.code, n));
-        let v = try!(self.get_value(frame, name));
+        let name = get_const_name(&frame.code, n)?;
+        let v = self.get_value(frame, name)?;
         self.push(v)
     }
 
     fn set_def(&mut self, frame: &StackFrame, n: u32) -> Result<(), Error> {
-        let name = try!(get_const_name(&frame.code, n));
+        let name = get_const_name(&frame.code, n)?;
 
         if !MasterScope::can_define(name) {
             return Err(From::from(ExecError::CannotDefine(name)));
@@ -1145,7 +1145,7 @@ impl Machine {
 
     /// Pop from the top of the stack and return the value.
     fn pop(&mut self) -> Result<Value, ExecError> {
-        let v = try!(self.stack.pop().ok_or(ExecError::InvalidStack(0)));
+        let v = self.stack.pop().ok_or(ExecError::InvalidStack(0))?;
         self.context.set_memory(|m| m.saturating_sub(v.size()));
 
         Ok(v)
@@ -1172,7 +1172,7 @@ impl Machine {
 
         let total = self.context.set_memory(|m| m.saturating_add(size));
 
-        try!(self.check_memory(total));
+        self.check_memory(total)?;
 
         Ok(())
     }
@@ -1183,7 +1183,7 @@ impl Machine {
         } else {
             let n = v.size();
             let total = self.context.set_memory(|m| m.saturating_add(n));
-            try!(self.check_memory(total));
+            self.check_memory(total)?;
 
             self.stack.push(v);
             Ok(())
@@ -1191,12 +1191,12 @@ impl Machine {
     }
 
     fn push_const(&mut self, code: &Code, n: u32) -> Result<(), Error> {
-        self.push(try!(get_const(code, n)).clone())
+        self.push(get_const(code, n)?.clone())
     }
 
     fn push_unbound(&mut self, n: u32) -> Result<(), Error> {
         for _ in 0..n {
-            try!(self.push(Value::Unbound));
+            self.push(Value::Unbound)?;
         }
         Ok(())
     }
@@ -1207,7 +1207,7 @@ impl Machine {
     }
 
     fn load_const(&mut self, code: &Code, n: u32) -> Result<(), ExecError> {
-        self.value = try!(get_const(code, n)).clone();
+        self.value = get_const(code, n)?.clone();
         Ok(())
     }
 
@@ -1256,12 +1256,12 @@ impl Machine {
     }
 
     fn load_push(&mut self, n: u32) -> Result<(), Error> {
-        let v = try!(self.get_stack(n)).clone();
+        let v = self.get_stack(n)?.clone();
         self.push(v)
     }
 
     fn load_c_push(&mut self, frame: &StackFrame, n: u32) -> Result<(), Error> {
-        let v = try!(self.get_closure_value(frame, n)).clone();
+        let v = self.get_closure_value(frame, n)?.clone();
         self.push(v)
     }
 
@@ -1275,7 +1275,7 @@ impl Machine {
     }
 
     fn jump_if(&mut self, frame: &mut StackFrame, label: u32) -> Result<(), ExecError> {
-        if try!(get_bool(&self.value)) {
+        if get_bool(&self.value)? {
             self.jump(frame, label)
         } else {
             Ok(())
@@ -1283,7 +1283,7 @@ impl Machine {
     }
 
     fn jump_if_bound(&mut self, frame: &mut StackFrame, label: u32, n: u32) -> Result<(), ExecError> {
-        match *try!(self.get_stack(n)) {
+        match *self.get_stack(n)? {
             Value::Unbound => Ok(()),
             _ => self.jump(frame, label)
         }
@@ -1304,7 +1304,7 @@ impl Machine {
     }
 
     fn jump_if_not(&mut self, frame: &mut StackFrame, label: u32) -> Result<(), ExecError> {
-        if try!(get_bool(&self.value)) {
+        if get_bool(&self.value)? {
             Ok(())
         } else {
             self.jump(frame, label)
@@ -1312,8 +1312,8 @@ impl Machine {
     }
 
     fn jump_if_eq(&mut self, frame: &mut StackFrame, label: u32) -> Result<(), ExecError> {
-        let v = try!(self.pop());
-        if try!(self.value.is_equal(&v)) {
+        let v = self.pop()?;
+        if self.value.is_equal(&v)? {
             self.jump(frame, label)
         } else {
             Ok(())
@@ -1321,8 +1321,8 @@ impl Machine {
     }
 
     fn jump_if_not_eq(&mut self, frame: &mut StackFrame, label: u32) -> Result<(), ExecError> {
-        let v = try!(self.pop());
-        if try!(self.value.is_equal(&v)) {
+        let v = self.pop()?;
+        if self.value.is_equal(&v)? {
             Ok(())
         } else {
             self.jump(frame, label)
@@ -1330,7 +1330,7 @@ impl Machine {
     }
 
     fn jump_if_eq_const(&mut self, frame: &mut StackFrame, label: u32, n: u32) -> Result<(), ExecError> {
-        let eq = try!(get_const(&frame.code, n).and_then(|v| self.value.is_equal(v)));
+        let eq = get_const(&frame.code, n).and_then(|v| self.value.is_equal(v))?;
 
         if eq {
             self.jump(frame, label)
@@ -1340,8 +1340,8 @@ impl Machine {
     }
 
     fn jump_if_not_eq_const(&mut self, frame: &mut StackFrame, label: u32, n: u32) -> Result<(), ExecError> {
-        let eq = try!(get_const(&frame.code, n)
-            .and_then(|v| self.value.is_equal(v)));
+        let eq = get_const(&frame.code, n)
+            .and_then(|v| self.value.is_equal(v))?;
 
         if !eq {
             self.jump(frame, label)
@@ -1369,29 +1369,29 @@ impl Machine {
     }
 
     fn equal(&mut self) -> Result<(), ExecError> {
-        let v = try!(self.pop());
-        let r = try!(v.is_equal(&self.value));
+        let v = self.pop()?;
+        let r = v.is_equal(&self.value)?;
         self.value = r.into();
         Ok(())
     }
 
     fn not_equal(&mut self) -> Result<(), ExecError> {
-        let v = try!(self.pop());
-        let r = try!(v.is_equal(&self.value));
+        let v = self.pop()?;
+        let r = v.is_equal(&self.value)?;
         self.value = (!r).into();
         Ok(())
     }
 
     fn equal_const(&mut self, code: &Code, n: u32) -> Result<(), ExecError> {
-        let c = try!(get_const(code, n));
-        let r = try!(self.value.is_equal(&c));
+        let c = get_const(code, n)?;
+        let r = self.value.is_equal(&c)?;
         self.value = r.into();
         Ok(())
     }
 
     fn not_equal_const(&mut self, code: &Code, n: u32) -> Result<(), ExecError> {
-        let c = try!(get_const(code, n));
-        let r = try!(self.value.is_equal(&c));
+        let c = get_const(code, n)?;
+        let r = self.value.is_equal(&c)?;
         self.value = (!r).into();
         Ok(())
     }
@@ -1425,7 +1425,7 @@ impl Machine {
     }
 
     fn append_value(&mut self) -> Result<(), ExecError> {
-        let mut li = try!(self.pop());
+        let mut li = self.pop()?;
         let v = self.value.take();
 
         match li {
@@ -1439,50 +1439,50 @@ impl Machine {
     }
 
     fn first(&mut self) -> Result<(), Error> {
-        let v = try!(first(&self.value));
+        let v = first(&self.value)?;
 
         self.value = v;
         Ok(())
     }
 
     fn tail(&mut self) -> Result<(), Error> {
-        let v = try!(tail(&self.value));
+        let v = tail(&self.value)?;
 
         self.value = v;
         Ok(())
     }
 
     fn init(&mut self) -> Result<(), Error> {
-        let v = try!(init(&self.value));
+        let v = init(&self.value)?;
 
         self.value = v;
         Ok(())
     }
 
     fn last(&mut self) -> Result<(), Error> {
-        let v = try!(last(&self.value));
+        let v = last(&self.value)?;
 
         self.value = v;
         Ok(())
     }
 
     fn first_push(&mut self) -> Result<(), Error> {
-        let v = try!(first(&self.value));
+        let v = first(&self.value)?;
         self.push(v)
     }
 
     fn tail_push(&mut self) -> Result<(), Error> {
-        let v = try!(tail(&self.value));
+        let v = tail(&self.value)?;
         self.push(v)
     }
 
     fn init_push(&mut self) -> Result<(), Error> {
-        let v = try!(init(&self.value));
+        let v = init(&self.value)?;
         self.push(v)
     }
 
     fn last_push(&mut self) -> Result<(), Error> {
-        let v = try!(last(&self.value));
+        let v = last(&self.value)?;
         self.push(v)
     }
 }
@@ -1503,7 +1503,7 @@ fn get_keyword(v: &Value) -> Result<Name, ExecError> {
 }
 
 fn get_const_name(code: &Code, n: u32) -> Result<Name, ExecError> {
-    match *try!(get_const(code, n)) {
+    match *get_const(code, n)? {
         Value::Name(name) => Ok(name),
         ref v => Err(ExecError::expected("name", v))
     }

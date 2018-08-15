@@ -146,19 +146,19 @@ fn parse_restrict(params: &str) -> Result<RestrictConfig, String> {
                 match name {
                     "execution_time" =>
                         res.execution_time = Some(Duration::from_millis(
-                            try!(parse_param(name, value)))),
+                            parse_param(name, value)?)),
                     "call_stack_size" =>
-                        res.call_stack_size = try!(parse_param(name, value)),
+                        res.call_stack_size = parse_param(name, value)?,
                     "value_stack_size" =>
-                        res.value_stack_size = try!(parse_param(name, value)),
+                        res.value_stack_size = parse_param(name, value)?,
                     "namespace_size" =>
-                        res.namespace_size = try!(parse_param(name, value)),
+                        res.namespace_size = parse_param(name, value)?,
                     "memory_limit" =>
-                        res.memory_limit = try!(parse_param(name, value)),
+                        res.memory_limit = parse_param(name, value)?,
                     "max_integer_size" =>
-                        res.max_integer_size = try!(parse_param(name, value)),
+                        res.max_integer_size = parse_param(name, value)?,
                     "max_syntax_nesting" =>
-                        res.max_syntax_nesting = try!(parse_param(name, value)),
+                        res.max_syntax_nesting = parse_param(name, value)?,
                     _ => return Err(format!("unrecognized parameter: {}", name))
                 }
             }

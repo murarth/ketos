@@ -39,7 +39,7 @@ use value::Value;
 /// See [`value_encode`](index.html) module documentation for details.
 pub fn encode_value<T: Serialize>(scope: &Scope, value: &T) -> Result<Value, Error> {
     let mut ser = VSerializer::new(scope);
-    try!(value.serialize(&mut ser));
+    value.serialize(&mut ser)?;
     Ok(ser.value.expect("empty serializer"))
 }
 
@@ -324,10 +324,10 @@ impl<'a, 'b: 'a> Serializer for &'a mut VSerializer<'b> {
     fn serialize_bytes(self, v: &[u8]) -> Result<(), ExecError> {
         use serde::ser::SerializeSeq;
 
-        let mut ser = try!(self.serialize_seq(Some(v.len())));
+        let mut ser = self.serialize_seq(Some(v.len()))?;
 
         for b in v {
-            try!(ser.serialize_element(b));
+            ser.serialize_element(b)?;
         }
 
         ser.end()
@@ -385,9 +385,9 @@ impl<'a, 'b: 'a> Serializer for &'a mut VSerializer<'b> {
             name: &'static str, value: &T) -> Result<(), ExecError> {
         use serde::ser::SerializeTupleStruct;
 
-        let mut ser = try!(self.serialize_tuple_struct(name, 1));
+        let mut ser = self.serialize_tuple_struct(name, 1)?;
 
-        try!(ser.serialize_field(value));
+        ser.serialize_field(value)?;
         ser.end()
     }
 
@@ -402,9 +402,9 @@ impl<'a, 'b: 'a> Serializer for &'a mut VSerializer<'b> {
             -> Result<(), ExecError> {
         use serde::ser::SerializeTupleVariant;
 
-        let mut ser = try!(self.serialize_tuple_variant(name, index, variant, 1));
+        let mut ser = self.serialize_tuple_variant(name, index, variant, 1)?;
 
-        try!(ser.serialize_field(value));
+        ser.serialize_field(value)?;
         ser.end()
     }
 

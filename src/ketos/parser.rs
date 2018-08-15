@@ -173,9 +173,9 @@ impl<'a, 'lex> Parser<'a, 'lex> {
                 return Err(From::from(RestrictError::MaxSyntaxNestingExceeded));
             }
 
-            let mut doc = try!(self.read_doc_comment());
+            let mut doc = self.read_doc_comment()?;
 
-            let (sp, tok) = try!(self.next());
+            let (sp, tok) = self.next()?;
 
             let r = match tok {
                 Token::DocComment(_) =>
@@ -183,7 +183,7 @@ impl<'a, 'lex> Parser<'a, 'lex> {
                         doc.unwrap().0, ParseErrorKind::CannotDocumentItem))),
                 Token::LeftParen => {
                     if let Some((doc_sp, _)) = doc {
-                        match try!(self.peek()) {
+                        match self.peek()? {
                             (_, Token::Name("const")) |
                             (_, Token::Name("define")) |
                             (_, Token::Name("lambda")) |
@@ -199,8 +199,8 @@ impl<'a, 'lex> Parser<'a, 'lex> {
                     continue;
                 }
                 Token::RightParen => {
-                    let group = try!(stack.pop().ok_or_else(
-                        || ParseError::new(sp, ParseErrorKind::UnmatchedParen)));
+                    let group = stack.pop().ok_or_else(
+                        || ParseError::new(sp, ParseErrorKind::UnmatchedParen))?;
 
                     match group {
                         Group::Parens(values, doc) =>
@@ -297,7 +297,7 @@ impl<'a, 'lex> Parser<'a, 'lex> {
                     ParseErrorKind::CannotDocumentItem)));
             }
 
-            let mut v = try!(r);
+            let mut v = r?;
 
             loop {
                 match stack.last_mut() {
@@ -336,9 +336,9 @@ impl<'a, 'lex> Parser<'a, 'lex> {
     /// Parses a single expression from the input stream.
     /// If any tokens remain after the expression, an error is returned.
     pub fn parse_single_expr(&mut self) -> Result<Value, Error> {
-        let expr = try!(self.parse_expr());
+        let expr = self.parse_expr()?;
 
-        match try!(self.next()) {
+        match self.next()? {
             (_, Token::End) => Ok(expr),
             (sp, tok) => Err(From::from(ParseError::new(sp, ParseErrorKind::UnexpectedToken{
                 expected: "eof",
@@ -351,7 +351,7 @@ impl<'a, 'lex> Parser<'a, 'lex> {
     pub fn parse_exprs(&mut self) -> Result<Vec<Value>, Error> {
         let mut res = Vec::new();
 
-        if let Some((_, doc)) = try!(self.read_module_doc_comment()) {
+        if let Some((_, doc)) = self.read_module_doc_comment()? {
             res.push(vec![
                 Value::Name(standard_names::SET_MODULE_DOC),
                 format_doc_comment(doc).into(),
@@ -359,9 +359,9 @@ impl<'a, 'lex> Parser<'a, 'lex> {
         }
 
         loop {
-            match try!(self.peek()) {
+            match self.peek()? {
                 (_sp, Token::End) => break,
-                _ => res.push(try!(self.parse_expr()))
+                _ => res.push(self.parse_expr()?)
             }
         }
 
@@ -377,7 +377,7 @@ impl<'a, 'lex> Parser<'a, 'lex> {
     /// Otherwise, `None` is returned and no token is consumed.
     fn read_doc_comment(&mut self)
             -> Result<Option<(Span, &'lex str)>, ParseError> {
-        match try!(self.peek()) {
+        match self.peek()? {
             (sp, Token::DocComment(doc)) => {
                 self.cur_token.take();
                 Ok(Some((sp, doc)))
@@ -390,7 +390,7 @@ impl<'a, 'lex> Parser<'a, 'lex> {
     /// comment, one beginning with at least three semicolon characters.
     fn read_module_doc_comment(&mut self)
             -> Result<Option<(Span, &'lex str)>, ParseError> {
-        match try!(self.peek()) {
+        match self.peek()? {
             (sp, Token::DocComment(doc)) if doc.starts_with(MODULE_DOC_COMMENT) => {
                 self.cur_token.take();
                 Ok(Some((sp, doc)))
@@ -417,7 +417,7 @@ impl<'a, 'lex> Parser<'a, 'lex> {
     }
 
     fn next(&mut self) -> Result<(Span, Token<'lex>), ParseError> {
-        let r = try!(self.peek());
+        let r = self.peek()?;
         self.cur_token = None;
         Ok(r)
     }
@@ -427,7 +427,7 @@ impl<'a, 'lex> Parser<'a, 'lex> {
         if let Some(tok) = self.cur_token {
             Ok(tok)
         } else {
-            let tok = try!(self.lexer.next_token());
+            let tok = self.lexer.next_token()?;
             self.cur_token = Some(tok);
             Ok(tok)
         }
@@ -472,38 +472,38 @@ fn insert_doc_comment(mut items: Vec<Value>, doc: Option<(Span, &str)>)
 }
 
 fn parse_byte(s: &str) -> Result<u8, ParseError> {
-    let (b, _) = try!(string::parse_byte(s, 0));
+    let (b, _) = string::parse_byte(s, 0)?;
     Ok(b)
 }
 
 fn parse_char(s: &str) -> Result<char, ParseError> {
-    let (ch, _) = try!(string::parse_char(s, 0));
+    let (ch, _) = string::parse_char(s, 0)?;
     Ok(ch)
 }
 
 fn parse_bytes(s: &str) -> Result<Bytes, ParseError> {
     let (b, _) = if s.starts_with("#br") {
-        try!(string::parse_raw_byte_string(&s[2..], 0))
+        string::parse_raw_byte_string(&s[2..], 0)?
     } else {
-        try!(string::parse_byte_string(&s[2..], 0))
+        string::parse_byte_string(&s[2..], 0)?
     };
     Ok(Bytes::new(b))
 }
 
 fn parse_path(s: &str) -> Result<PathBuf, ParseError> {
     let (s, _) = if s.starts_with("#pr") {
-        try!(string::parse_raw_string(&s[2..], 0))
+        string::parse_raw_string(&s[2..], 0)?
     } else {
-        try!(string::parse_string(&s[2..], 0))
+        string::parse_string(&s[2..], 0)?
     };
     Ok(PathBuf::from(s).into())
 }
 
 fn parse_string(s: &str) -> Result<String, ParseError> {
     let (s, _) = if s.starts_with('r') {
-        try!(string::parse_raw_string(s, 0))
+        string::parse_raw_string(s, 0)?
     } else {
-        try!(string::parse_string(s, 0))
+        string::parse_string(s, 0)?
     };
     Ok(s)
 }
@@ -522,7 +522,7 @@ fn parse_integer(ctx: &Context, s: &str, base: u32, sp: Span)
 
     let s = strip_underscores(s);
 
-    try!(check_integer(ctx, &s, base));
+    check_integer(ctx, &s, base)?;
 
     Integer::from_str_radix(&s, base)
         .map_err(|_| From::from(ParseError::new(sp,
@@ -532,7 +532,7 @@ fn parse_integer(ctx: &Context, s: &str, base: u32, sp: Span)
 fn parse_ratio(ctx: &Context, s: &str, sp: Span) -> Result<Ratio, Error> {
     let s = strip_underscores(s);
 
-    try!(check_integer(ctx, &s, 10));
+    check_integer(ctx, &s, 10)?;
 
     s.parse().map_err(|_| From::from(ParseError::new(sp,
         ParseErrorKind::LiteralParseError)))

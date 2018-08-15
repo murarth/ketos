@@ -194,7 +194,7 @@ impl ModuleCode {
             ctx.scope().add_value(name, value);
         }
 
-        try!(process_imports(ctx, &self.imports));
+        process_imports(ctx, &self.imports)?;
 
         ctx.scope().set_exports(self.exports);
 
@@ -204,7 +204,7 @@ impl ModuleCode {
         ctx.scope().with_docs_mut(|d| *d = docs.into_iter().collect());
 
         for code in self.code {
-            try!(execute(ctx, code));
+            execute(ctx, code)?;
         }
 
         Ok(())
@@ -251,7 +251,7 @@ impl ModuleRegistry {
         let new_scope = GlobalScope::new_using(name, ctx.scope());
         let new_ctx = ctx.with_scope(new_scope);
 
-        let m = try!(self.loader.load_module(name, new_ctx));
+        let m = self.loader.load_module(name, new_ctx)?;
         self.modules.borrow_mut().insert(name, m.clone());
 
         Ok(m)
@@ -412,21 +412,21 @@ impl FileModuleLoader {
 
 impl ModuleLoader for FileModuleLoader {
     fn load_module(&self, name: Name, ctx: Context) -> Result<Module, Error> {
-        let (src_fname, code_fname) = try!(ctx.scope().with_name(name, |name_str| {
+        let (src_fname, code_fname) = ctx.scope().with_name(name, |name_str| {
             if name_str.chars().any(|c| c == '.' || c == '/' || c == '\\') {
                 Err(CompileError::InvalidModuleName(name))
             } else {
                 Ok((PathBuf::from(format!("{}.{}", name_str, FILE_EXTENSION)),
                     PathBuf::from(format!("{}.{}", name_str, COMPILED_FILE_EXTENSION))))
             }
-        }));
+        })?;
 
         for base in &self.paths {
             let src_path = base.join(&src_fname);
             let code_path = base.join(&code_fname);
 
             let load = if self.read_bytecode {
-                try!(find_module_file(&src_path, &code_path))
+                find_module_file(&src_path, &code_path)?
             } else {
                 find_source_file(&src_path)
             };
@@ -436,7 +436,7 @@ impl ModuleLoader for FileModuleLoader {
                     return self.guard_import(name, &src_path, || {
                         match read_bytecode_file(&code_path, &ctx) {
                             Ok(m) => {
-                                try!(m.load_in_context(&ctx));
+                                m.load_in_context(&ctx)?;
 
                                 Ok(Module{
                                     name: name,
@@ -485,7 +485,7 @@ enum ModuleFileResult {
 
 fn find_module_file(src_path: &Path, code_path: &Path) -> Result<ModuleFileResult, Error> {
     match (code_path.exists(), src_path.exists()) {
-        (true, true) if try!(is_younger(code_path, src_path)) =>
+        (true, true) if is_younger(code_path, src_path)? =>
             Ok(ModuleFileResult::UseCode),
         (_, true) => Ok(ModuleFileResult::UseSource),
         (true, false) => Ok(ModuleFileResult::UseCode),
@@ -502,10 +502,10 @@ fn find_source_file(src_path: &Path) -> ModuleFileResult {
 }
 
 fn is_younger(a: &Path, b: &Path) -> Result<bool, Error> {
-    let ma = try!(a.metadata()
-        .map_err(|e| IoError::new(IoMode::Stat, a, e)));
-    let mb = try!(b.metadata()
-        .map_err(|e| IoError::new(IoMode::Stat, b, e)));
+    let ma = a.metadata()
+        .map_err(|e| IoError::new(IoMode::Stat, a, e))?;
+    let mb = b.metadata()
+        .map_err(|e| IoError::new(IoMode::Stat, b, e))?;
 
     Ok(is_younger_impl(&ma, &mb))
 }
@@ -524,32 +524,32 @@ fn is_younger_impl(ma: &Metadata, mb: &Metadata) -> bool {
 
 fn load_module_from_file(ctx: Context, name: Name,
         src_path: &Path, code_path: Option<&Path>) -> Result<Module, Error> {
-    let mut file = try!(File::open(src_path)
-        .map_err(|e| IoError::new(IoMode::Open, src_path, e)));
+    let mut file = File::open(src_path)
+        .map_err(|e| IoError::new(IoMode::Open, src_path, e))?;
     let mut buf = String::new();
 
-    try!(file.read_to_string(&mut buf)
-        .map_err(|e| IoError::new(IoMode::Read, src_path, e)));
+    file.read_to_string(&mut buf)
+        .map_err(|e| IoError::new(IoMode::Read, src_path, e))?;
 
     let exprs = {
         let offset = ctx.scope().borrow_codemap_mut().add_source(&buf,
             Some(src_path.to_string_lossy().into_owned()));
 
-        try!(Parser::new(&ctx, Lexer::new(&buf, offset)).parse_exprs())
+        Parser::new(&ctx, Lexer::new(&buf, offset)).parse_exprs()?
     };
 
-    let code = try!(exprs.iter()
-        .map(|e| compile(&ctx, e).map(Rc::new)).collect::<Result<Vec<_>, _>>());
+    let code = exprs.iter()
+        .map(|e| compile(&ctx, e).map(Rc::new)).collect::<Result<Vec<_>, _>>()?;
 
     if let Some(code_path) = code_path {
         // Grab compile-time values before executing code
         let mcode = ModuleCode::new(code.clone(), ctx.scope());
 
         for code in &code {
-            try!(execute(&ctx, code.clone()));
+            execute(&ctx, code.clone())?;
         }
 
-        try!(check_exports(ctx.scope(), name));
+        check_exports(ctx.scope(), name)?;
 
         let r = {
             let names = ctx.scope().borrow_names();
@@ -561,10 +561,10 @@ fn load_module_from_file(ctx: Context, name: Name,
         }
     } else {
         for code in &code {
-            try!(execute(&ctx, code.clone()));
+            execute(&ctx, code.clone())?;
         }
 
-        try!(check_exports(ctx.scope(), name));
+        check_exports(ctx.scope(), name)?;
     }
 
     Ok(Module{
@@ -577,7 +577,7 @@ fn process_imports(ctx: &Context, imports: &[ImportSet]) -> Result<(), Error> {
     let mods = ctx.scope().modules();
 
     for imp in imports {
-        let m = try!(mods.load_module(imp.module_name, ctx));
+        let m = mods.load_module(imp.module_name, ctx)?;
 
         for &(src, dest) in &imp.names {
             if !m.scope.contains_name(src) {

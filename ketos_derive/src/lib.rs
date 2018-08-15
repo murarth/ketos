@@ -255,12 +255,12 @@ pub fn derive_struct_value(input: TokenStream) -> TokenStream {
         field_str.push(field_s);
 
         handle_field.push(quote!{
-            let v = try!(<#ty as ::ketos::FromValue>::from_value(value));
+            let v = <#ty as ::ketos::FromValue>::from_value(value)?;
             #local_ident = ::std::option::Option::Some(v);
         });
 
         handle_set_field.push(quote!{
-            self.#ident = try!(<#ty as ::ketos::FromValue>::from_value(value));
+            self.#ident = <#ty as ::ketos::FromValue>::from_value(value)?;
         });
     }
 
@@ -287,7 +287,7 @@ pub fn derive_struct_value(input: TokenStream) -> TokenStream {
                         &mut (name, ref mut field)) = iter.next() {
                     let value = field.take();
 
-                    try!(scope.with_name(name, |name_str| {
+                    scope.with_name(name, |name_str| {
                         match name_str {
                             #( #field_str => { #handle_field } , )*
                             _ => return ::std::result::Result::Err(::ketos::Error::ExecError(
@@ -298,15 +298,15 @@ pub fn derive_struct_value(input: TokenStream) -> TokenStream {
                         }
 
                         ::std::result::Result::Ok(())
-                    }));
+                    })?;
                 }
 
                 ::std::result::Result::Ok(#name{
-                    #( #field_name : try!(#local.ok_or_else(
+                    #( #field_name : #local.ok_or_else(
                         || ::ketos::Error::ExecError(::ketos::ExecError::MissingField{
                             struct_name: def.name(),
                             field: scope.add_name(#field_str),
-                        }))) ),*
+                        }))? ),*
                 })
             }
 
@@ -338,7 +338,7 @@ pub fn derive_struct_value(input: TokenStream) -> TokenStream {
                 for &mut (name, ref mut value) in fields {
                     let value = value.take();
 
-                    try!(scope.with_name(name, |name_str| {
+                    scope.with_name(name, |name_str| {
                         match name_str {
                             #( #field_str => { #handle_set_field } , )*
                             _ => return ::std::result::Result::Err(::ketos::Error::ExecError(
@@ -349,7 +349,7 @@ pub fn derive_struct_value(input: TokenStream) -> TokenStream {
                         }
 
                         ::std::result::Result::Ok(())
-                    }));
+                    })?;
                 }
 
                 ::std::result::Result::Ok(())

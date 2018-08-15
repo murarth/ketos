@@ -329,10 +329,10 @@ impl Instruction {
         use self::Instruction::*;
 
         macro_rules! operand {
-            () => { try!(r.read_operand()) }
+            () => { r.read_operand()? }
         }
 
-        let op = try!(r.read_byte());
+        let op = r.read_byte()?;
 
         let instr = match op {
             LOAD => Load(operand!()),
@@ -838,12 +838,12 @@ impl<'a> CodeReader<'a> {
     }
 
     fn read_operand(&mut self) -> Result<u32, ExecError> {
-        let a = try!(self.read_byte()) as u32;
+        let a = self.read_byte()? as u32;
         if a & 0x80 == 0 {
             Ok(a)
         } else {
             let a = (a & 0x7f) << 8;
-            let b = try!(self.read_byte()) as u32;
+            let b = self.read_byte()? as u32;
             Ok(a | b)
         }
     }
@@ -950,7 +950,7 @@ impl CodeBlock {
     /// Write stored jump instruction to buffer, if present.
     pub fn write_jump(&mut self, label: u32, short: bool) -> Result<(), CompileError> {
         if let Some((instr, _)) = self.jump.take() {
-            try!(instr.set_label(label).encode(self, short));
+            instr.set_label(label).encode(self, short)?;
         }
         Ok(())
     }
@@ -972,7 +972,7 @@ impl CodeBlock {
             match merge_instructions(part, instr) {
                 Some(new) => self.instr_part = Some(new),
                 None => {
-                    try!(self.write_instruction(part));
+                    self.write_instruction(part)?;
                     self.instr_part = Some(instr);
                 }
             }
@@ -1011,7 +1011,7 @@ impl CodeBlock {
         if op <= MAX_LONG_OPERAND {
             let lo = op as u8;
             let hi = (op >> 8) as u8;
-            try!(self.write_byte(hi | 0x80));
+            self.write_byte(hi | 0x80)?;
             self.write_byte(lo)
         } else {
             Err(CompileError::OperandOverflow(op))

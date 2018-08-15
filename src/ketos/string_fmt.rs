@@ -110,8 +110,8 @@ pub fn format_string(names: &NameStore, fmt: &str, values: &[Value])
         -> Result<String, ExecError> {
     let mut buf = String::new();
     let mut fmter = StringFormatter::new(fmt, names, values);
-    try!(fmter.format_string(&mut buf));
-    try!(fmter.finish());
+    fmter.format_string(&mut buf)?;
+    fmter.finish()?;
     Ok(buf)
 }
 
@@ -277,60 +277,60 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
         while let Some(ch) = self.consume_char() {
             match ch {
                 '~' => {
-                    let dir = try!(self.parse_directive());
+                    let dir = self.parse_directive()?;
 
                     match dir.command {
-                        'a' => try!(self.format_aesthetic(&dir, buf)),
-                        's' => try!(self.format_standard(&dir, buf)),
-                        'c' => try!(self.format_character(&dir, buf)),
-                        'f' => try!(self.format_float(&dir, buf)),
-                        'e' => try!(self.format_exponent(&dir, buf)),
-                        'r' => try!(self.format_radix(&dir, buf)),
-                        'd' => try!(self.format_integer(&dir, buf, 10)),
-                        'b' => try!(self.format_integer(&dir, buf, 2)),
-                        'o' => try!(self.format_integer(&dir, buf, 8)),
-                        'x' => try!(self.format_integer(&dir, buf, 16)),
-                        'p' => try!(self.format_plural(&dir, buf)),
-                        't' => try!(self.format_tab(&dir, buf)),
-                        'z' => try!(self.pretty_print(&dir, buf)),
-                        '?' => try!(self.process_indirection(&dir, buf)),
-                        '*' => try!(self.process_goto(&dir)),
+                        'a' => self.format_aesthetic(&dir, buf)?,
+                        's' => self.format_standard(&dir, buf)?,
+                        'c' => self.format_character(&dir, buf)?,
+                        'f' => self.format_float(&dir, buf)?,
+                        'e' => self.format_exponent(&dir, buf)?,
+                        'r' => self.format_radix(&dir, buf)?,
+                        'd' => self.format_integer(&dir, buf, 10)?,
+                        'b' => self.format_integer(&dir, buf, 2)?,
+                        'o' => self.format_integer(&dir, buf, 8)?,
+                        'x' => self.format_integer(&dir, buf, 16)?,
+                        'p' => self.format_plural(&dir, buf)?,
+                        't' => self.format_tab(&dir, buf)?,
+                        'z' => self.pretty_print(&dir, buf)?,
+                        '?' => self.process_indirection(&dir, buf)?,
+                        '*' => self.process_goto(&dir)?,
                         '<' => {
-                            try!(self.process_justification(&dir, buf));
+                            self.process_justification(&dir, buf)?;
                             if self.terminate {
                                 break;
                             }
                         }
                         '(' => {
-                            try!(self.process_case_conversion(&dir, buf));
+                            self.process_case_conversion(&dir, buf)?;
                             if self.terminate {
                                 break;
                             }
                         }
                         '[' => {
-                            try!(self.process_conditional(&dir, buf));
+                            self.process_conditional(&dir, buf)?;
                             if self.terminate {
                                 break;
                             }
                         }
-                        '{' => try!(self.process_iteration(&dir, buf)),
+                        '{' => self.process_iteration(&dir, buf)?,
                         '>' => {
-                            try!(self.end_group(Group::Justify, dir));
+                            self.end_group(Group::Justify, dir)?;
                             break;
                         }
                         ')' => {
-                            try!(self.end_group(Group::CaseConversion, dir));
+                            self.end_group(Group::CaseConversion, dir)?;
                             break;
                         }
                         ']' => {
-                            try!(self.end_group(Group::Conditional, dir));
+                            self.end_group(Group::Conditional, dir)?;
                             break;
                         }
                         '}' => {
-                            try!(self.end_group(Group::Iteration, dir));
+                            self.end_group(Group::Iteration, dir)?;
                             break;
                         }
-                        '^' => if try!(self.process_terminate(&dir)) {
+                        '^' => if self.process_terminate(&dir)? {
                             self.terminate = true;
                             if dir.colon {
                                 self.terminate_loop = true;
@@ -344,11 +344,11 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
                             return Err(self.error(dir.span,
                                 FormatError::MisplacedDirective));
                         },
-                        '|' => try!(self.repeat_char(&dir, buf, '\x0c')),
-                        '%' => try!(self.repeat_char(&dir, buf, '\n')),
-                        '&' => try!(self.fresh_line(&dir, buf)),
+                        '|' => self.repeat_char(&dir, buf, '\x0c')?,
+                        '%' => self.repeat_char(&dir, buf, '\n')?,
+                        '&' => self.fresh_line(&dir, buf)?,
                         '\n' => self.consume_whitespace(),
-                        '~' => try!(self.repeat_char(&dir, buf, '~')),
+                        '~' => self.repeat_char(&dir, buf, '~')?,
                         ch => return Err(self.error(self.span_one(),
                             FormatError::UnrecognizedDirective(ch)))
                     }
@@ -477,10 +477,10 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
     fn pretty_print(&mut self, dir: &Directive, buf: &mut String)
             -> Result<(), ExecError> {
         let mut fields = FieldParser::new(dir.fields);
-        let indent = try!(self.get_u32_field(&mut fields, dir.span)).unwrap_or(0);
-        try!(self.no_fields(fields, dir.span));
+        let indent = self.get_u32_field(&mut fields, dir.span)?.unwrap_or(0);
+        self.no_fields(fields, dir.span)?;
 
-        let arg = try!(self.consume_arg(dir.span));
+        let arg = self.consume_arg(dir.span)?;
 
         let _ = pretty_print(buf, self.names, arg, indent);
 
@@ -490,13 +490,13 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
     fn format_aesthetic(&mut self, dir: &Directive, buf: &mut String)
             -> Result<(), ExecError> {
         let mut fields = FieldParser::new(dir.fields);
-        let min_col = try!(self.get_u32_field(&mut fields, dir.span)).unwrap_or(0);
-        let col_inc = try!(self.get_u32_field(&mut fields, dir.span)).unwrap_or(0);
-        let min_pad = try!(self.get_u32_field(&mut fields, dir.span)).unwrap_or(0);
-        let pad_char = try!(self.get_char_field(&mut fields, dir.span)).unwrap_or(' ');
-        try!(self.no_fields(fields, dir.span));
+        let min_col = self.get_u32_field(&mut fields, dir.span)?.unwrap_or(0);
+        let col_inc = self.get_u32_field(&mut fields, dir.span)?.unwrap_or(0);
+        let min_pad = self.get_u32_field(&mut fields, dir.span)?.unwrap_or(0);
+        let pad_char = self.get_char_field(&mut fields, dir.span)?.unwrap_or(' ');
+        self.no_fields(fields, dir.span)?;
 
-        let arg = try!(self.consume_arg(dir.span));
+        let arg = self.consume_arg(dir.span)?;
 
         let s = display_names(self.names, arg).to_string();
         pad_str(buf, &s, min_col, col_inc, min_pad, pad_char, dir.at);
@@ -506,13 +506,13 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
     fn format_standard(&mut self, dir: &Directive, buf: &mut String)
             -> Result<(), ExecError> {
         let mut fields = FieldParser::new(dir.fields);
-        let min_col = try!(self.get_u32_field(&mut fields, dir.span)).unwrap_or(0);
-        let col_inc = try!(self.get_u32_field(&mut fields, dir.span)).unwrap_or(0);
-        let min_pad = try!(self.get_u32_field(&mut fields, dir.span)).unwrap_or(0);
-        let pad_char = try!(self.get_char_field(&mut fields, dir.span)).unwrap_or(' ');
-        try!(self.no_fields(fields, dir.span));
+        let min_col = self.get_u32_field(&mut fields, dir.span)?.unwrap_or(0);
+        let col_inc = self.get_u32_field(&mut fields, dir.span)?.unwrap_or(0);
+        let min_pad = self.get_u32_field(&mut fields, dir.span)?.unwrap_or(0);
+        let pad_char = self.get_char_field(&mut fields, dir.span)?.unwrap_or(' ');
+        self.no_fields(fields, dir.span)?;
 
-        let arg = try!(self.consume_arg(dir.span));
+        let arg = self.consume_arg(dir.span)?;
         let s = debug_names(self.names, arg).to_string();
         pad_str(buf, &s, min_col, col_inc, min_pad, pad_char, dir.at);
         Ok(())
@@ -522,8 +522,8 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
             -> Result<(), ExecError> {
         // TODO: ':' flag prints name for special characters, e.g. "Space";
         // '@' flag prints name in literal format, e.g. "#\Space"
-        try!(self.no_fields(FieldParser::new(dir.fields), dir.span));
-        let arg = try!(self.consume_arg(dir.span));
+        self.no_fields(FieldParser::new(dir.fields), dir.span)?;
+        let arg = self.consume_arg(dir.span)?;
 
         let ch = match *arg {
             Value::Char(ch) => ch,
@@ -543,8 +543,8 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
 
     fn fresh_line(&mut self, dir: &Directive, buf: &mut String) -> Result<(), ExecError> {
         let mut fields = FieldParser::new(dir.fields);
-        let mut n = try!(self.get_u32_field(&mut fields, dir.span)).unwrap_or(1);
-        try!(self.no_fields(fields, dir.span));
+        let mut n = self.get_u32_field(&mut fields, dir.span)?.unwrap_or(1);
+        self.no_fields(fields, dir.span)?;
 
         if buf.is_empty() || buf.ends_with('\n') {
             n = n.saturating_sub(1);
@@ -557,8 +557,8 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
     fn repeat_char(&mut self, dir: &Directive, buf: &mut String, ch: char) -> Result<(), ExecError> {
         let mut fields = FieldParser::new(dir.fields);
 
-        let n = try!(self.get_u32_field(&mut fields, dir.span)).unwrap_or(1);
-        try!(self.no_fields(fields, dir.span));
+        let n = self.get_u32_field(&mut fields, dir.span)?.unwrap_or(1);
+        self.no_fields(fields, dir.span)?;
 
         buf.extend(repeat(ch).take(n as usize));
 
@@ -567,13 +567,13 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
 
     fn format_plural(&mut self, dir: &Directive, buf: &mut String)
             -> Result<(), ExecError> {
-        try!(self.no_fields(FieldParser::new(dir.fields), dir.span));
+        self.no_fields(FieldParser::new(dir.fields), dir.span)?;
 
         if dir.colon {
             self.goto_back_arg(1);
         }
 
-        let arg = try!(self.consume_arg(dir.span));
+        let arg = self.consume_arg(dir.span)?;
         let is_one = match *arg {
             Value::Float(f) => f == 1.0,
             Value::Integer(ref i) => i == &Integer::one(),
@@ -595,9 +595,9 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
     fn format_tab(&mut self, dir: &Directive, buf: &mut String) -> Result<(), ExecError> {
         let mut fields = FieldParser::new(dir.fields);
 
-        let col_num = try!(self.get_u32_field(&mut fields, dir.span)).unwrap_or(1);
-        let col_inc = try!(self.get_u32_field(&mut fields, dir.span)).unwrap_or(1);
-        try!(self.no_fields(fields, dir.span));
+        let col_num = self.get_u32_field(&mut fields, dir.span)?.unwrap_or(1);
+        let col_inc = self.get_u32_field(&mut fields, dir.span)?.unwrap_or(1);
+        self.no_fields(fields, dir.span)?;
 
         let cur_col = cur_line_len(&buf) as u32;
 
@@ -623,13 +623,13 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
     fn format_float(&mut self, dir: &Directive, buf: &mut String)
             -> Result<(), ExecError> {
         let mut fields = FieldParser::new(dir.fields);
-        let width = try!(self.get_u32_field(&mut fields, dir.span));
-        let prec = try!(self.get_u32_field(&mut fields, dir.span));
-        let pad_char = try!(self.get_char_field(&mut fields, dir.span)).unwrap_or(' ');
-        try!(self.no_fields(fields, dir.span));
+        let width = self.get_u32_field(&mut fields, dir.span)?;
+        let prec = self.get_u32_field(&mut fields, dir.span)?;
+        let pad_char = self.get_char_field(&mut fields, dir.span)?.unwrap_or(' ');
+        self.no_fields(fields, dir.span)?;
 
-        let arg = try!(self.consume_arg(dir.span));
-        let f = try!(self.get_float(arg, dir.span));
+        let arg = self.consume_arg(dir.span)?;
+        let f = self.get_float(arg, dir.span)?;
 
         // This is horrible and hacky because there's no way I'm implementing
         // float formatting myself. Deal with it.
@@ -656,13 +656,13 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
     fn format_exponent(&mut self, dir: &Directive, buf: &mut String)
             -> Result<(), ExecError> {
         let mut fields = FieldParser::new(dir.fields);
-        let width = try!(self.get_u32_field(&mut fields, dir.span));
-        let prec = try!(self.get_u32_field(&mut fields, dir.span));
-        let pad_char = try!(self.get_char_field(&mut fields, dir.span)).unwrap_or(' ');
-        try!(self.no_fields(fields, dir.span));
+        let width = self.get_u32_field(&mut fields, dir.span)?;
+        let prec = self.get_u32_field(&mut fields, dir.span)?;
+        let pad_char = self.get_char_field(&mut fields, dir.span)?.unwrap_or(' ');
+        self.no_fields(fields, dir.span)?;
 
-        let arg = try!(self.consume_arg(dir.span));
-        let f = try!(self.get_float(arg, dir.span));
+        let arg = self.consume_arg(dir.span)?;
+        let f = self.get_float(arg, dir.span)?;
 
         // This is horrible and hacky because there's no way I'm implementing
         // float formatting myself. Deal with it.
@@ -690,7 +690,7 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
             -> Result<(), ExecError> {
         let mut fields = FieldParser::new(dir.fields);
 
-        match try!(self.get_u32_field(&mut fields, dir.span)) {
+        match self.get_u32_field(&mut fields, dir.span)? {
             Some(n) if n >= 2 && n <= 36 => {
                 let new_dir = Directive{fields: fields.rest(), ..*dir};
                 return self.format_integer(&new_dir, buf, n);
@@ -699,8 +699,8 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
             None => ()
         }
 
-        let arg = try!(self.consume_arg(dir.span));
-        let i = try!(self.get_integer(arg, dir.span));
+        let arg = self.consume_arg(dir.span)?;
+        let i = self.get_integer(arg, dir.span)?;
 
         let n = match (dir.at, i.to_u32()) {
             (false, Some(n)) if n <= 5000 => n,
@@ -725,14 +725,14 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
     fn format_integer(&mut self, dir: &Directive, buf: &mut String,
             radix: u32) -> Result<(), ExecError> {
         let mut fields = FieldParser::new(dir.fields);
-        let min_col = try!(self.get_u32_field(&mut fields, dir.span)).unwrap_or(0);
-        let pad_char = try!(self.get_char_field(&mut fields, dir.span)).unwrap_or(' ');
-        let comma = try!(self.get_char_field(&mut fields, dir.span)).unwrap_or(',');
-        let comma_interval = try!(self.get_u32_field(&mut fields, dir.span)).unwrap_or(3);
-        try!(self.no_fields(fields, dir.span));
+        let min_col = self.get_u32_field(&mut fields, dir.span)?.unwrap_or(0);
+        let pad_char = self.get_char_field(&mut fields, dir.span)?.unwrap_or(' ');
+        let comma = self.get_char_field(&mut fields, dir.span)?.unwrap_or(',');
+        let comma_interval = self.get_u32_field(&mut fields, dir.span)?.unwrap_or(3);
+        self.no_fields(fields, dir.span)?;
 
-        let arg = try!(self.consume_arg(dir.span));
-        let i = try!(self.get_integer(arg, dir.span));
+        let arg = self.consume_arg(dir.span)?;
+        let i = self.get_integer(arg, dir.span)?;
 
         let mut s = i.abs().to_str_radix(radix);
 
@@ -808,11 +808,11 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
     }
 
     fn process_case_conversion(&mut self, dir: &Directive, buf: &mut String) -> Result<(), ExecError> {
-        try!(self.no_fields(FieldParser::new(dir.fields), dir.span));
+        self.no_fields(FieldParser::new(dir.fields), dir.span)?;
         self.push_group(Group::CaseConversion, dir.span);
         let start = buf.len();
 
-        try!(self.format_string(buf));
+        self.format_string(buf)?;
         self.pop_group();
 
         if !buf[start..].is_empty() {
@@ -843,7 +843,7 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
                 // the desired branch to evaluate.
                 // If there's no arg to consume, just move on silently.
                 if let Ok(arg) = self.consume_arg(dir.span) {
-                    let i = try!(self.get_integer(arg, dir.span));
+                    let i = self.get_integer(arg, dir.span)?;
                     let n = match i.to_u32() {
                         Some(n) => n,
                         None => u32::max_value()
@@ -851,8 +851,8 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
 
                     // Skip to the branch we're looking for
                     for _ in 0..n {
-                        let dir = try!(self.skip_until(
-                            |dir| dir.command == ';' || dir.command == ']'));
+                        let dir = self.skip_until(
+                            |dir| dir.command == ';' || dir.command == ']')?;
 
                         match dir {
                             // End branch. Break out.
@@ -869,7 +869,7 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
                     }
 
                     if !found_end {
-                        try!(self.format_string(buf));
+                        self.format_string(buf)?;
 
                         if let Some(Directive{command: ']', ..}) = self.close_dir.take() {
                              found_end = true;
@@ -880,19 +880,19 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
             (false, true) => {
                 // ':' conditional; argument is a bool. If false, evaluate
                 // first branch. If true, evaluate second branch.
-                let arg = try!(self.consume_arg(dir.span));
-                let v = try!(self.get_bool(arg, dir.span));
+                let arg = self.consume_arg(dir.span)?;
+                let v = self.get_bool(arg, dir.span)?;
 
                 if v {
-                    let dir = try!(self.skip_until(
-                        |dir| dir.command == ';' || dir.command == ']'));
+                    let dir = self.skip_until(
+                        |dir| dir.command == ';' || dir.command == ']')?;
 
                     if dir.command == ']' {
                         return Err(self.error(dir.span, FormatError::MissingBranch));
                     }
                 }
 
-                try!(self.format_string(buf));
+                self.format_string(buf)?;
 
                 match self.close_dir.take() {
                     Some(Directive{command: ']', ..}) => found_end = true,
@@ -907,12 +907,12 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
                 // If it is `()`, the arg is consumed and the branch skipped.
                 // Otherwise, the arg is not consumed and the single contained
                 // branch is evaluated.
-                let arg = try!(self.consume_arg(dir.span));
+                let arg = self.consume_arg(dir.span)?;
                 if let Value::Unit = *arg {
                     // Nothing
                 } else {
                     self.goto_back_arg(1);
-                    try!(self.format_string(buf));
+                    self.format_string(buf)?;
 
                     match self.close_dir.take() {
                         Some(Directive{command: ']', ..}) => found_end = true,
@@ -926,7 +926,7 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
         }
 
         if !found_end {
-            try!(self.skip_until(|dir| dir.command == ']'));
+            self.skip_until(|dir| dir.command == ']')?;
         }
 
         self.pop_group();
@@ -941,17 +941,17 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
         let mut strs = Vec::new();
 
         let mut fields = FieldParser::new(dir.fields);
-        let min_col = try!(self.get_u32_field(&mut fields, dir.span)).unwrap_or(0);
-        let col_inc = try!(self.get_u32_field(&mut fields, dir.span)).unwrap_or(1);
-        let min_pad = try!(self.get_u32_field(&mut fields, dir.span)).unwrap_or(0);
-        let pad_char = try!(self.get_char_field(&mut fields, dir.span)).unwrap_or(' ');
-        try!(self.no_fields(fields, dir.span));
+        let min_col = self.get_u32_field(&mut fields, dir.span)?.unwrap_or(0);
+        let col_inc = self.get_u32_field(&mut fields, dir.span)?.unwrap_or(1);
+        let min_pad = self.get_u32_field(&mut fields, dir.span)?.unwrap_or(0);
+        let pad_char = self.get_char_field(&mut fields, dir.span)?.unwrap_or(' ');
+        self.no_fields(fields, dir.span)?;
 
         loop {
             let seg_start = self.end_index;
 
-            let end_dir = try!(self.skip_until(
-                |dir| dir.command == ';' || dir.command == '>'));
+            let end_dir = self.skip_until(
+                |dir| dir.command == ';' || dir.command == '>')?;
 
             // Special `~:;` directive must be the first.
             if let Directive{command: ';', colon: true, ..} = end_dir {
@@ -967,23 +967,23 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
             let mut sub_fmter = self.sub(segment, self.values);
             sub_fmter.arg_index = self.arg_index;
 
-            try!(sub_fmter.format_string(&mut s));
+            sub_fmter.format_string(&mut s)?;
             self.arg_index = sub_fmter.arg_index;
             if sub_fmter.terminate {
                 break;
             }
-            try!(sub_fmter.finish());
+            sub_fmter.finish()?;
 
             if let Directive{command: ';', colon: true, ..} = end_dir {
                 pre = Some(s);
 
                 let mut fields = FieldParser::new(end_dir.fields);
-                let spare = try!(self.get_u32_field(&mut fields, end_dir.span))
+                let spare = self.get_u32_field(&mut fields, end_dir.span)?
                     .unwrap_or(0);
-                if let Some(len) = try!(self.get_u32_field(&mut fields, end_dir.span)) {
+                if let Some(len) = self.get_u32_field(&mut fields, end_dir.span)? {
                     line_len = len.saturating_sub(spare);
                 }
-                try!(self.no_fields(fields, end_dir.span));
+                self.no_fields(fields, end_dir.span)?;
             } else {
                 strs.push(s);
             }
@@ -1054,10 +1054,10 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
 
     fn process_terminate(&mut self, dir: &Directive) -> Result<bool, ExecError> {
         let mut fields = FieldParser::new(dir.fields);
-        let a = try!(self.get_u32_field(&mut fields, dir.span));
-        let b = try!(self.get_u32_field(&mut fields, dir.span));
-        let c = try!(self.get_u32_field(&mut fields, dir.span));
-        try!(self.no_fields(fields, dir.span));
+        let a = self.get_u32_field(&mut fields, dir.span)?;
+        let b = self.get_u32_field(&mut fields, dir.span)?;
+        let c = self.get_u32_field(&mut fields, dir.span)?;
+        self.no_fields(fields, dir.span)?;
 
         Ok(match (a, b, c) {
             (None,    _,       _) => if dir.colon {
@@ -1087,7 +1087,7 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
         loop {
             match self.consume_char() {
                 Some('~') => {
-                    let dir = try!(self.parse_directive());
+                    let dir = self.parse_directive()?;
 
                     match dir.command {
                         '<' | '(' | '[' | '{' => {
@@ -1122,7 +1122,7 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
                 FormatError::MissingCloseDelim(ch)));
         }
 
-        try!(self.check_open_groups());
+        self.check_open_groups()?;
         panic!("skip_until reached end with no open group");
     }
 
@@ -1136,8 +1136,8 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
 
     fn process_goto(&mut self, dir: &Directive) -> Result<(), ExecError> {
         let mut fields = FieldParser::new(dir.fields);
-        let n = try!(self.get_u32_field(&mut fields, dir.span));
-        try!(self.no_fields(fields, dir.span));
+        let n = self.get_u32_field(&mut fields, dir.span)?;
+        self.no_fields(fields, dir.span)?;
 
         if dir.at {
             self.arg_index = n.unwrap_or(0) as usize;
@@ -1154,24 +1154,24 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
     }
 
     fn process_indirection(&mut self, dir: &Directive, buf: &mut String) -> Result<(), ExecError> {
-        try!(self.no_fields(FieldParser::new(dir.fields), dir.span));
+        self.no_fields(FieldParser::new(dir.fields), dir.span)?;
 
-        let arg = try!(self.consume_arg(dir.span));
-        let sub_fmt = try!(self.get_string(arg, dir.span));
+        let arg = self.consume_arg(dir.span)?;
+        let sub_fmt = self.get_string(arg, dir.span)?;
 
         if !dir.at {
-            let arg = try!(self.consume_arg(dir.span));
-            let sub_args = try!(self.get_list(arg, dir.span));
+            let arg = self.consume_arg(dir.span)?;
+            let sub_args = self.get_list(arg, dir.span)?;
 
             let mut sub_fmter = self.sub(sub_fmt, sub_args);
-            try!(sub_fmter.format_string(buf));
-            try!(sub_fmter.finish());
+            sub_fmter.format_string(buf)?;
+            sub_fmter.finish()?;
         } else {
             let mut sub_fmter = self.sub(sub_fmt, self.values);
             sub_fmter.arg_index = self.arg_index;
-            try!(sub_fmter.format_string(buf));
+            sub_fmter.format_string(buf)?;
             self.arg_index = sub_fmter.arg_index;
-            try!(sub_fmter.finish());
+            sub_fmter.finish()?;
         }
 
         Ok(())
@@ -1181,17 +1181,17 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
         self.push_group(Group::Iteration, dir.span);
 
         let mut fields = FieldParser::new(dir.fields);
-        let mut max_iter = try!(self.get_u32_field(&mut fields, dir.span))
+        let mut max_iter = self.get_u32_field(&mut fields, dir.span)?
             .unwrap_or(u32::max_value());
-        try!(self.no_fields(fields, dir.span));
+        self.no_fields(fields, dir.span)?;
 
         let start = self.end_index;
-        let end_dir = try!(self.skip_until(|dir| dir.command == '}'));
+        let end_dir = self.skip_until(|dir| dir.command == '}')?;
 
         let sub_fmt = match &self.fmt[start..end_dir.span.lo as usize] {
             fmt if fmt.is_empty() => {
-                let arg = try!(self.consume_arg(dir.span));
-                try!(self.get_string(arg, dir.span))
+                let arg = self.consume_arg(dir.span)?;
+                self.get_string(arg, dir.span)?
             }
             fmt => fmt
         };
@@ -1202,8 +1202,8 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
         match (dir.at, dir.colon) {
             (false, false) => {
                 // No-flag; consumes a list arg.
-                let arg = try!(self.consume_arg(dir.span));
-                let li = try!(self.get_list(arg, dir.span));
+                let arg = self.consume_arg(dir.span)?;
+                let li = self.get_list(arg, dir.span)?;
                 let mut last_off = 0;
 
                 while last_off < li.len() {
@@ -1213,12 +1213,12 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
                     max_iter -= 1;
                     let mut sub_fmter = self.sub(sub_fmt, &li[last_off..]);
 
-                    try!(sub_fmter.format_string(buf));
+                    sub_fmter.format_string(buf)?;
                     let new_off = last_off.saturating_add(sub_fmter.arg_index);
                     if sub_fmter.terminate {
                         break;
                     }
-                    try!(sub_fmter.finish());
+                    sub_fmter.finish()?;
 
                     if last_off == new_off {
                         // If no arguments were consumed, it's an infinite loop.
@@ -1230,8 +1230,8 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
                 if li.is_empty() && run_once && max_iter != 0 {
                     let mut sub_fmter = self.sub(sub_fmt, &[]);
 
-                    try!(sub_fmter.format_string(buf));
-                    try!(sub_fmter.finish());
+                    sub_fmter.format_string(buf)?;
+                    sub_fmter.finish()?;
                 }
             }
             (true, false) => {
@@ -1247,12 +1247,12 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
                     let mut sub_fmter = self.sub(sub_fmt, self.values);
                     sub_fmter.arg_index = last_off;
 
-                    try!(sub_fmter.format_string(buf));
+                    sub_fmter.format_string(buf)?;
                     let new_off = sub_fmter.arg_index;
                     if sub_fmter.terminate {
                         break;
                     }
-                    try!(sub_fmter.finish());
+                    sub_fmter.finish()?;
 
                     if new_off <= last_off {
                         // If no arguments were consumed, it's an infinite loop.
@@ -1265,9 +1265,9 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
                     let mut sub_fmter = self.sub(sub_fmt, &[]);
                     sub_fmter.arg_index = start_off;
 
-                    try!(sub_fmter.format_string(buf));
+                    sub_fmter.format_string(buf)?;
                     last_off = sub_fmter.arg_index;
-                    try!(sub_fmter.finish());
+                    sub_fmter.finish()?;
                 }
 
                 self.arg_index = last_off;
@@ -1275,35 +1275,35 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
             (false, true) => {
                 // ':' flag; consumes a list arg whose elements must be lists.
                 // Each iteration receives a sublist.
-                let arg = try!(self.consume_arg(dir.span));
-                let li = try!(self.get_list(arg, dir.span));
+                let arg = self.consume_arg(dir.span)?;
+                let li = self.get_list(arg, dir.span)?;
 
                 for (i, item) in li.iter().enumerate() {
                     if max_iter == 0 {
                         break;
                     }
                     max_iter -= 1;
-                    let sub_li = try!(self.get_list(item, dir.span));
+                    let sub_li = self.get_list(item, dir.span)?;
                     let mut sub_fmter = self.sub(sub_fmt, sub_li);
 
                     if i + 1 < li.len() {
                         sub_fmter.parent_end = false;
                     }
 
-                    try!(sub_fmter.format_string(buf));
+                    sub_fmter.format_string(buf)?;
                     if sub_fmter.terminate_loop {
                         break;
                     } else if sub_fmter.terminate {
                         continue;
                     }
-                    try!(sub_fmter.finish());
+                    sub_fmter.finish()?;
                 }
 
                 if li.is_empty() && run_once && max_iter != 0 {
                     let mut sub_fmter = self.sub(sub_fmt, &[]);
 
-                    try!(sub_fmter.format_string(buf));
-                    try!(sub_fmter.finish());
+                    sub_fmter.format_string(buf)?;
+                    sub_fmter.finish()?;
                 }
             }
             (true, true) => {
@@ -1314,8 +1314,8 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
                     if run_once && max_iter != 0 {
                         let mut sub_fmter = self.sub(sub_fmt, &[]);
 
-                        try!(sub_fmter.format_string(buf));
-                        try!(sub_fmter.finish());
+                        sub_fmter.format_string(buf)?;
+                        sub_fmter.finish()?;
                     }
                 } else {
                     for (i, item) in self.values[start_off..].iter().enumerate() {
@@ -1323,7 +1323,7 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
                             break;
                         }
                         max_iter -= 1;
-                        let sub_li = try!(self.get_list(item, dir.span));
+                        let sub_li = self.get_list(item, dir.span)?;
 
                         let mut sub_fmter = self.sub(sub_fmt, sub_li);
 
@@ -1331,13 +1331,13 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
                             sub_fmter.parent_end = false;
                         }
 
-                        try!(sub_fmter.format_string(buf));
+                        sub_fmter.format_string(buf)?;
                         if sub_fmter.terminate_loop {
                             break;
                         } else if sub_fmter.terminate {
                             continue;
                         }
-                        try!(sub_fmter.finish());
+                        sub_fmter.finish()?;
                     }
                 }
             }
@@ -1472,12 +1472,12 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
             -> Result<Option<char>, ExecError> {
         let r = fields.next().map_err(|e| self.error(span, e));
 
-        match try!(r) {
+        match r? {
             None => Ok(None),
             Some(Field::Empty) => Ok(None),
             Some(Field::Char(ch)) => Ok(Some(ch)),
             Some(Field::ArgValue) => {
-                let arg = try!(self.consume_arg(span));
+                let arg = self.consume_arg(span)?;
                 match *arg {
                     Value::Char(ch) => Ok(Some(ch)),
                     ref v => Err(self.error(span,
@@ -1496,7 +1496,7 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
             -> Result<Option<u32>, ExecError> {
         let r = fields.next().map_err(|e| self.error(span, e));
 
-        match try!(r) {
+        match r? {
             None => Ok(None),
             Some(Field::Empty) => Ok(None),
             Some(Field::Integer(i)) => match i.to_u32() {
@@ -1505,8 +1505,8 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
             },
             Some(Field::ArgCount) => Ok(Some(self.args_left() as u32)),
             Some(Field::ArgValue) => {
-                let arg = try!(self.consume_arg(span));
-                match try!(self.get_integer(arg, span)).to_u32() {
+                let arg = self.consume_arg(span)?;
+                match self.get_integer(arg, span)?.to_u32() {
                     Some(u) if u <= 100 => Ok(Some(u)),
                     _ => Err(self.error(span, FormatError::FieldOverflow))
                 }

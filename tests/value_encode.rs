@@ -50,8 +50,8 @@ fn interp(code: &str) -> Result<Interpreter, Error> {
     let interp = Interpreter::with_loader(
         Box::new(BuiltinModuleLoader.chain(loader)));
 
-    try!(interp.run_code("(use test (assert-eq))", None));
-    try!(interp.run_code(code, None));
+    interp.run_code("(use test (assert-eq))", None)?;
+    interp.run_code(code, None)?;
 
     Ok(interp)
 }

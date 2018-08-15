@@ -122,8 +122,8 @@ impl NameDisplay for EncodeError {
 
 /// Read compiled bytecode from a file
 pub fn read_bytecode_file(path: &Path, ctx: &Context) -> Result<ModuleCode, Error> {
-    let mut f = try!(File::open(path)
-        .map_err(|e| IoError::new(IoMode::Open, path, e)));
+    let mut f = File::open(path)
+        .map_err(|e| IoError::new(IoMode::Open, path, e))?;
     read_bytecode(&mut f, path, ctx)
 }
 
@@ -132,52 +132,52 @@ pub fn read_bytecode<R: Read>(r: &mut R, path: &Path, ctx: &Context)
         -> Result<ModuleCode, Error> {
     let mut buf = [0; 4];
 
-    try!(r.read_exact(&mut buf)
-        .map_err(|e| IoError::new(IoMode::Read, path, e)));
-    try!(check_magic_number(&buf));
+    r.read_exact(&mut buf)
+        .map_err(|e| IoError::new(IoMode::Read, path, e))?;
+    check_magic_number(&buf)?;
 
-    try!(r.read_exact(&mut buf)
-        .map_err(|e| IoError::new(IoMode::Read, path, e)));
-    try!(check_version(&buf));
+    r.read_exact(&mut buf)
+        .map_err(|e| IoError::new(IoMode::Read, path, e))?;
+    check_version(&buf)?;
 
     let mut buf = Vec::new();
-    try!(r.read_to_end(&mut buf)
-        .map_err(|e| IoError::new(IoMode::Read, path, e)));
+    r.read_to_end(&mut buf)
+        .map_err(|e| IoError::new(IoMode::Read, path, e))?;
 
     let mut dec = ValueDecoder::new(ctx, &buf);
 
-    let n_names = try!(dec.read_uint());
+    let n_names = dec.read_uint()?;
     let mut names = NameInputConversion::new();
 
     {
         let mut name_store = ctx.scope().names().borrow_mut();
 
         for _ in 0..n_names {
-            let s = try!(dec.read_string());
+            let s = dec.read_string()?;
             names.insert(name_store.add(s));
         }
     }
 
-    let n_exports = try!(dec.read_uint());
+    let n_exports = dec.read_uint()?;
     let mut exports = NameSet::new();
 
     for _ in 0..n_exports {
-        let name = try!(dec.read_name(&names));
+        let name = dec.read_name(&names)?;
         exports.insert(name);
     }
 
-    let n_imports = try!(dec.read_uint());
+    let n_imports = dec.read_uint()?;
     let mut imports = Vec::new();
 
     for _ in 0..n_imports {
-        let mod_name = try!(dec.read_name(&names));
+        let mod_name = dec.read_name(&names)?;
         let mut imp = ImportSet::new(mod_name);
 
-        let n_names = try!(dec.read_uint());
+        let n_names = dec.read_uint()?;
 
         for _ in 0..n_names {
-            let src = try!(dec.read_name(&names));
-            let dest = try!(dec.read_name(&names));
+            let src = dec.read_name(&names)?;
+            let dest = dec.read_name(&names)?;
 
             imp.names.push((src, dest));
         }
@@ -185,47 +185,47 @@ pub fn read_bytecode<R: Read>(r: &mut R, path: &Path, ctx: &Context)
         imports.push(imp);
     }
 
-    let n_consts = try!(dec.read_uint());
+    let n_consts = dec.read_uint()?;
     let mut consts = Vec::with_capacity(n_consts as usize);
 
     for _ in 0..n_consts {
-        let name = try!(dec.read_name(&names));
-        let value = try!(dec.read_value(&names));
+        let name = dec.read_name(&names)?;
+        let value = dec.read_value(&names)?;
         consts.push((name, value));
     }
 
-    let n_macros = try!(dec.read_uint());
+    let n_macros = dec.read_uint()?;
     let mut macros = Vec::with_capacity(n_macros as usize);
 
     for _ in 0..n_macros {
-        let name = try!(dec.read_name(&names));
-        let code = Rc::new(try!(dec.read_code(&names)));
+        let name = dec.read_name(&names)?;
+        let code = Rc::new(dec.read_code(&names)?);
         macros.push((name, code));
     }
 
-    let n_values = try!(dec.read_uint());
+    let n_values = dec.read_uint()?;
     let mut values = Vec::with_capacity(n_values as usize);
 
     for _ in 0..n_values {
-        let name = try!(dec.read_name(&names));
-        let value = try!(dec.read_value(&names));
+        let name = dec.read_name(&names)?;
+        let value = dec.read_value(&names)?;
 
         values.push((name, value));
     }
 
-    let doc = try!(dec.read_string());
+    let doc = dec.read_string()?;
     let doc = if doc.is_empty() {
         None
     } else {
         Some(doc.to_owned())
     };
 
-    let n_docs = try!(dec.read_uint());
+    let n_docs = dec.read_uint()?;
     let mut docs = Vec::with_capacity(n_docs as usize);
 
     for _ in 0..n_docs {
-        let name = try!(dec.read_name(&names));
-        let doc = try!(dec.read_string());
+        let name = dec.read_name(&names)?;
+        let doc = dec.read_string()?;
 
         docs.push((name, doc.to_owned()));
     }
@@ -233,7 +233,7 @@ pub fn read_bytecode<R: Read>(r: &mut R, path: &Path, ctx: &Context)
     let mut exprs = Vec::new();
 
     while !dec.is_empty() {
-        exprs.push(Rc::new(try!(dec.read_code(&names))));
+        exprs.push(Rc::new(dec.read_code(&names)?));
     }
 
     Ok(ModuleCode{
@@ -251,8 +251,8 @@ pub fn read_bytecode<R: Read>(r: &mut R, path: &Path, ctx: &Context)
 /// Write compiled bytecode to a file
 pub fn write_bytecode_file(path: &Path, module: &ModuleCode,
         name_store: &NameStore) -> Result<(), Error> {
-    let mut f = try!(File::create(path)
-        .map_err(|e| IoError::new(IoMode::Create, path, e)));
+    let mut f = File::create(path)
+        .map_err(|e| IoError::new(IoMode::Create, path, e))?;
     write_bytecode(&mut f, path, module, name_store)
 }
 
@@ -262,80 +262,80 @@ pub fn write_bytecode<W: Write>(w: &mut W, path: &Path, module: &ModuleCode,
     let mut names = NameOutputConversion::new(name_store);
     let mut body_enc = ValueEncoder::new();
 
-    try!(body_enc.write_len(module.imports.len()));
+    body_enc.write_len(module.imports.len())?;
 
     for imp in &module.imports {
-        try!(body_enc.write_name(imp.module_name, &mut names));
+        body_enc.write_name(imp.module_name, &mut names)?;
 
-        try!(body_enc.write_len(imp.names.len()));
+        body_enc.write_len(imp.names.len())?;
 
         for &(src, dest) in &imp.names {
-            try!(body_enc.write_name(src, &mut names));
-            try!(body_enc.write_name(dest, &mut names));
+            body_enc.write_name(src, &mut names)?;
+            body_enc.write_name(dest, &mut names)?;
         }
     }
 
-    try!(body_enc.write_len(module.constants.len()));
+    body_enc.write_len(module.constants.len())?;
 
     for &(name, ref value) in &module.constants {
-        try!(body_enc.write_name(name, &mut names));
-        try!(body_enc.write_value(value, &mut names));
+        body_enc.write_name(name, &mut names)?;
+        body_enc.write_value(value, &mut names)?;
     }
 
-    try!(body_enc.write_len(module.macros.len()));
+    body_enc.write_len(module.macros.len())?;
 
     for &(name, ref mac) in &module.macros {
-        try!(body_enc.write_name(name, &mut names));
-        try!(body_enc.write_code(mac, &mut names));
+        body_enc.write_name(name, &mut names)?;
+        body_enc.write_code(mac, &mut names)?;
     }
 
-    try!(body_enc.write_len(module.values.len()));
+    body_enc.write_len(module.values.len())?;
 
     for &(name, ref value) in &module.values {
-        try!(body_enc.write_name(name, &mut names));
-        try!(body_enc.write_value(value, &mut names));
+        body_enc.write_name(name, &mut names)?;
+        body_enc.write_value(value, &mut names)?;
     }
 
     if let Some(ref doc) = module.module_doc {
-        try!(body_enc.write_string(doc));
+        body_enc.write_string(doc)?;
     } else {
-        try!(body_enc.write_string(""));
+        body_enc.write_string("")?;
     }
 
-    try!(body_enc.write_len(module.docs.len()));
+    body_enc.write_len(module.docs.len())?;
 
     for &(name, ref doc) in &module.docs {
-        try!(body_enc.write_name(name, &mut names));
-        try!(body_enc.write_string(doc));
+        body_enc.write_name(name, &mut names)?;
+        body_enc.write_string(doc)?;
     }
 
     for code in &module.code {
-        try!(body_enc.write_code(code, &mut names));
+        body_enc.write_code(code, &mut names)?;
     }
 
     let mut head_enc = ValueEncoder::new();
 
-    try!(head_enc.write_len(names.len()));
+    head_enc.write_len(names.len())?;
 
     for name in names.names() {
-        try!(head_enc.write_string(name));
+        head_enc.write_string(name)?;
     }
 
-    try!(head_enc.write_len(module.exports.len()));
+    head_enc.write_len(module.exports.len())?;
 
     for name in &module.exports {
-        try!(head_enc.write_name(name, &mut names));
+        head_enc.write_name(name, &mut names)?;
     }
 
-    try!(w.write_all(MAGIC_NUMBER)
-        .map_err(|e| IoError::new(IoMode::Write, path, e)));
+    w.write_all(MAGIC_NUMBER)
+        .map_err(|e| IoError::new(IoMode::Write, path, e))?;
 
-    try!(w.write_u32::<BigEndian>(BYTECODE_VERSION)
-        .map_err(|e| IoError::new(IoMode::Write, path, e)));
+    w.write_u32::<BigEndian>(BYTECODE_VERSION)
+        .map_err(|e| IoError::new(IoMode::Write, path, e))?;
 
-    try!(w.write_all(&head_enc.into_bytes())
+    w.write_all(&head_enc.into_bytes())
         .and_then(|_| w.write_all(&body_enc.into_bytes()))
-        .map_err(|e| IoError::new(IoMode::Write, path, e)));
+        .map_err(|e| IoError::new(IoMode::Write, path, e))?;
 
     Ok(())
 }
@@ -385,13 +385,13 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
     fn read_value(&mut self, names: &NameInputConversion) -> Result<Value, DecodeError> {
         use self::types::*;
 
-        let ty = try!(self.read_u8());
+        let ty = self.read_u8()?;
 
         match ty {
             UNIT => Ok(Value::Unit),
             BOOL_TRUE => Ok(Value::Bool(true)),
             BOOL_FALSE => Ok(Value::Bool(false)),
-            FLOAT => Ok(Value::Float(try!(self.read_f64()))),
+            FLOAT => Ok(Value::Float(self.read_f64()?)),
             INTEGER | INTEGER_NEG => {
                 let sign = if ty == INTEGER {
                     Sign::Plus
@@ -409,9 +409,9 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
                     Sign::Minus
                 };
 
-                let numer = try!(self.read_integer(sign));
+                let numer = self.read_integer(sign)?;
                 // Denominator is always positive
-                let denom = try!(self.read_integer(Sign::Plus));
+                let denom = self.read_integer(Sign::Plus)?;
 
                 if denom.is_zero() {
                     Err(DecodeError::DivisionByZero)
@@ -420,10 +420,10 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
                 }
             }
             RATIO_ZERO => Ok(Value::Ratio(Ratio::zero())),
-            NAME => Ok(Value::Name(try!(self.read_name(names)))),
-            KEYWORD => Ok(Value::Keyword(try!(self.read_name(names)))),
+            NAME => Ok(Value::Name(self.read_name(names)?)),
+            KEYWORD => Ok(Value::Keyword(self.read_name(names)?)),
             CHAR => {
-                let c = try!(self.read_u32());
+                let c = self.read_u32()?;
                 from_u32(c)
                     .map(Value::Char)
                     .ok_or(DecodeError::InvalidChar(c))
@@ -434,13 +434,13 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
             // XXX: Decoding struct values is not implemented
             STRUCT => return Err(DecodeError::InvalidType(STRUCT)),
             STRUCT_DEF => {
-                let name = try!(self.read_name(names));
-                let n = try!(self.read_uint());
+                let name = self.read_name(names)?;
+                let n = self.read_uint()?;
                 let mut fields = NameMap::new();
 
                 for _ in 0..n {
-                    let field = try!(self.read_name(names));
-                    let ty = try!(self.read_name(names));
+                    let field = self.read_name(names)?;
+                    let ty = self.read_name(names)?;
 
                     fields.insert(field, ty);
                 }
@@ -450,27 +450,27 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
                 Ok(Value::StructDef(Rc::new(StructDef::new(name, Box::new(def)))))
             }
             QUASI_QUOTE => {
-                let n = try!(self.read_u8()) as u32;
+                let n = self.read_u8()? as u32;
                 self.read_value(names).map(|v| v.quasiquote(n))
             }
             QUASI_QUOTE_ONE => self.read_value(names).map(|v| v.quasiquote(1)),
             COMMA => {
-                let n = try!(self.read_u8()) as u32;
+                let n = self.read_u8()? as u32;
                 self.read_value(names).map(|v| v.comma(n))
             }
             COMMA_ONE => self.read_value(names).map(|v| v.comma(1)),
             COMMA_AT => {
-                let n = try!(self.read_u8()) as u32;
+                let n = self.read_u8()? as u32;
                 self.read_value(names).map(|v| v.comma_at(n))
             }
             COMMA_AT_ONE => self.read_value(names).map(|v| v.comma_at(1)),
             QUOTE => {
-                let n = try!(self.read_u8()) as u32;
+                let n = self.read_u8()? as u32;
                 self.read_value(names).map(|v| v.quote(n))
             }
             QUOTE_ONE => self.read_value(names).map(|v| v.quote(1)),
             LIST => {
-                let n = try!(self.read_len());
+                let n = self.read_len()?;
 
                 if n == 0 {
                     return Err(DecodeError::EmptyList);
@@ -479,13 +479,13 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
                 let mut v = Vec::with_capacity(n);
 
                 for _ in 0..n {
-                    v.push(try!(self.read_value(names)));
+                    v.push(self.read_value(names)?);
                 }
 
                 Ok(v.into())
             }
             LAMBDA => {
-                let code = try!(self.read_code(names));
+                let code = self.read_code(names)?;
                 Ok(Value::Lambda(Lambda::new(Rc::new(code), self.ctx.scope())))
             }
             _ => Err(DecodeError::InvalidType(ty))
@@ -499,7 +499,7 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
     fn read_code(&mut self, names: &NameInputConversion) -> Result<Code, DecodeError> {
         use bytecode::code_flags::*;
 
-        let flags = try!(self.read_u8()) as u32;
+        let flags = self.read_u8()? as u32;
 
         if flags & ALL_FLAGS != flags {
             return Err(DecodeError::InvalidCodeFlags(flags));
@@ -508,29 +508,29 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
         let name = if flags & HAS_NAME == 0 {
             None
         } else {
-            Some(try!(self.read_name(names)))
+            Some(self.read_name(names)?)
         };
 
         let doc = if flags & HAS_DOC_STRING == 0 {
             None
         } else {
-            Some(try!(self.read_string()).to_owned())
+            Some(self.read_string()?.to_owned())
         };
 
-        let n_consts = try!(self.read_len());
+        let n_consts = self.read_len()?;
         let mut consts = Vec::with_capacity(n_consts);
 
         for _ in 0..n_consts {
-            let v = try!(self.read_value(names));
-            try!(validate_value(&v));
+            let v = self.read_value(names)?;
+            validate_value(&v)?;
             consts.push(v);
         }
 
-        let code_bytes = try!(self.read_len());
-        let code = try!(self.read_bytes(code_bytes)).to_vec();
+        let code_bytes = self.read_len()?;
+        let code = self.read_bytes(code_bytes)?.to_vec();
 
-        let n_params = try!(self.read_uint());
-        let req_params = try!(self.read_uint());
+        let n_params = self.read_uint()?;
+        let req_params = self.read_uint()?;
 
         if n_params < req_params {
             return Err(DecodeError::InvalidParamCount);
@@ -541,7 +541,7 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
         match flags & PARAM_FLAGS_MASK {
             0 | HAS_REST_PARAMS => (),
             HAS_KW_PARAMS => {
-                let n = try!(self.read_len());
+                let n = self.read_len()?;
 
                 if n == 0 {
                     return Err(DecodeError::InvalidCodeFlags(flags));
@@ -550,7 +550,7 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
                 kw_params.reserve_exact(n);
 
                 for _ in 0..n {
-                    kw_params.push(try!(self.read_name(names)));
+                    kw_params.push(self.read_name(names)?);
                 }
             }
             _ => return Err(DecodeError::InvalidCodeFlags(flags))
@@ -569,38 +569,38 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
     }
 
     fn read_name(&mut self, names: &NameInputConversion) -> Result<Name, DecodeError> {
-        let n = try!(self.read_uint());
+        let n = self.read_uint()?;
         names.get(n).ok_or(DecodeError::InvalidName(n))
     }
 
     fn read_string(&mut self) -> Result<&'data str, DecodeError> {
-        let n = try!(self.read_uint());
-        let b = try!(self.read_bytes(n as usize));
+        let n = self.read_uint()?;
+        let b = self.read_bytes(n as usize)?;
 
         from_utf8(b).map_err(|_| DecodeError::InvalidUtf8)
     }
 
     fn read_byte_string(&mut self) -> Result<Bytes, DecodeError> {
-        let n = try!(self.read_uint());
-        let b = try!(self.read_bytes(n as usize));
+        let n = self.read_uint()?;
+        let b = self.read_bytes(n as usize)?;
 
         Ok(Bytes::from(b))
     }
 
     fn read_integer(&mut self, sign: Sign) -> Result<Integer, DecodeError> {
-        let n = try!(self.read_uint());
-        let b = try!(self.read_bytes(n as usize));
+        let n = self.read_uint()?;
+        let b = self.read_bytes(n as usize)?;
         Ok(Integer::from_bytes_be(sign, b))
     }
 
     fn read_u8(&mut self) -> Result<u8, DecodeError> {
-        Ok(try!(self.data.read_u8()
-            .map_err(|_| DecodeError::UnexpectedEof)))
+        Ok(self.data.read_u8()
+            .map_err(|_| DecodeError::UnexpectedEof)?)
     }
 
     fn read_u32(&mut self) -> Result<u32, DecodeError> {
-        Ok(try!(self.data.read_u32::<BigEndian>()
-            .map_err(|_| DecodeError::UnexpectedEof)))
+        Ok(self.data.read_u32::<BigEndian>()
+            .map_err(|_| DecodeError::UnexpectedEof)?)
     }
 
     fn read_len(&mut self) -> Result<usize, DecodeError> {
@@ -608,20 +608,20 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
     }
 
     fn read_uint(&mut self) -> Result<u32, DecodeError> {
-        let hi = try!(self.read_u8()) as u32;
+        let hi = self.read_u8()? as u32;
 
         if hi & 0x80 == 0 {
             Ok(hi)
         } else {
             let hi = (hi & 0x7f) << 8;
-            let lo = try!(self.read_u8()) as u32;
+            let lo = self.read_u8()? as u32;
             Ok(hi | lo)
         }
     }
 
     fn read_f64(&mut self) -> Result<f64, DecodeError> {
-        Ok(try!(self.data.read_f64::<BigEndian>()
-            .map_err(|_| DecodeError::UnexpectedEof)))
+        Ok(self.data.read_f64::<BigEndian>()
+            .map_err(|_| DecodeError::UnexpectedEof)?)
     }
 }
 
@@ -685,7 +685,7 @@ impl ValueEncoder {
                         self.write_u8(INTEGER);
                     }
 
-                    try!(self.write_integer(i));
+                    self.write_integer(i)?;
                 }
             }
             Value::Ratio(ref r) => {
@@ -698,17 +698,17 @@ impl ValueEncoder {
                         self.write_u8(RATIO_NEG);
                     }
 
-                    try!(self.write_integer(r.numer()));
-                    try!(self.write_integer(r.denom()));
+                    self.write_integer(r.numer())?;
+                    self.write_integer(r.denom())?;
                 }
             }
             Value::Name(name) => {
                 self.write_u8(NAME);
-                try!(self.write_name(name, names));
+                self.write_name(name, names)?;
             }
             Value::Keyword(name) => {
                 self.write_u8(KEYWORD);
-                try!(self.write_name(name, names));
+                self.write_name(name, names)?;
             }
             Value::Char(c) => {
                 self.write_u8(CHAR);
@@ -716,15 +716,15 @@ impl ValueEncoder {
             }
             Value::String(ref s) => {
                 self.write_u8(STRING);
-                try!(self.write_string(s));
+                self.write_string(s)?;
             }
             Value::Bytes(ref s) => {
                 self.write_u8(BYTES);
-                try!(self.write_byte_string(s));
+                self.write_byte_string(s)?;
             }
             Value::Path(ref p) => {
                 self.write_u8(PATH);
-                try!(self.write_path(p));
+                self.write_path(p)?;
             }
             // TODO: Encode/decode struct values.
             // Modules could begin with a listing of all defined StructDefs,
@@ -739,12 +739,12 @@ impl ValueEncoder {
 
                     let fields = vdef.fields();
 
-                    try!(self.write_name(def.name(), names));
-                    try!(self.write_len(fields.len()));
+                    self.write_name(def.name(), names)?;
+                    self.write_len(fields.len())?;
 
                     for &(name, ty) in fields {
-                        try!(self.write_name(name, names));
-                        try!(self.write_name(ty, names));
+                        self.write_name(name, names)?;
+                        self.write_name(ty, names)?;
                     }
                 } else {
                     return Err(EncodeError::UnencodableType("struct-def"));
@@ -752,39 +752,39 @@ impl ValueEncoder {
             }
             Value::Quasiquote(ref v, 1) => {
                 self.write_u8(QUASI_QUOTE_ONE);
-                try!(self.write_value(v, names));
+                self.write_value(v, names)?;
             }
             Value::Quasiquote(ref v, n) if n <= 0xff => {
                 self.write_u8(QUASI_QUOTE);
                 self.write_u8(n as u8);
-                try!(self.write_value(v, names));
+                self.write_value(v, names)?;
             }
             Value::Comma(ref v, 1) => {
                 self.write_u8(COMMA_ONE);
-                try!(self.write_value(v, names));
+                self.write_value(v, names)?;
             }
             Value::Comma(ref v, n) if n <= 0xff => {
                 self.write_u8(COMMA);
                 self.write_u8(n as u8);
-                try!(self.write_value(v, names));
+                self.write_value(v, names)?;
             }
             Value::CommaAt(ref v, 1) => {
                 self.write_u8(COMMA_AT_ONE);
-                try!(self.write_value(v, names));
+                self.write_value(v, names)?;
             }
             Value::CommaAt(ref v, n) if n <= 0xff => {
                 self.write_u8(COMMA_AT);
                 self.write_u8(n as u8);
-                try!(self.write_value(v, names));
+                self.write_value(v, names)?;
             }
             Value::Quote(ref v, 1) => {
                 self.write_u8(QUOTE_ONE);
-                try!(self.write_value(v, names));
+                self.write_value(v, names)?;
             }
             Value::Quote(ref v, n) if n <= 0xff => {
                 self.write_u8(QUOTE);
                 self.write_u8(n as u8);
-                try!(self.write_value(v, names));
+                self.write_value(v, names)?;
             }
             Value::Comma(_, _)
             | Value::CommaAt(_, _)
@@ -794,10 +794,10 @@ impl ValueEncoder {
             }
             Value::List(ref li) => {
                 self.write_u8(LIST);
-                try!(self.write_len(li.len()));
+                self.write_len(li.len())?;
 
                 for v in li {
-                    try!(self.write_value(v, names));
+                    self.write_value(v, names)?;
                 }
             }
             Value::Lambda(ref l) => {
@@ -806,7 +806,7 @@ impl ValueEncoder {
                         "lambda with enclosed values"));
                 }
                 self.write_u8(LAMBDA);
-                try!(self.write_code(&l.code, names));
+                self.write_code(&l.code, names)?;
             }
             Value::Foreign(_) =>
                 return Err(EncodeError::UnencodableType("foreign value")),
@@ -829,33 +829,33 @@ impl ValueEncoder {
         assert_eq!(code.flags & HAS_DOC_STRING != 0, code.doc.is_some());
 
         if let Some(name) = code.name {
-            try!(self.write_name(name, names));
+            self.write_name(name, names)?;
         }
 
         if let Some(ref doc) = code.doc {
-            try!(self.write_string(doc));
+            self.write_string(doc)?;
         }
 
-        try!(self.write_len(code.consts.len()));
+        self.write_len(code.consts.len())?;
 
         for c in code.consts.iter() {
-            try!(self.write_value(c, names));
+            self.write_value(c, names)?;
         }
 
-        try!(self.write_len(code.code.len()));
+        self.write_len(code.code.len())?;
         self.write_bytes(&code.code);
 
-        try!(self.write_uint(code.n_params));
-        try!(self.write_uint(code.req_params));
+        self.write_uint(code.n_params)?;
+        self.write_uint(code.req_params)?;
 
         assert_eq!(code.flags & PARAM_FLAGS_MASK == HAS_KW_PARAMS,
             !code.kw_params.is_empty());
 
         if !code.kw_params.is_empty() {
-            try!(self.write_len(code.kw_params.len()));
+            self.write_len(code.kw_params.len())?;
 
             for &name in code.kw_params.iter() {
-                try!(self.write_name(name, names));
+                self.write_name(name, names)?;
             }
         }
 
@@ -865,7 +865,7 @@ impl ValueEncoder {
     fn write_integer(&mut self, i: &Integer) -> Result<(), EncodeError> {
         let (_, b) = i.to_bytes_be();
 
-        try!(self.write_len(b.len()));
+        self.write_len(b.len())?;
         self.write_bytes(&b);
         Ok(())
     }
@@ -876,13 +876,13 @@ impl ValueEncoder {
     }
 
     fn write_string(&mut self, s: &str) -> Result<(), EncodeError> {
-        try!(self.write_len(s.len()));
+        self.write_len(s.len())?;
         self.write_bytes(s.as_bytes());
         Ok(())
     }
 
     fn write_byte_string(&mut self, b: &[u8]) -> Result<(), EncodeError> {
-        try!(self.write_len(b.len()));
+        self.write_len(b.len())?;
         self.write_bytes(b);
         Ok(())
     }

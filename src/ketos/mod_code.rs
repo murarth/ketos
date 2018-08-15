@@ -43,7 +43,7 @@ Given no arguments, returns the documentation string for the current module."))
 
 /// `compile` compiles an expression into a code object.
 fn fn_compile(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let code = try!(compile(ctx, &args[0]));
+    let code = compile(ctx, &args[0])?;
     Ok(Value::Lambda(Lambda::new(Rc::new(code), ctx.scope())))
 }
 
@@ -58,54 +58,54 @@ fn fn_disassemble(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let code = &l.code;
     let out = &scope.io().stdout;
 
-    try!(writeln!(out, "{} positional argument{} total",
-        code.n_params, plural(code.n_params)));
-    try!(writeln!(out, "{} positional argument{} required",
-        code.req_params, plural(code.req_params)));
+    writeln!(out, "{} positional argument{} total",
+        code.n_params, plural(code.n_params))?;
+    writeln!(out, "{} positional argument{} required",
+        code.req_params, plural(code.req_params))?;
 
     if code.kw_params.is_empty() {
-        try!(writeln!(out, "0 keyword arguments"));
+        writeln!(out, "0 keyword arguments")?;
     } else {
         let names = scope.borrow_names();
 
-        try!(writeln!(out, "{} keyword argument{}: {}",
+        writeln!(out, "{} keyword argument{}: {}",
             code.kw_params.len(), plural(code.kw_params.len() as u32),
             code.kw_params.iter().map(|&n| names.get(n))
-                .collect::<Vec<_>>().join(" ")));
+                .collect::<Vec<_>>().join(" "))?;
     }
 
     if code.has_rest_params() {
-        try!(writeln!(out, "Has rest parameter"));
+        writeln!(out, "Has rest parameter")?;
     } else {
-        try!(writeln!(out, "No rest parameter"));
+        writeln!(out, "No rest parameter")?;
     }
 
     if code.consts.is_empty() {
-        try!(writeln!(out, "0 const values"));
+        writeln!(out, "0 const values")?;
     } else {
-        try!(writeln!(out, "{} const value{}:",
-            code.consts.len(), plural(code.consts.len() as u32)));
+        writeln!(out, "{} const value{}:",
+            code.consts.len(), plural(code.consts.len() as u32))?;
 
         let names = scope.borrow_names();
 
         for (i, v) in code.consts.iter().enumerate() {
-            try!(writeln!(out, "  {} = {}", i, debug_names(&names, v)));
+            writeln!(out, "  {} = {}", i, debug_names(&names, v))?;
         }
     }
 
     if let Some(ref v) = l.values {
-        try!(writeln!(out, "{} enclosed value{}:", v.len(), plural(v.len() as u32)));
+        writeln!(out, "{} enclosed value{}:", v.len(), plural(v.len() as u32))?;
 
         let names = scope.borrow_names();
 
         for (i, v) in v.iter().enumerate() {
-            try!(writeln!(out, "  {} = {}", i, debug_names(&names, v)));
+            writeln!(out, "  {} = {}", i, debug_names(&names, v))?;
         }
     } else {
-        try!(writeln!(out, "0 enclosed values"));
+        writeln!(out, "0 enclosed values")?;
     }
 
-    let instrs = try!(get_instructions(&code.code));
+    let instrs = get_instructions(&code.code)?;
     let mut jumps = Vec::with_capacity(16);
 
     // Collect all jump labels
@@ -118,14 +118,14 @@ fn fn_disassemble(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
         }
     }
 
-    try!(writeln!(out, "{} bytecode instruction{}:", instrs.len(), plural(instrs.len() as u32)));
+    writeln!(out, "{} bytecode instruction{}:", instrs.len(), plural(instrs.len() as u32))?;
 
     for (off, instr) in instrs {
         let is_label = jumps.binary_search(&off).is_ok();
-        try!(print_instruction(ctx, l, off, instr, is_label));
+        print_instruction(ctx, l, off, instr, is_label)?;
     }
 
-    try!(out.flush());
+    out.flush()?;
     Ok(().into())
 }
 
@@ -204,9 +204,9 @@ fn print_instruction(ctx: &Context, lambda: &Lambda,
             // fmt::Debug does not honor "<n" formatting,
             // so we make this string first and format again.
             let instr = format!("{:?}", instr);
-            try!(writeln!(out, "  {} {:>4}  {:<30} ; {}", label_str, offset, instr, s));
+            writeln!(out, "  {} {:>4}  {:<30} ; {}", label_str, offset, instr, s)?;
         }
-        None => try!(writeln!(out, "  {} {:>4}  {:?}", label_str, offset, instr))
+        None => writeln!(out, "  {} {:>4}  {:?}", label_str, offset, instr)?
     }
 
     Ok(())
@@ -255,10 +255,10 @@ fn value_doc(v: &Value) -> Option<String> {
 fn fn_get_const(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0] {
         Value::Lambda(ref l) => {
-            let n = try!(usize::from_value_ref(&args[1]));
+            let n = usize::from_value_ref(&args[1])?;
 
-            let v = try!(l.code.consts.get(n)
-                .ok_or(ExecError::OutOfBounds(n)));
+            let v = l.code.consts.get(n)
+                .ok_or(ExecError::OutOfBounds(n))?;
 
             Ok(v.clone())
         }
@@ -270,10 +270,10 @@ fn fn_get_const(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 fn fn_get_value(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0] {
         Value::Lambda(ref l) => {
-            let n = try!(usize::from_value_ref(&args[1]));
+            let n = usize::from_value_ref(&args[1])?;
 
-            let v = try!(l.values.as_ref().and_then(|v| v.get(n))
-                .ok_or(ExecError::OutOfBounds(n)));
+            let v = l.values.as_ref().and_then(|v| v.get(n))
+                .ok_or(ExecError::OutOfBounds(n))?;
 
             Ok(v.clone())
         }

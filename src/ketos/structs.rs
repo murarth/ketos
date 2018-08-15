@@ -147,7 +147,7 @@ impl<T: StructValue> StructDefinition for ForeignStructDef<T> {
     fn replace_fields(&self, scope: &Scope, def: &Rc<StructDef>,
             value: Value, fields: &mut [(Name, Value)]) -> Result<Value, Error> {
         let mut v = self.get_rc(value);
-        try!(Rc::make_mut(&mut v).replace_fields(scope, def, fields));
+        Rc::make_mut(&mut v).replace_fields(scope, def, fields)?;
         Ok(Value::Foreign(v))
     }
 }
@@ -191,7 +191,7 @@ impl StructDefinition for StructValueDef {
         let mut res = vec![Value::Unbound; self.fields.len()];
 
         for &mut (name, ref mut value) in fields {
-            let (idx, ty) = try!(self.get(name, def));
+            let (idx, ty) = self.get(name, def)?;
 
             if !value_is(scope, value, ty) {
                 return Err(ExecError::FieldTypeError{
@@ -224,7 +224,7 @@ impl StructDefinition for StructValueDef {
             value: &Value, field: Name) -> Result<Value, Error> {
         match *value {
             Value::Struct(ref v) => {
-                let (idx, _) = try!(self.get(field, def));
+                let (idx, _) = self.get(field, def)?;
                 Ok(v.fields[idx].clone())
             }
             ref v => Err(ExecError::expected("struct", v).into())
@@ -247,7 +247,7 @@ impl StructDefinition for StructValueDef {
             let values = struc_inner.fields_mut();
 
             for &mut (name, ref mut value) in fields {
-                let (idx, ty) = try!(self.get(name, def));
+                let (idx, ty) = self.get(name, def)?;
 
                 if !value_is(scope, value, ty) {
                     return Err(ExecError::FieldTypeError{

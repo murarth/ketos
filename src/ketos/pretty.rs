@@ -21,25 +21,25 @@ pub fn pretty_print<W: Write>(w: &mut W, names: &NameStore, v: &Value, indent: u
                 _ => indent + 1
             };
 
-            try!(w.write_char('('));
-            try!(pretty_print(w, names, first, indent));
+            w.write_char('(')?;
+            pretty_print(w, names, first, indent)?;
 
             if is_short_args(&li[1..]) {
                 for v in iter {
-                    try!(w.write_char(' '));
-                    try!(pretty_print(w, names, v, sub_indent));
+                    w.write_char(' ')?;
+                    pretty_print(w, names, v, sub_indent)?;
                 }
             } else {
                 while let Some(v) = iter.next() {
-                    try!(w.write_char('\n'));
-                    try!(write_indent(w, sub_indent));
-                    try!(pretty_print(w, names, v, sub_indent));
+                    w.write_char('\n')?;
+                    write_indent(w, sub_indent)?;
+                    pretty_print(w, names, v, sub_indent)?;
 
                     // Pair keywords with their arguments
                     if let Value::Keyword(_) = *v {
                         if let Some(v) = iter.next() {
-                            try!(w.write_char(' '));
-                            try!(pretty_print(w, names, v, sub_indent));
+                            w.write_char(' ')?;
+                            pretty_print(w, names, v, sub_indent)?;
                         }
                     }
                 }
@@ -63,7 +63,7 @@ fn is_short_args(args: &[Value]) -> bool {
 
 fn write_indent<W: Write>(w: &mut W, n: u32) -> fmt::Result {
     for _ in 0..n {
-        try!(w.write_char(' '));
+        w.write_char(' ')?;
     }
     Ok(())
 }

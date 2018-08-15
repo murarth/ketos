@@ -251,7 +251,7 @@ impl<'a> Compiler<'a> {
     }
 
     fn assemble_code(&mut self) -> Result<Box<[u8]>, CompileError> {
-        let total = try!(self.write_jumps());
+        let total = self.write_jumps()?;
         let mut res = Vec::with_capacity(total);
 
         for block in &mut self.blocks {
@@ -300,12 +300,12 @@ impl<'a> Compiler<'a> {
                     // If the block returns, its jump could not possibly have
                     // pointed anywhere but an empty, returning block.
                     b.jump = None;
-                    try!(b.push_instruction(Instruction::Return));
+                    b.push_instruction(Instruction::Return)?;
                 }
             }
 
             if !skip_block {
-                try!(b.flush());
+                b.flush()?;
 
                 // Jump block numbers refer to initial ordering
                 offsets[i] = off as u32;
@@ -325,7 +325,7 @@ impl<'a> Compiler<'a> {
             if let Some((_, dest)) = block.jump {
                 let dest_off = offsets[dest as usize];
                 assert!(dest_off != !0, "jump to dead block {}", dest);
-                try!(block.write_jump(dest_off, short));
+                block.write_jump(dest_off, short)?;
             }
         }
 
@@ -333,9 +333,9 @@ impl<'a> Compiler<'a> {
     }
 
     fn compile(&mut self, value: &Value) -> Result<Code, Error> {
-        try!(self.compile_value(value));
+        self.compile_value(value)?;
 
-        let code = try!(self.assemble_code());
+        let code = self.assemble_code()?;
         let consts = replace(&mut self.consts, Vec::new());
 
         Ok(Code{
@@ -402,10 +402,10 @@ impl<'a> Compiler<'a> {
         for (i, (name, default)) in params.into_iter().enumerate() {
             if (i as u32) >= req_params {
                 if let Some(default) = default {
-                    try!(self.branch_if_unbound(i as u32, &default));
+                    self.branch_if_unbound(i as u32, &default)?;
                 } else {
-                    try!(self.push_instruction(
-                        Instruction::UnboundToUnit(i as u32)));
+                    self.push_instruction(
+                        Instruction::UnboundToUnit(i as u32))?;
                 }
             }
 
@@ -414,10 +414,10 @@ impl<'a> Compiler<'a> {
 
         for (i, (name, default)) in kw_params.into_iter().enumerate() {
             if let Some(default) = default {
-                try!(self.branch_if_unbound((n_params + i) as u32, &default));
+                self.branch_if_unbound((n_params + i) as u32, &default)?;
             } else {
-                try!(self.push_instruction(
-                    Instruction::UnboundToUnit((n_params + i) as u32)));
+                self.push_instruction(
+                    Instruction::UnboundToUnit((n_params + i) as u32))?;
             }
 
             self.stack[n_params + i].0 = name;
@@ -429,9 +429,9 @@ impl<'a> Compiler<'a> {
             self.stack[n - 1].0 = rest;
         }
 
-        try!(self.compile_value(value));
+        self.compile_value(value)?;
 
-        let code = try!(self.assemble_code());
+        let code = self.assemble_code()?;
         let consts = replace(&mut self.consts, Vec::new());
         let captures = replace(&mut self.captures, Vec::new());
 
@@ -452,23 +452,23 @@ impl<'a> Compiler<'a> {
     fn compile_value(&mut self, value: &Value) -> Result<(), Error> {
         let mut value = Borrowed(value);
 
-        match try!(self.eval_constant(&value)) {
+        match self.eval_constant(&value)? {
             ConstResult::IsConstant |
             ConstResult::IsRuntime => (),
             ConstResult::Partial(v) => value = Owned(v),
             ConstResult::Constant(v) => {
-                try!(self.load_quoted_value(Owned(v)));
+                self.load_quoted_value(Owned(v))?;
                 return Ok(());
             }
         }
 
         match *value {
             Value::Name(name) => {
-                let loaded = try!(self.load_local_name(name));
+                let loaded = self.load_local_name(name)?;
 
                 if !loaded {
                     let c = self.add_const(Owned(Value::Name(name)));
-                    try!(self.push_instruction(Instruction::GetDef(c)));
+                    self.push_instruction(Instruction::GetDef(c))?;
                 }
             }
             Value::List(ref li) => {
@@ -478,8 +478,8 @@ impl<'a> Compiler<'a> {
 
                 match *fn_v {
                     Value::Name(name) => {
-                        if try!(self.load_local_name(name)) {
-                            try!(self.push_instruction(Instruction::Push));
+                        if self.load_local_name(name)? {
+                            self.push_instruction(Instruction::Push)?;
                             pushed_fn = true;
                         } else if self.self_name == Some(name) {
                             () // This is handled later
@@ -488,8 +488,8 @@ impl<'a> Compiler<'a> {
                                 self.ctx.scope().name(), name));
 
                             self.macro_recursion += 1;
-                            let v = try!(self.expand_macro(name, &li[1..], &value));
-                            try!(self.compile_value(&v));
+                            let v = self.expand_macro(name, &li[1..], &value)?;
+                            self.compile_value(&v)?;
                             self.macro_recursion -= 1;
 
                             self.trace.pop();
@@ -497,7 +497,7 @@ impl<'a> Compiler<'a> {
                             return Ok(());
                         } else if is_system_operator(name) {
                             return self.compile_operator(name, &li[1..], &value);
-                        } else if try!(self.specialize_call(name, &li[1..])) {
+                        } else if self.specialize_call(name, &li[1..])? {
                             return Ok(());
                         }
 
@@ -505,8 +505,8 @@ impl<'a> Compiler<'a> {
                             self.ctx.scope().name(), name));
                     }
                     Value::List(_) => {
-                        try!(self.compile_value(fn_v));
-                        try!(self.push_instruction(Instruction::Push));
+                        self.compile_value(fn_v)?;
+                        self.push_instruction(Instruction::Push)?;
                         pushed_fn = true;
 
                         self.trace.push(
@@ -520,19 +520,19 @@ impl<'a> Compiler<'a> {
                 }
 
                 for v in &li[1..] {
-                    try!(self.compile_value(v));
-                    try!(self.push_instruction(Instruction::Push));
+                    self.compile_value(v)?;
+                    self.push_instruction(Instruction::Push)?;
                 }
 
                 let n_args = (li.len() - 1) as u32;
 
                 if pushed_fn {
-                    try!(self.push_instruction(Instruction::Call(n_args)));
+                    self.push_instruction(Instruction::Call(n_args))?;
                 } else {
                     if let Value::Name(name) = *fn_v {
                         if self.self_name == Some(name) {
-                            try!(self.push_instruction(
-                                Instruction::CallSelf(n_args)));
+                            self.push_instruction(
+                                Instruction::CallSelf(n_args))?;
                         } else {
                             match get_system_fn(name) {
                                 Some(sys_fn) => {
@@ -545,12 +545,12 @@ impl<'a> Compiler<'a> {
                                         }));
                                     }
 
-                                    try!(self.write_call_sys(name, sys_fn.arity, n_args));
+                                    self.write_call_sys(name, sys_fn.arity, n_args)?;
                                 }
                                 None => {
                                     let c = self.add_const(Owned(Value::Name(name)));
-                                    try!(self.push_instruction(
-                                        Instruction::CallConst(c, n_args)));
+                                    self.push_instruction(
+                                        Instruction::CallConst(c, n_args))?;
                                 }
                             }
                         }
@@ -564,8 +564,8 @@ impl<'a> Compiler<'a> {
                 return Err(From::from(CompileError::UnbalancedComma));
             }
             Value::Quasiquote(ref v, n) =>
-                try!(self.compile_quasiquote(v, n)),
-            _ => try!(self.load_const_value(&value))
+                self.compile_quasiquote(v, n)?,
+            _ => self.load_const_value(&value)?
         }
 
         Ok(())
@@ -657,7 +657,7 @@ impl<'a> Compiler<'a> {
             -> Result<ConstResult, Error> {
         self.trace.push(TraceItem::CallCode(
             self.ctx.scope().name(), name));
-        let v = try!(self.eval_constant_function_inner(name, args));
+        let v = self.eval_constant_function_inner(name, args)?;
         self.trace.pop();
         Ok(v)
     }
@@ -670,7 +670,7 @@ impl<'a> Compiler<'a> {
             standard_names::IF if n_args >= 2 && n_args <= 3 => {
                 let mut cond = Borrowed(&args[0]);
 
-                match try!(self.eval_constant(&cond)) {
+                match self.eval_constant(&cond)? {
                     ConstResult::IsRuntime | ConstResult::Partial(_) =>
                         return Ok(ConstResult::IsRuntime),
                     ConstResult::IsConstant => (),
@@ -688,7 +688,7 @@ impl<'a> Compiler<'a> {
                 };
 
                 if cond {
-                    match try!(self.eval_constant(&args[1])) {
+                    match self.eval_constant(&args[1])? {
                         ConstResult::IsConstant =>
                             Ok(ConstResult::Constant(args[1].clone())),
                         ConstResult::IsRuntime =>
@@ -698,7 +698,7 @@ impl<'a> Compiler<'a> {
                 } else if n_args == 2 {
                     Ok(ConstResult::Constant(().into()))
                 } else {
-                    match try!(self.eval_constant(&args[2])) {
+                    match self.eval_constant(&args[2])? {
                         ConstResult::IsConstant =>
                             Ok(ConstResult::Constant(args[2].clone())),
                         ConstResult::IsRuntime =>
@@ -727,7 +727,7 @@ impl<'a> Compiler<'a> {
 
     fn eval_constant_quasiquote(&mut self, value: &Value, depth: u32)
             -> Result<ConstResult, Error> {
-        let v = match try!(self.eval_constant_quasi_value(value, depth)) {
+        let v = match self.eval_constant_quasi_value(value, depth)? {
             ConstResult::IsConstant => value.clone(),
             ConstResult::Constant(v) => v,
             res => return Ok(res)
@@ -750,13 +750,13 @@ impl<'a> Compiler<'a> {
                 Err(From::from(CompileError::UnbalancedComma))
             }
             Value::Comma(ref v, n) if n == depth => {
-                match try!(self.eval_constant(v)) {
+                match self.eval_constant(v)? {
                     ConstResult::IsConstant => Ok(ConstResult::Constant((&**v).clone())),
                     res => Ok(res)
                 }
             }
             Value::Comma(ref v, n) => {
-                match try!(self.eval_constant_quasi_value(v, depth - n)) {
+                match self.eval_constant_quasi_value(v, depth - n)? {
                     ConstResult::Constant(v) =>
                         Ok(ConstResult::Constant(v.comma(n))),
                     res => Ok(res)
@@ -767,14 +767,14 @@ impl<'a> Compiler<'a> {
                 Err(From::from(CompileError::InvalidCommaAt))
             }
             Value::Quote(ref v, n) => {
-                match try!(self.eval_constant_quasi_value(v, depth)) {
+                match self.eval_constant_quasi_value(v, depth)? {
                     ConstResult::Constant(v) =>
                         Ok(ConstResult::Constant(v.quote(n))),
                     res => Ok(res)
                 }
             }
             Value::Quasiquote(ref v, n) => {
-                match try!(self.eval_constant_quasi_value(v, depth + n)) {
+                match self.eval_constant_quasi_value(v, depth + n)? {
                     ConstResult::Constant(v) =>
                         Ok(ConstResult::Constant(v.quasiquote(n))),
                     res => Ok(res)
@@ -796,7 +796,7 @@ impl<'a> Compiler<'a> {
                     return Err(From::from(CompileError::InvalidCommaAt));
                 }
                 Value::CommaAt(ref v, n) if n == depth => {
-                    let v = match try!(self.eval_constant(v)) {
+                    let v = match self.eval_constant(v)? {
                         ConstResult::IsConstant => (**v).clone(),
                         ConstResult::Constant(v) => v,
                         res => return Ok(res)
@@ -818,7 +818,7 @@ impl<'a> Compiler<'a> {
                     }
                 }
                 Value::CommaAt(ref v, n) => {
-                    match try!(self.eval_constant_quasi_value(v, depth - n)) {
+                    match self.eval_constant_quasi_value(v, depth - n)? {
                         ConstResult::IsConstant => {
                             if new_constant {
                                 values.push((**v).clone());
@@ -835,7 +835,7 @@ impl<'a> Compiler<'a> {
                     }
                 }
                 _ => {
-                    match try!(self.eval_constant_quasi_value(v, depth)) {
+                    match self.eval_constant_quasi_value(v, depth)? {
                         ConstResult::IsConstant => {
                             if new_constant {
                                 values.push(v.clone());
@@ -877,7 +877,7 @@ impl<'a> Compiler<'a> {
                 found: n_args,
             }))
         } else {
-            try!((op.callback)(self, args));
+            (op.callback)(self, args)?;
             self.trace.pop();
             Ok(())
         }
@@ -885,16 +885,16 @@ impl<'a> Compiler<'a> {
 
     /// Compiles the expression `Quasiquote(value, depth)`
     fn compile_quasiquote(&mut self, value: &Value, depth: u32) -> Result<(), Error> {
-        if try!(self.is_quasi_const(value, depth)) {
+        if self.is_quasi_const(value, depth)? {
             match depth {
-                1 => try!(self.load_quoted_value(Borrowed(value))),
-                _ => try!(self.load_quoted_value(Owned(
-                    value.clone().quasiquote(depth - 1))))
+                1 => self.load_quoted_value(Borrowed(value))?,
+                _ => self.load_quoted_value(Owned(
+                    value.clone().quasiquote(depth - 1)))?
             }
         } else {
-            try!(self.compile_quasi_value(value, depth));
+            self.compile_quasi_value(value, depth)?;
             if depth != 1 {
-                try!(self.push_instruction(Instruction::Quasiquote(depth - 1)));
+                self.push_instruction(Instruction::Quasiquote(depth - 1))?;
             }
         }
 
@@ -903,8 +903,8 @@ impl<'a> Compiler<'a> {
 
     /// Compiles a value found within a quasiquoted expression
     fn compile_quasi_value(&mut self, value: &Value, depth: u32) -> Result<(), Error> {
-        if try!(self.is_quasi_const(value, depth)) {
-            try!(self.load_quoted_value(Borrowed(value)));
+        if self.is_quasi_const(value, depth)? {
+            self.load_quoted_value(Borrowed(value))?;
             return Ok(());
         }
 
@@ -916,8 +916,8 @@ impl<'a> Compiler<'a> {
                 Err(From::from(CompileError::UnbalancedComma))
             }
             Value::Comma(ref v, n) => {
-                try!(self.compile_quasi_value(v, depth - n));
-                try!(self.push_instruction(Instruction::Comma(n)));
+                self.compile_quasi_value(v, depth - n)?;
+                self.push_instruction(Instruction::Comma(n))?;
                 Ok(())
             }
             Value::CommaAt(_, n) if n == depth => {
@@ -927,30 +927,30 @@ impl<'a> Compiler<'a> {
             Value::List(ref li) =>
                 self.compile_quasiquote_list(li, depth),
             Value::Quote(ref v, n) => {
-                try!(self.compile_quasi_value(v, depth));
-                try!(self.push_instruction(Instruction::Quote(n)));
+                self.compile_quasi_value(v, depth)?;
+                self.push_instruction(Instruction::Quote(n))?;
                 Ok(())
             }
             Value::Quasiquote(ref v, n) => {
-                if try!(self.is_quasi_const(v, n)) {
+                if self.is_quasi_const(v, n)? {
                     match n {
-                        1 => try!(self.load_const_value(v)),
+                        1 => self.load_const_value(v)?,
                         _ => {
                             let c = self.add_const(Owned(
                                 Value::Quasiquote(v.clone(), n - 1)));
-                            try!(self.push_instruction(Instruction::Const(c)));
+                            self.push_instruction(Instruction::Const(c))?;
                         }
                     }
 
                     Ok(())
                 } else {
-                    try!(self.compile_quasi_value(v, depth + n));
+                    self.compile_quasi_value(v, depth + n)?;
                     if depth == 0 {
                         if n != 1 {
-                            try!(self.push_instruction(Instruction::Quasiquote(n - 1)));
+                            self.push_instruction(Instruction::Quasiquote(n - 1))?;
                         }
                     } else {
-                        try!(self.push_instruction(Instruction::Quasiquote(n)));
+                        self.push_instruction(Instruction::Quasiquote(n))?;
                     }
                     Ok(())
                 }
@@ -966,20 +966,20 @@ impl<'a> Compiler<'a> {
 
         for v in li {
             if n_items == 0 && n_lists == 1 {
-                try!(self.push_instruction(Instruction::Push));
+                self.push_instruction(Instruction::Push)?;
             }
 
             match *v {
                 Value::CommaAt(ref v, n) if n == depth => {
                     if n_items != 0 {
-                        try!(self.push_instruction(Instruction::List(n_items)));
-                        try!(self.push_instruction(Instruction::Push));
+                        self.push_instruction(Instruction::List(n_items))?;
+                        self.push_instruction(Instruction::Push)?;
                         n_lists += 1;
                         n_items = 0;
                     }
-                    try!(self.compile_value(v));
+                    self.compile_value(v)?;
                     if n_lists != 0 {
-                        try!(self.push_instruction(Instruction::Push));
+                        self.push_instruction(Instruction::Push)?;
                     }
                     n_lists += 1;
                 }
@@ -989,31 +989,31 @@ impl<'a> Compiler<'a> {
                 }
                 Value::CommaAt(ref v, n) => {
                     n_items += 1;
-                    try!(self.compile_quasi_value(v, depth - n));
-                    try!(self.push_instruction(
-                        Instruction::CommaAt(depth - n)));
-                    try!(self.push_instruction(Instruction::Push));
+                    self.compile_quasi_value(v, depth - n)?;
+                    self.push_instruction(
+                        Instruction::CommaAt(depth - n))?;
+                    self.push_instruction(Instruction::Push)?;
                 }
                 _ => {
                     n_items += 1;
-                    try!(self.compile_quasi_value(v, depth));
-                    try!(self.push_instruction(Instruction::Push));
+                    self.compile_quasi_value(v, depth)?;
+                    self.push_instruction(Instruction::Push)?;
                 }
             }
         }
 
         if n_items != 0 {
-            try!(self.push_instruction(Instruction::List(n_items)));
+            self.push_instruction(Instruction::List(n_items))?;
 
             if n_lists != 0 {
-                try!(self.push_instruction(Instruction::Push));
+                self.push_instruction(Instruction::Push)?;
                 n_lists += 1;
             }
         }
 
         if n_lists > 1 {
-            try!(self.push_instruction(Instruction::CallSysArgs(
-                standard_names::CONCAT.get(), n_lists)));
+            self.push_instruction(Instruction::CallSysArgs(
+                standard_names::CONCAT.get(), n_lists))?;
         }
 
         Ok(())
@@ -1025,7 +1025,7 @@ impl<'a> Compiler<'a> {
         match *value {
             Value::List(ref li) => {
                 for v in li {
-                    if !try!(self.is_quasi_const(v, depth)) {
+                    if !self.is_quasi_const(v, depth)? {
                         return Ok(false);
                     }
                 }
@@ -1059,17 +1059,17 @@ impl<'a> Compiler<'a> {
                 let rhs = &args[1];
 
                 if is_one(lhs) {
-                    try!(self.compile_value(rhs));
-                    try!(self.push_instruction(Instruction::Inc));
+                    self.compile_value(rhs)?;
+                    self.push_instruction(Instruction::Inc)?;
                 } else if is_one(rhs) {
-                    try!(self.compile_value(lhs));
-                    try!(self.push_instruction(Instruction::Inc));
+                    self.compile_value(lhs)?;
+                    self.push_instruction(Instruction::Inc)?;
                 } else if is_negative_one(lhs) {
-                    try!(self.compile_value(rhs));
-                    try!(self.push_instruction(Instruction::Dec));
+                    self.compile_value(rhs)?;
+                    self.push_instruction(Instruction::Dec)?;
                 } else if is_negative_one(rhs) {
-                    try!(self.compile_value(lhs));
-                    try!(self.push_instruction(Instruction::Dec));
+                    self.compile_value(lhs)?;
+                    self.push_instruction(Instruction::Dec)?;
                 } else {
                     return Ok(false);
                 }
@@ -1079,121 +1079,121 @@ impl<'a> Compiler<'a> {
                 let rhs = &args[1];
 
                 if is_one(rhs) {
-                    try!(self.compile_value(lhs));
-                    try!(self.push_instruction(Instruction::Dec));
+                    self.compile_value(lhs)?;
+                    self.push_instruction(Instruction::Dec)?;
                 } else if is_negative_one(rhs) {
-                    try!(self.compile_value(lhs));
-                    try!(self.push_instruction(Instruction::Inc));
+                    self.compile_value(lhs)?;
+                    self.push_instruction(Instruction::Inc)?;
                 } else {
                     return Ok(false);
                 }
             }
             standard_names::NULL if args.len() == 1 => {
-                try!(self.compile_value(&args[0]));
-                try!(self.push_instruction(Instruction::Null));
+                self.compile_value(&args[0])?;
+                self.push_instruction(Instruction::Null)?;
             }
             standard_names::EQ if args.len() == 2 => {
                 let lhs = &args[0];
                 let rhs = &args[1];
 
-                let lhs_const = match try!(self.eval_constant(lhs)) {
+                let lhs_const = match self.eval_constant(lhs)? {
                     ConstResult::IsConstant => Some(Borrowed(lhs)),
                     ConstResult::Constant(v) => Some(Owned(v)),
                     _ => None
                 };
 
-                let rhs_const = match try!(self.eval_constant(rhs)) {
+                let rhs_const = match self.eval_constant(rhs)? {
                     ConstResult::IsConstant => Some(Borrowed(rhs)),
                     ConstResult::Constant(v) => Some(Owned(v)),
                     _ => None
                 };
 
                 if let Some(rhs) = rhs_const {
-                    try!(self.compile_value(lhs));
+                    self.compile_value(lhs)?;
                     let c = self.add_const(rhs);
-                    try!(self.push_instruction(Instruction::EqConst(c)));
+                    self.push_instruction(Instruction::EqConst(c))?;
                 } else if let Some(lhs) = lhs_const {
                     let c = self.add_const(lhs);
-                    try!(self.compile_value(rhs));
-                    try!(self.push_instruction(Instruction::EqConst(c)));
+                    self.compile_value(rhs)?;
+                    self.push_instruction(Instruction::EqConst(c))?;
                 } else {
-                    try!(self.compile_value(lhs));
-                    try!(self.push_instruction(Instruction::Push));
-                    try!(self.compile_value(rhs));
-                    try!(self.push_instruction(Instruction::Eq));
+                    self.compile_value(lhs)?;
+                    self.push_instruction(Instruction::Push)?;
+                    self.compile_value(rhs)?;
+                    self.push_instruction(Instruction::Eq)?;
                 }
             }
             standard_names::NOT_EQ if args.len() == 2 => {
                 let lhs = &args[0];
                 let rhs = &args[1];
 
-                let lhs_const = match try!(self.eval_constant(lhs)) {
+                let lhs_const = match self.eval_constant(lhs)? {
                     ConstResult::IsConstant => Some(Borrowed(lhs)),
                     ConstResult::Constant(v) => Some(Owned(v)),
                     _ => None
                 };
 
-                let rhs_const = match try!(self.eval_constant(rhs)) {
+                let rhs_const = match self.eval_constant(rhs)? {
                     ConstResult::IsConstant => Some(Borrowed(rhs)),
                     ConstResult::Constant(v) => Some(Owned(v)),
                     _ => None
                 };
 
                 if let Some(rhs) = rhs_const {
-                    try!(self.compile_value(lhs));
+                    self.compile_value(lhs)?;
                     let c = self.add_const(rhs);
-                    try!(self.push_instruction(Instruction::NotEqConst(c)));
+                    self.push_instruction(Instruction::NotEqConst(c))?;
                 } else if let Some(lhs) = lhs_const {
                     let c = self.add_const(lhs);
-                    try!(self.compile_value(rhs));
-                    try!(self.push_instruction(Instruction::NotEqConst(c)));
+                    self.compile_value(rhs)?;
+                    self.push_instruction(Instruction::NotEqConst(c))?;
                 } else {
-                    try!(self.compile_value(lhs));
-                    try!(self.push_instruction(Instruction::Push));
-                    try!(self.compile_value(rhs));
-                    try!(self.push_instruction(Instruction::NotEq));
+                    self.compile_value(lhs)?;
+                    self.push_instruction(Instruction::Push)?;
+                    self.compile_value(rhs)?;
+                    self.push_instruction(Instruction::NotEq)?;
                 }
             }
             standard_names::NOT if args.len() == 1 => {
-                try!(self.compile_value(&args[0]));
-                try!(self.push_instruction(Instruction::Not));
+                self.compile_value(&args[0])?;
+                self.push_instruction(Instruction::Not)?;
             }
             standard_names::APPEND if args.len() == 2 => {
-                try!(self.compile_value(&args[0]));
-                try!(self.push_instruction(Instruction::Push));
-                try!(self.compile_value(&args[1]));
-                try!(self.push_instruction(Instruction::Append));
+                self.compile_value(&args[0])?;
+                self.push_instruction(Instruction::Push)?;
+                self.compile_value(&args[1])?;
+                self.push_instruction(Instruction::Append)?;
             }
             standard_names::FIRST if args.len() == 1 => {
-                try!(self.compile_value(&args[0]));
-                try!(self.push_instruction(Instruction::First));
+                self.compile_value(&args[0])?;
+                self.push_instruction(Instruction::First)?;
             }
             standard_names::TAIL if args.len() == 1 => {
-                try!(self.compile_value(&args[0]));
-                try!(self.push_instruction(Instruction::Tail));
+                self.compile_value(&args[0])?;
+                self.push_instruction(Instruction::Tail)?;
             }
             standard_names::INIT if args.len() == 1 => {
-                try!(self.compile_value(&args[0]));
-                try!(self.push_instruction(Instruction::Init));
+                self.compile_value(&args[0])?;
+                self.push_instruction(Instruction::Init)?;
             }
             standard_names::LAST if args.len() == 1 => {
-                try!(self.compile_value(&args[0]));
-                try!(self.push_instruction(Instruction::Last));
+                self.compile_value(&args[0])?;
+                self.push_instruction(Instruction::Last)?;
             }
             standard_names::LIST => {
                 if args.is_empty() {
-                    try!(self.push_instruction(Instruction::Unit));
+                    self.push_instruction(Instruction::Unit)?;
                 } else {
                     for arg in args {
-                        try!(self.compile_value(arg));
-                        try!(self.push_instruction(Instruction::Push));
+                        self.compile_value(arg)?;
+                        self.push_instruction(Instruction::Push)?;
                     }
-                    try!(self.push_instruction(
-                        Instruction::List(args.len() as u32)));
+                    self.push_instruction(
+                        Instruction::List(args.len() as u32))?;
                 }
             }
             standard_names::ID if args.len() == 1 => {
-                try!(self.compile_value(&args[0]));
+                self.compile_value(&args[0])?;
             }
             _ => return Ok(false)
         }
@@ -1219,8 +1219,8 @@ impl<'a> Compiler<'a> {
         self.current_block().jump_to(JumpInstruction::JumpIfBound(pos), final_block);
 
         self.use_next(bind_block);
-        try!(self.compile_value(value));
-        try!(self.push_instruction(Instruction::Store(pos)));
+        self.compile_value(value)?;
+        self.push_instruction(Instruction::Store(pos))?;
         self.use_next(final_block);
         Ok(())
     }
@@ -1230,9 +1230,9 @@ impl<'a> Compiler<'a> {
             self.push_instruction(Instruction::Const(n))
         } else {
             for &name in captures {
-                let _loaded = try!(self.load_local_name(name));
+                let _loaded = self.load_local_name(name)?;
                 assert!(_loaded);
-                try!(self.push_instruction(Instruction::Push));
+                self.push_instruction(Instruction::Push)?;
             }
 
             self.push_instruction(
@@ -1244,7 +1244,7 @@ impl<'a> Compiler<'a> {
     /// Returns `Ok(true)` if a named value was found and loaded.
     fn load_local_name(&mut self, name: Name) -> Result<bool, CompileError> {
         if let Some(&(_, pos)) = self.stack.iter().rev().find(|&&(n, _)| n == name) {
-            try!(self.push_instruction(Instruction::Load(pos)));
+            self.push_instruction(Instruction::Load(pos))?;
             return Ok(true);
         }
 
@@ -1255,7 +1255,7 @@ impl<'a> Compiler<'a> {
 
         match self.closure_value(name) {
             Some(n) => {
-                try!(self.push_instruction(Instruction::LoadC(n)));
+                self.push_instruction(Instruction::LoadC(n))?;
                 Ok(true)
             }
             None => Ok(false)
@@ -1437,7 +1437,7 @@ fn fold_anticommutative<F: FoldOp>(compiler: &mut Compiler,
 
     let first = args.next().unwrap();
 
-    let first_const = match try!(compiler.eval_constant(first)) {
+    let first_const = match compiler.eval_constant(first)? {
         ConstResult::IsRuntime => {
             new_args.push(first.clone());
             false
@@ -1447,12 +1447,12 @@ fn fold_anticommutative<F: FoldOp>(compiler: &mut Compiler,
             false
         }
         ConstResult::IsConstant => {
-            try!(F::type_check(first));
+            F::type_check(first)?;
             value = Some(first.clone());
             true
         }
         ConstResult::Constant(v) => {
-            try!(F::type_check(&v));
+            F::type_check(&v)?;
             value = Some(v);
             true
         }
@@ -1461,7 +1461,7 @@ fn fold_anticommutative<F: FoldOp>(compiler: &mut Compiler,
     for v in args {
         let mut rhs = Borrowed(v);
 
-        match try!(compiler.eval_constant(v)) {
+        match compiler.eval_constant(v)? {
             ConstResult::IsRuntime => {
                 new_args.push(v.clone());
                 continue;
@@ -1471,10 +1471,10 @@ fn fold_anticommutative<F: FoldOp>(compiler: &mut Compiler,
                 continue;
             }
             ConstResult::IsConstant => {
-                try!(F::type_check(v));
+                F::type_check(v)?;
             }
             ConstResult::Constant(v) => {
-                try!(F::type_check(&v));
+                F::type_check(&v)?;
                 rhs = Owned(v);
             }
         }
@@ -1482,9 +1482,9 @@ fn fold_anticommutative<F: FoldOp>(compiler: &mut Compiler,
         match value {
             Some(lhs) => {
                 value = if first_const {
-                    Some(try!(F::fold(&compiler.ctx, lhs, &rhs)))
+                    Some(F::fold(&compiler.ctx, lhs, &rhs)?)
                 } else {
-                    Some(try!(F::fold_inv(&compiler.ctx, lhs, &rhs)))
+                    Some(F::fold_inv(&compiler.ctx, lhs, &rhs)?)
                 };
             }
             None => value = Some(rhs.into_owned())
@@ -1495,7 +1495,7 @@ fn fold_anticommutative<F: FoldOp>(compiler: &mut Compiler,
         None => Ok(ConstResult::IsRuntime),
         Some(v) => {
             if new_args.is_empty() {
-                Ok(ConstResult::Constant(try!(F::finish(v))))
+                Ok(ConstResult::Constant(F::finish(v)?))
             } else {
                 if F::is_identity(&v) {
                     if first_const {
@@ -1528,7 +1528,7 @@ fn fold_commutative<F: FoldOp>(compiler: &mut Compiler, name: Name, args: &[Valu
     for v in args {
         let mut rhs = Borrowed(v);
 
-        match try!(compiler.eval_constant(v)) {
+        match compiler.eval_constant(v)? {
             ConstResult::IsRuntime => {
                 new_args.push(v.clone());
                 continue;
@@ -1538,16 +1538,16 @@ fn fold_commutative<F: FoldOp>(compiler: &mut Compiler, name: Name, args: &[Valu
                 continue;
             }
             ConstResult::IsConstant => {
-                try!(F::type_check(v));
+                F::type_check(v)?;
             }
             ConstResult::Constant(v) => {
-                try!(F::type_check(&v));
+                F::type_check(&v)?;
                 rhs = Owned(v);
             }
         }
 
         match value {
-            Some(lhs) => value = Some(try!(F::fold(&compiler.ctx, lhs, &rhs))),
+            Some(lhs) => value = Some(F::fold(&compiler.ctx, lhs, &rhs)?),
             None => value = Some(rhs.into_owned())
         }
     }
@@ -1556,7 +1556,7 @@ fn fold_commutative<F: FoldOp>(compiler: &mut Compiler, name: Name, args: &[Valu
         None => Ok(ConstResult::IsRuntime),
         Some(v) => {
             if new_args.is_empty() {
-                Ok(ConstResult::Constant(try!(F::finish(v))))
+                Ok(ConstResult::Constant(F::finish(v)?))
             } else {
                 new_args.insert(0, Value::Name(name));
                 if !F::is_identity(&v) {
@@ -1588,7 +1588,7 @@ fn eval_system_fn(compiler: &mut Compiler, name: Name, args: &[Value])
     let mut values = Vec::new();
 
     for v in args {
-        match try!(compiler.eval_constant(v)) {
+        match compiler.eval_constant(v)? {
             ConstResult::IsRuntime |
             ConstResult::Partial(_) => return Ok(ConstResult::IsRuntime),
             ConstResult::IsConstant => {
@@ -1600,7 +1600,7 @@ fn eval_system_fn(compiler: &mut Compiler, name: Name, args: &[Value])
         }
     }
 
-    let v = try!((sys_fn.callback)(&compiler.ctx, &mut values));
+    let v = (sys_fn.callback)(&compiler.ctx, &mut values)?;
 
     Ok(ConstResult::Constant(v))
 }
@@ -1703,8 +1703,8 @@ fn op_apply(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 
         if compiler.self_name() == Some(name) {
             apply_self = true;
-        } else if try!(compiler.load_local_name(name)) {
-            try!(compiler.push_instruction(Instruction::Push));
+        } else if compiler.load_local_name(name)? {
+            compiler.push_instruction(Instruction::Push)?;
         } else {
             let c = compiler.add_const(Owned(Value::Name(name)));
             apply_const = Some(c);
@@ -1712,18 +1712,18 @@ fn op_apply(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     }
 
     for arg in iter {
-        try!(compiler.compile_value(arg));
-        try!(compiler.push_instruction(Instruction::Push));
+        compiler.compile_value(arg)?;
+        compiler.push_instruction(Instruction::Push)?;
     }
 
-    try!(compiler.compile_value(&args[last]));
+    compiler.compile_value(&args[last])?;
 
     if let Some(c) = apply_const {
-        try!(compiler.push_instruction(Instruction::ApplyConst(c, n_args)));
+        compiler.push_instruction(Instruction::ApplyConst(c, n_args))?;
     } else if apply_self {
-        try!(compiler.push_instruction(Instruction::ApplySelf(n_args)));
+        compiler.push_instruction(Instruction::ApplySelf(n_args))?;
     } else {
-        try!(compiler.push_instruction(Instruction::Apply(n_args)));
+        compiler.push_instruction(Instruction::Apply(n_args))?;
     }
 
     Ok(())
@@ -1733,7 +1733,7 @@ fn op_apply(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 /// expression.
 fn op_do(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     for arg in args {
-        try!(compiler.compile_value(arg));
+        compiler.compile_value(arg)?;
     }
     Ok(())
 }
@@ -1755,11 +1755,11 @@ fn op_let(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
             for v in li {
                 match *v {
                     Value::List(ref li) if li.len() == 2 => {
-                        let name = try!(get_name(compiler, &li[0]));
+                        let name = get_name(compiler, &li[0])?;
 
-                        try!(compiler.compile_value(&li[1]));
+                        compiler.compile_value(&li[1])?;
                         compiler.push_var(name);
-                        try!(compiler.push_instruction(Instruction::Push));
+                        compiler.push_instruction(Instruction::Push)?;
                     }
                     _ => {
                         compiler.set_trace_expr(v);
@@ -1775,14 +1775,14 @@ fn op_let(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
         }
     }
 
-    try!(compiler.compile_value(&args[1]));
+    compiler.compile_value(&args[1])?;
 
     // Create a new block containing the Skip.
     // This helps to optimize out unnecessary instructions in the assembly phase.
     let next_block = compiler.new_block();
     compiler.use_next(next_block);
 
-    try!(compiler.push_instruction(Instruction::Skip(n_vars)));
+    compiler.push_instruction(Instruction::Skip(n_vars))?;
     compiler.pop_vars(n_vars);
 
     Ok(())
@@ -1802,42 +1802,42 @@ fn op_define(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
             compiler.trace.pop();
             compiler.trace.push(TraceItem::Define(compiler.ctx.scope().name(), name));
 
-            let (doc, body) = try!(extract_doc_string(args));
-            try!(test_define_name(compiler.scope(), name));
-            try!(compiler.compile_value(&body));
+            let (doc, body) = extract_doc_string(args)?;
+            test_define_name(compiler.scope(), name)?;
+            compiler.compile_value(&body)?;
 
             if let Some(doc) = doc {
                 compiler.scope().add_doc_string(name, doc.to_owned());
             }
 
             let c = compiler.add_const(Owned(Value::Name(name)));
-            try!(compiler.push_instruction(Instruction::SetDef(c)));
+            compiler.push_instruction(Instruction::SetDef(c))?;
             Ok(())
         }
         Value::List(ref li) => {
-            let name = try!(get_name(compiler, &li[0]));
+            let name = get_name(compiler, &li[0])?;
 
             // Replace operator item with more specific item
             compiler.trace.pop();
             compiler.trace.push(TraceItem::Define(compiler.ctx.scope().name(), name));
 
-            try!(test_define_name(compiler.scope(), name));
-            let (doc, body) = try!(extract_doc_string(args));
+            test_define_name(compiler.scope(), name)?;
+            let (doc, body) = extract_doc_string(args)?;
 
             let c = compiler.add_const(Owned(Value::Name(name)));
 
-            let (lambda, captures) = try!(make_lambda(
-                compiler, Some(name), &li[1..], body, doc));
+            let (lambda, captures) = make_lambda(
+                compiler, Some(name), &li[1..], body, doc)?;
 
             if compiler.is_top_level() && captures.is_empty() {
                 // Add top-level, non-capturing lambdas to global scope immediately.
                 compiler.scope().add_value(name, Value::Lambda(lambda));
                 let c = compiler.add_const(Owned(Value::Name(name)));
-                try!(compiler.push_instruction(Instruction::Const(c)));
+                compiler.push_instruction(Instruction::Const(c))?;
             } else {
                 let code_c = compiler.add_const(Owned(Value::Lambda(lambda)));
-                try!(compiler.load_lambda(code_c, &captures));
-                try!(compiler.push_instruction(Instruction::SetDef(c)));
+                compiler.load_lambda(code_c, &captures)?;
+                compiler.push_instruction(Instruction::SetDef(c))?;
             }
 
             Ok(())
@@ -1853,7 +1853,7 @@ fn op_define(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 fn op_macro(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     let (name, params) = match args[0] {
         Value::List(ref li) => {
-            let name = try!(get_name(compiler, &li[0]));
+            let name = get_name(compiler, &li[0])?;
             (name, &li[1..])
         }
         ref v => {
@@ -1867,12 +1867,12 @@ fn op_macro(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     compiler.trace.push(TraceItem::DefineMacro(
         compiler.ctx.scope().name(), name));
 
-    let (doc, body) = try!(extract_doc_string(args));
+    let (doc, body) = extract_doc_string(args)?;
 
-    try!(test_define_name(compiler.scope(), name));
+    test_define_name(compiler.scope(), name)?;
 
-    let (lambda, captures) = try!(make_lambda(compiler,
-        Some(name), params, &body, doc));
+    let (lambda, captures) = make_lambda(compiler,
+        Some(name), params, &body, doc)?;
 
     if !captures.is_empty() {
         return Err(From::from(CompileError::SyntaxError(
@@ -1882,7 +1882,7 @@ fn op_macro(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     compiler.scope().add_macro(name, lambda);
 
     let c = compiler.add_const(Owned(Value::Name(name)));
-    try!(compiler.push_instruction(Instruction::Const(c)));
+    compiler.push_instruction(Instruction::Const(c))?;
     Ok(())
 }
 
@@ -1893,16 +1893,16 @@ fn op_macro(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 ///              (num integer)))
 /// ```
 fn op_struct(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
-    let name = try!(get_name(compiler, &args[0]));
+    let name = get_name(compiler, &args[0])?;
 
     // Replace operator item with more specific item
     compiler.trace.pop();
     compiler.trace.push(TraceItem::DefineStruct(
         compiler.ctx.scope().name(), name));
 
-    let (doc, body) = try!(extract_doc_string(args));
+    let (doc, body) = extract_doc_string(args)?;
 
-    try!(test_define_name(compiler.scope(), name));
+    test_define_name(compiler.scope(), name)?;
     let mut fields = NameMap::new();
 
     match *body {
@@ -1911,8 +1911,8 @@ fn op_struct(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
             for v in li {
                 match *v {
                     Value::List(ref li) if li.len() == 2 => {
-                        let fname = try!(get_name(compiler, &li[0]));
-                        let fty = try!(get_name(compiler, &li[1]));
+                        let fname = get_name(compiler, &li[0])?;
+                        let fty = get_name(compiler, &li[1])?;
 
                         fields.insert(fname, fty);
                     }
@@ -1939,8 +1939,8 @@ fn op_struct(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 
     let name_c = compiler.add_const(Owned(Value::Name(name)));
     let c = compiler.add_const(Owned(def));
-    try!(compiler.push_instruction(Instruction::Const(c)));
-    try!(compiler.push_instruction(Instruction::SetDef(name_c)));
+    compiler.push_instruction(Instruction::Const(c))?;
+    compiler.push_instruction(Instruction::SetDef(name_c))?;
     Ok(())
 }
 
@@ -1957,17 +1957,17 @@ fn op_if(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     let else_block = compiler.new_block();
     let final_block = compiler.new_block();
 
-    try!(compiler.compile_value(&args[0]));
+    compiler.compile_value(&args[0])?;
     compiler.current_block().jump_to(JumpInstruction::JumpIfNot, else_block);
 
     compiler.use_next(then_block);
-    try!(compiler.compile_value(&args[1]));
+    compiler.compile_value(&args[1])?;
     compiler.current_block().jump_to(JumpInstruction::Jump, final_block);
 
     compiler.use_next(else_block);
     match args.get(2) {
-        Some(value) => try!(compiler.compile_value(value)),
-        None => try!(compiler.push_instruction(Instruction::Unit))
+        Some(value) => compiler.compile_value(value)?,
+        None => compiler.push_instruction(Instruction::Unit)?
     }
 
     compiler.use_next(final_block);
@@ -1982,20 +1982,20 @@ fn op_and(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     let last_block = compiler.new_block();
 
     for arg in init {
-        try!(compiler.compile_value(arg));
+        compiler.compile_value(arg)?;
 
         // The `and` operator expects a boolean value in the value register
         // after this jump instruction is run. Therefore, we must prevent
         // the compiler from merging it with a previous instruction,
         // which might result in a different value, e.g. () for JumpIfNotNull.
-        try!(compiler.flush_instructions());
+        compiler.flush_instructions()?;
         compiler.current_block().jump_to(JumpInstruction::JumpIfNot, last_block);
 
         let block = compiler.new_block();
         compiler.use_next(block);
     }
 
-    try!(compiler.compile_value(last));
+    compiler.compile_value(last)?;
     compiler.use_next(last_block);
     Ok(())
 }
@@ -2008,20 +2008,20 @@ fn op_or(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     let last_block = compiler.new_block();
 
     for arg in init {
-        try!(compiler.compile_value(arg));
+        compiler.compile_value(arg)?;
 
         // The `or` operator expects a boolean value in the value register
         // after this jump instruction is run. Therefore, we must prevent
         // the compiler from merging it with a previous instruction,
         // which might result in a different value, e.g. () for JumpIfNull.
-        try!(compiler.flush_instructions());
+        compiler.flush_instructions()?;
         compiler.current_block().jump_to(JumpInstruction::JumpIf, last_block);
 
         let block = compiler.new_block();
         compiler.use_next(block);
     }
 
-    try!(compiler.compile_value(last));
+    compiler.compile_value(last)?;
     compiler.use_next(last_block);
     Ok(())
 }
@@ -2047,7 +2047,7 @@ fn op_case(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     let mut code_blocks = Vec::with_capacity(args.len());
     let mut else_case = false;
 
-    try!(compiler.compile_value(&args[0]));
+    compiler.compile_value(&args[0])?;
 
     for case in &args[1..] {
         if else_case {
@@ -2102,7 +2102,7 @@ fn op_case(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 
         let prev_block = compiler.cur_block as u32;
         compiler.use_block(code_begin);
-        try!(compiler.compile_value(code));
+        compiler.compile_value(code)?;
         compiler.current_block().jump_to(JumpInstruction::Jump, final_block);
         let code_end = compiler.cur_block as u32;
         code_blocks.push((code_begin, code_end));
@@ -2113,7 +2113,7 @@ fn op_case(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     }
 
     if !else_case {
-        try!(compiler.push_instruction(Instruction::Unit));
+        compiler.push_instruction(Instruction::Unit)?;
         compiler.current_block().jump_to(JumpInstruction::Jump, final_block);
     }
 
@@ -2170,13 +2170,13 @@ fn op_cond(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
             else_case = true;
             compiler.current_block().jump_to(JumpInstruction::Jump, code_begin);
         } else {
-            try!(compiler.compile_value(cond));
+            compiler.compile_value(cond)?;
             compiler.current_block().jump_to(JumpInstruction::JumpIf, code_begin);
         }
 
         let prev_block = compiler.cur_block as u32;
         compiler.use_block(code_begin);
-        try!(compiler.compile_value(code));
+        compiler.compile_value(code)?;
         compiler.current_block().jump_to(JumpInstruction::Jump, final_block);
         let code_end = compiler.cur_block as u32;
         code_blocks.push((code_begin, code_end));
@@ -2187,7 +2187,7 @@ fn op_cond(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     }
 
     if !else_case {
-        try!(compiler.push_instruction(Instruction::Unit));
+        compiler.push_instruction(Instruction::Unit)?;
         compiler.current_block().jump_to(JumpInstruction::Jump, final_block);
     }
 
@@ -2212,7 +2212,7 @@ fn op_lambda(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     compiler.trace.pop();
     compiler.trace.push(TraceItem::DefineLambda(compiler.ctx.scope().name()));
 
-    let (doc, body) = try!(extract_doc_string(args));
+    let (doc, body) = extract_doc_string(args)?;
 
     let li = match args[0] {
         Value::Unit => &[][..],
@@ -2223,11 +2223,11 @@ fn op_lambda(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
         }
     };
 
-    let (lambda, captures) = try!(make_lambda(
-        compiler, None, li, body, doc));
+    let (lambda, captures) = make_lambda(
+        compiler, None, li, body, doc)?;
 
     let c = compiler.add_const(Owned(Value::Lambda(lambda)));
-    try!(compiler.load_lambda(c, &captures));
+    compiler.load_lambda(c, &captures)?;
     Ok(())
 }
 
@@ -2254,12 +2254,12 @@ fn op_export(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     let mut names = NameSet::new();
 
     for v in li {
-        names.insert(try!(get_name(compiler, v)));
+        names.insert(get_name(compiler, v)?);
     }
 
     compiler.scope().set_exports(names.into_slice());
 
-    try!(compiler.push_instruction(Instruction::Unit));
+    compiler.push_instruction(Instruction::Unit)?;
     Ok(())
 }
 
@@ -2269,7 +2269,7 @@ fn op_export(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 /// (use foo (alpha beta gamma))
 /// ```
 fn op_use(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
-    let mod_name = try!(get_name(compiler, &args[0]));
+    let mod_name = get_name(compiler, &args[0])?;
 
     // Replace operator item with more specific item
     compiler.trace.pop();
@@ -2277,8 +2277,8 @@ fn op_use(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 
     let ctx = compiler.ctx.clone();
     let mods = ctx.scope().modules();
-    let m = try!(mods.load_module(mod_name, &ctx)
-        .map_err(|e| { compiler.extend_global_trace(); e }));
+    let m = mods.load_module(mod_name, &ctx)
+        .map_err(|e| { compiler.extend_global_trace(); e })?;
 
     let mut imp_set = ImportSet::new(mod_name);
 
@@ -2289,8 +2289,8 @@ fn op_use(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
         }
         Value::Unit => (),
         Value::List(ref li) => {
-            try!(import_names(mod_name, &mut imp_set,
-                compiler.scope(), &m.scope, li));
+            import_names(mod_name, &mut imp_set,
+                compiler.scope(), &m.scope, li)?;
         }
         ref v => {
             compiler.set_trace_expr(v);
@@ -2301,7 +2301,7 @@ fn op_use(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 
     compiler.scope().add_imports(imp_set);
 
-    try!(compiler.push_instruction(Instruction::Unit));
+    compiler.push_instruction(Instruction::Unit)?;
     Ok(())
 }
 
@@ -2309,7 +2309,7 @@ fn extract_doc_string(args: &[Value]) -> Result<(Option<&str>, &Value), Error> {
     if args.len() == 2 {
         Ok((None, &args[1]))
     } else {
-        let doc = try!(<&str>::from_value_ref(&args[1]));
+        let doc = <&str>::from_value_ref(&args[1])?;
 
         Ok((Some(doc), &args[2]))
     }
@@ -2324,16 +2324,16 @@ fn extract_doc_string(args: &[Value]) -> Result<(Option<&str>, &Value), Error> {
 /// (const bar (+ foo 1))
 /// ```
 fn op_const(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
-    let name = try!(get_name(compiler, &args[0]));
+    let name = get_name(compiler, &args[0])?;
 
     // Replace operator item with more specific item
     compiler.trace.pop();
     compiler.trace.push(TraceItem::DefineConst(
         compiler.ctx.scope().name(), name));
 
-    let (doc, body) = try!(extract_doc_string(args));
+    let (doc, body) = extract_doc_string(args)?;
 
-    try!(test_define_name(compiler.scope(), name));
+    test_define_name(compiler.scope(), name)?;
 
     if compiler.get_constant(name).is_some() {
         return Err(From::from(CompileError::ConstantExists(name)));
@@ -2341,7 +2341,7 @@ fn op_const(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 
     let mut value = Borrowed(body);
 
-    match try!(compiler.eval_constant(&value)) {
+    match compiler.eval_constant(&value)? {
         ConstResult::IsConstant => (),
         ConstResult::IsRuntime |
         ConstResult::Partial(_) => {
@@ -2356,7 +2356,7 @@ fn op_const(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
         compiler.scope().add_doc_string(name, doc.to_owned());
     }
 
-    try!(compiler.load_quoted_value(Owned(Value::Name(name))));
+    compiler.load_quoted_value(Owned(Value::Name(name)))?;
     Ok(())
 }
 
@@ -2367,14 +2367,14 @@ fn op_const(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 /// (set-module-doc "Module doc string")
 /// ```
 fn op_set_module_doc(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
-    let doc = try!(<&str>::from_value_ref(&args[0]));
+    let doc = <&str>::from_value_ref(&args[0])?;
 
     let scope = compiler.scope().clone();
 
     scope.with_module_doc_mut(|d| {
         if d.is_none() {
             *d = Some(doc.to_owned());
-            try!(compiler.push_instruction(Instruction::Unit));
+            compiler.push_instruction(Instruction::Unit)?;
             Ok(())
         } else {
             Err(From::from(CompileError::DuplicateModuleDoc))
@@ -2397,7 +2397,7 @@ fn import_names(mod_name: Name, imps: &mut ImportSet,
             });
         }
 
-        try!(test_define_name(a, dest));
+        test_define_name(a, dest)?;
 
         if let Some(v) = b.get_constant(src) {
             // Store the remote constants as a runtime value in local scope.
@@ -2433,7 +2433,7 @@ fn each_import<F>(items: &[Value], mut f: F) -> Result<(), CompileError>
             _ => return Err(CompileError::SyntaxError("expected name or keyword"))
         };
 
-        try!(f(src, dest));
+        f(src, dest)?;
     }
 
     Ok(())
@@ -2517,7 +2517,7 @@ fn make_lambda(compiler: &mut Compiler, name: Option<Name>,
                                 "expected name after `:rest`")))
                         };
 
-                        rest = Some(try!(get_name(compiler, arg)));
+                        rest = Some(get_name(compiler, arg)?);
 
                         match iter.next() {
                             Some(_) => return Err(From::from(CompileError::SyntaxError(
@@ -2531,7 +2531,7 @@ fn make_lambda(compiler: &mut Compiler, name: Option<Name>,
                 continue;
             }
             Value::List(ref li) if li.len() == 2 => {
-                let name = try!(get_name(compiler, &li[0]));
+                let name = get_name(compiler, &li[0])?;
                 (name, Some(li[1].clone()))
             }
             ref v => {
@@ -2576,8 +2576,8 @@ fn make_lambda(compiler: &mut Compiler, name: Option<Name>,
             "expected arguments after `:optional`")));
     }
 
-    let (mut code, captures) = try!(compile_lambda(compiler,
-        name, params, req_params, kw_params, rest, body));
+    let (mut code, captures) = compile_lambda(compiler,
+        name, params, req_params, kw_params, rest, body)?;
 
     if let Some(doc) = doc {
         code.flags |= code_flags::HAS_DOC_STRING;

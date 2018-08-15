@@ -12,8 +12,8 @@ use ketos::{Code, Error, Interpreter};
 fn compile(setup: &str, input: &str) -> Result<(Interpreter, Rc<Code>), Error> {
     let interp = Interpreter::new();
 
-    let _ = try!(interp.run_code(setup, None));
-    let code = try!(interp.compile_single_expr(input, None));
+    let _ = interp.run_code(setup, None)?;
+    let code = interp.compile_single_expr(input, None)?;
 
     Ok((interp, Rc::new(code)))
 }

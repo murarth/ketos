@@ -76,13 +76,13 @@ Returns `NaN` if the number is negative."))
 /// `acos` returns the arccosine of a number. Return value is in radians
 /// in the range `[0, pi]` or `NaN` if the number is outside the range `[-1, 1]`.
 fn fn_acos(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let f = try!(get_float(&args[0]));
+    let f = get_float(&args[0])?;
     Ok(f.acos().into())
 }
 
 /// `acosh` is the inverse hyperbolic cosine.
 fn fn_acosh(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let f = try!(get_float(&args[0]));
+    let f = get_float(&args[0])?;
     Ok(f.acosh().into())
 }
 
@@ -90,112 +90,112 @@ fn fn_acosh(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 /// in the range `[-pi/2, pi/2]` or `NaN` if the number is outside the range
 /// `[-1, 1]`.
 fn fn_asin(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let f = try!(get_float(&args[0]));
+    let f = get_float(&args[0])?;
     Ok(f.asin().into())
 }
 
 /// `asinh` is the inverse hyperbolic sine function.
 fn fn_asinh(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let f = try!(get_float(&args[0]));
+    let f = get_float(&args[0])?;
     Ok(f.asinh().into())
 }
 
 /// `atan` returns the arctangent of a number. Return value is in the range
 /// `[-pi/2, pi/2]`.
 fn fn_atan(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let f = try!(get_float(&args[0]));
+    let f = get_float(&args[0])?;
     Ok(f.atan().into())
 }
 
 /// `atanh` is the inverse hyperbolic tangent function.
 fn fn_atanh(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let f = try!(get_float(&args[0]));
+    let f = get_float(&args[0])?;
     Ok(f.atanh().into())
 }
 
 /// `atan2` computes the four quadrant arctangent of `y` and `x`.
 fn fn_atan2(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let fa = try!(get_float(&args[0]));
-    let fb = try!(get_float(&args[1]));
+    let fa = get_float(&args[0])?;
+    let fb = get_float(&args[1])?;
     Ok(fa.atan2(fb).into())
 }
 
 /// `cos` computes the cosine of a number, in radians.
 fn fn_cos(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let f = try!(get_float(&args[0]));
+    let f = get_float(&args[0])?;
     Ok(f.cos().into())
 }
 
 /// `cosh` is the hyperbolic cosine function.
 fn fn_cosh(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let f = try!(get_float(&args[0]));
+    let f = get_float(&args[0])?;
     Ok(f.cosh().into())
 }
 
 /// `degrees` converts a value in radians to the equivalent value in degrees.
 fn fn_degrees(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let f = try!(get_float(&args[0]));
+    let f = get_float(&args[0])?;
     Ok(f.to_degrees().into())
 }
 
 /// `ln` returns the natural logarithm of a number.
 fn fn_ln(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let f = try!(get_float(&args[0]));
+    let f = get_float(&args[0])?;
     Ok(f.ln().into())
 }
 
 /// `log` returns the logarithm of a number with respect to an arbitrary base.
 fn fn_log(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let f = try!(get_float(&args[0]));
-    let base = try!(get_float(&args[1]));
+    let f = get_float(&args[0])?;
+    let base = get_float(&args[1])?;
     Ok(f.log(base).into())
 }
 
 /// `log2` returns the base 2 logarithm of a number.
 fn fn_log2(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let f = try!(get_float(&args[0]));
+    let f = get_float(&args[0])?;
     Ok(f.log2().into())
 }
 
 /// `log10` returns the base 10 logarithm of a number.
 fn fn_log10(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let f = try!(get_float(&args[0]));
+    let f = get_float(&args[0])?;
     Ok(f.log10().into())
 }
 
 /// `radians` converts a value in degrees to the equivalent value in radians.
 fn fn_radians(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let f = try!(get_float(&args[0]));
+    let f = get_float(&args[0])?;
     Ok(f.to_radians().into())
 }
 
 /// `sin` computes the sine of a number, in radians.
 fn fn_sin(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let f = try!(get_float(&args[0]));
+    let f = get_float(&args[0])?;
     Ok(f.sin().into())
 }
 
 /// `sinh` is the hyperbolic sine function.
 fn fn_sinh(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let f = try!(get_float(&args[0]));
+    let f = get_float(&args[0])?;
     Ok(f.sinh().into())
 }
 
 /// `sqrt` returns the square root of the given value.
 fn fn_sqrt(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let f = try!(get_float(&args[0]));
+    let f = get_float(&args[0])?;
     Ok(f.sqrt().into())
 }
 
 /// `tan` computes the tangent of a number, in radians.
 fn fn_tan(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let f = try!(get_float(&args[0]));
+    let f = get_float(&args[0])?;
     Ok(f.tan().into())
 }
 
 /// `tanh` is the hyperbolic tangent function.
 fn fn_tanh(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let f = try!(get_float(&args[0]));
+    let f = get_float(&args[0])?;
     Ok(f.tanh().into())
 }
 

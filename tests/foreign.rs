@@ -37,7 +37,7 @@ impl ketos::ForeignValue for MyType {
 }
 
 fn eval(interp: &Interpreter, input: &str) -> Result<String, Error> {
-    let v = try!(interp.run_single_expr(input, None));
+    let v = interp.run_single_expr(input, None)?;
     Ok(interp.format_value(&v))
 }
 

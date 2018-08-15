@@ -23,7 +23,7 @@ use value::{FromValueRef, Value};
 /// for details.
 pub fn decode_value<'de, T: Deserialize<'de>>(scope: &'de Scope, value: &'de Value) -> Result<T, Error> {
     let mut de = VDeserializer::new(scope, value);
-    let v = try!(T::deserialize(&mut de));
+    let v = T::deserialize(&mut de)?;
     de.finish();
     Ok(v)
 }
@@ -89,14 +89,14 @@ impl<'de> VDeserializer<'de> {
     }
 
     fn read_name(&mut self) -> Result<Name, ExecError> {
-        match *try!(self.next_value()) {
+        match *self.next_value()? {
             Value::Name(name) => Ok(name),
             ref v => Err(ExecError::expected("name", v))
         }
     }
 
     fn enter_seq(&mut self) -> Result<usize, ExecError> {
-        let v = try!(self.next_value().and_then(<&[Value]>::from_value_ref));
+        let v = self.next_value().and_then(<&[Value]>::from_value_ref)?;
         self.state.push(DeserializeState::Seq(v.iter()));
         Ok(v.len())
     }
@@ -117,8 +117,8 @@ impl<'de> VDeserializer<'de> {
     }
 
     fn enter_enum(&mut self, name: &str) -> Result<(), ExecError> {
-        try!(self.enter_seq());
-        let name_v = try!(self.read_name());
+        self.enter_seq()?;
+        let name_v = self.read_name()?;
 
         self.scope.with_name(name_v, |n| {
             if n != name {
@@ -130,8 +130,8 @@ impl<'de> VDeserializer<'de> {
     }
 
     fn begin_struct(&mut self, name: &str) -> Result<(), ExecError> {
-        try!(self.enter_seq());
-        let name_v = try!(self.read_name());
+        self.enter_seq()?;
+        let name_v = self.read_name()?;
 
         self.scope.with_name(name_v, |n| {
             if n != name {
@@ -143,17 +143,17 @@ impl<'de> VDeserializer<'de> {
     }
 
     fn enter_struct(&mut self, name: &str) -> Result<usize, ExecError> {
-        try!(self.begin_struct(name));
+        self.begin_struct(name)?;
         self.enter_fields()
     }
 
     fn enter_tuple_struct(&mut self, name: &str) -> Result<usize, ExecError> {
-        try!(self.begin_struct(name));
+        self.begin_struct(name)?;
         self.enter_seq()
     }
 
     fn enter_fields(&mut self) -> Result<usize, ExecError> {
-        let n = try!(self.enter_seq());
+        let n = self.enter_seq()?;
 
         if n % 2 == 1 {
             Err(ExecError::OddKeywordParams)
@@ -172,73 +172,73 @@ impl<'a, 'de: 'a> Deserializer<'de> for &'a mut VDeserializer<'de> {
 
     fn deserialize_bool<V: Visitor<'de>>(self, visitor: V)
             -> Result<V::Value, ExecError> {
-        let v = try!(self.next_value().and_then(bool::from_value_ref));
+        let v = self.next_value().and_then(bool::from_value_ref)?;
         visitor.visit_bool(v)
     }
 
     fn deserialize_char<V: Visitor<'de>>(self, visitor: V)
             -> Result<V::Value, ExecError> {
-        let v = try!(self.next_value().and_then(char::from_value_ref));
+        let v = self.next_value().and_then(char::from_value_ref)?;
         visitor.visit_char(v)
     }
 
     fn deserialize_i8<V: Visitor<'de>>(self, visitor: V)
             -> Result<V::Value, ExecError> {
-        let v = try!(self.next_value().and_then(i8::from_value_ref));
+        let v = self.next_value().and_then(i8::from_value_ref)?;
         visitor.visit_i8(v)
     }
 
     fn deserialize_i16<V: Visitor<'de>>(self, visitor: V)
             -> Result<V::Value, ExecError> {
-        let v = try!(self.next_value().and_then(i16::from_value_ref));
+        let v = self.next_value().and_then(i16::from_value_ref)?;
         visitor.visit_i16(v)
     }
 
     fn deserialize_i32<V: Visitor<'de>>(self, visitor: V)
             -> Result<V::Value, ExecError> {
-        let v = try!(self.next_value().and_then(i32::from_value_ref));
+        let v = self.next_value().and_then(i32::from_value_ref)?;
         visitor.visit_i32(v)
     }
 
     fn deserialize_i64<V: Visitor<'de>>(self, visitor: V)
             -> Result<V::Value, ExecError> {
-        let v = try!(self.next_value().and_then(i64::from_value_ref));
+        let v = self.next_value().and_then(i64::from_value_ref)?;
         visitor.visit_i64(v)
     }
 
     fn deserialize_u8<V: Visitor<'de>>(self, visitor: V)
             -> Result<V::Value, ExecError> {
-        let v = try!(self.next_value().and_then(u8::from_value_ref));
+        let v = self.next_value().and_then(u8::from_value_ref)?;
         visitor.visit_u8(v)
     }
 
     fn deserialize_u16<V: Visitor<'de>>(self, visitor: V)
             -> Result<V::Value, ExecError> {
-        let v = try!(self.next_value().and_then(u16::from_value_ref));
+        let v = self.next_value().and_then(u16::from_value_ref)?;
         visitor.visit_u16(v)
     }
 
     fn deserialize_u32<V: Visitor<'de>>(self, visitor: V)
             -> Result<V::Value, ExecError> {
-        let v = try!(self.next_value().and_then(u32::from_value_ref));
+        let v = self.next_value().and_then(u32::from_value_ref)?;
         visitor.visit_u32(v)
     }
 
     fn deserialize_u64<V: Visitor<'de>>(self, visitor: V)
             -> Result<V::Value, ExecError> {
-        let v = try!(self.next_value().and_then(u64::from_value_ref));
+        let v = self.next_value().and_then(u64::from_value_ref)?;
         visitor.visit_u64(v)
     }
 
     fn deserialize_f32<V: Visitor<'de>>(self, visitor: V)
             -> Result<V::Value, ExecError> {
-        let v = try!(self.next_value().and_then(f64::from_value_ref));
+        let v = self.next_value().and_then(f64::from_value_ref)?;
         visitor.visit_f32(v as f32)
     }
 
     fn deserialize_f64<V: Visitor<'de>>(self, visitor: V)
             -> Result<V::Value, ExecError> {
-        let v = try!(self.next_value().and_then(f64::from_value_ref));
+        let v = self.next_value().and_then(f64::from_value_ref)?;
         visitor.visit_f64(v)
     }
 
@@ -254,25 +254,25 @@ impl<'a, 'de: 'a> Deserializer<'de> for &'a mut VDeserializer<'de> {
 
     fn deserialize_str<V: Visitor<'de>>(self, visitor: V)
             -> Result<V::Value, ExecError> {
-        let v = try!(self.next_value().and_then(<&str>::from_value_ref));
+        let v = self.next_value().and_then(<&str>::from_value_ref)?;
         visitor.visit_str(v)
     }
 
     fn deserialize_string<V: Visitor<'de>>(self, visitor: V)
             -> Result<V::Value, ExecError> {
-        let v = try!(self.next_value().and_then(<&str>::from_value_ref));
+        let v = self.next_value().and_then(<&str>::from_value_ref)?;
         visitor.visit_string(v.to_owned())
     }
 
     fn deserialize_unit<V: Visitor<'de>>(self, visitor: V)
             -> Result<V::Value, ExecError> {
-        let _ = try!(self.next_value().and_then(<()>::from_value_ref));
+        let _ = self.next_value().and_then(<()>::from_value_ref)?;
         visitor.visit_unit()
     }
 
     fn deserialize_option<V: Visitor<'de>>(self, visitor: V)
             -> Result<V::Value, ExecError> {
-        match *try!(self.peek_value()) {
+        match *self.peek_value()? {
             Value::Unit => {
                 let _ = self.next_value();
                 visitor.visit_none()
@@ -283,14 +283,14 @@ impl<'a, 'de: 'a> Deserializer<'de> for &'a mut VDeserializer<'de> {
 
     fn deserialize_seq<V: Visitor<'de>>(self, visitor: V)
             -> Result<V::Value, ExecError> {
-        let n = try!(self.enter_seq());
+        let n = self.enter_seq()?;
 
-        let v = try!(visitor.visit_seq(SeqVisitor{
+        let v = visitor.visit_seq(SeqVisitor{
             de: self,
             n: n,
-        }));
+        })?;
 
-        try!(self.leave_seq());
+        self.leave_seq()?;
         Ok(v)
     }
 
@@ -301,15 +301,15 @@ impl<'a, 'de: 'a> Deserializer<'de> for &'a mut VDeserializer<'de> {
 
     fn deserialize_map<V: Visitor<'de>>(self, visitor: V)
             -> Result<V::Value, ExecError> {
-        let n = try!(self.enter_seq());
+        let n = self.enter_seq()?;
 
-        let v = try!(visitor.visit_map(MapVisitor{
+        let v = visitor.visit_map(MapVisitor{
             de: self,
             n: n,
             is_struct: false,
-        }));
+        })?;
 
-        try!(self.leave_seq());
+        self.leave_seq()?;
         Ok(v)
     }
 
@@ -320,23 +320,23 @@ impl<'a, 'de: 'a> Deserializer<'de> for &'a mut VDeserializer<'de> {
 
     fn deserialize_tuple_struct<V: Visitor<'de>>(self, name: &'static str,
             _len: usize, visitor: V) -> Result<V::Value, ExecError> {
-        let n = try!(self.enter_tuple_struct(name));
+        let n = self.enter_tuple_struct(name)?;
 
-        let v = try!(visitor.visit_seq(SeqVisitor{
+        let v = visitor.visit_seq(SeqVisitor{
             de: self,
             n: n,
-        }));
+        })?;
 
-        try!(self.leave_seq());
-        try!(self.leave_seq());
+        self.leave_seq()?;
+        self.leave_seq()?;
         Ok(v)
     }
 
     fn deserialize_unit_struct<V: Visitor<'de>>(self, name: &'static str,
             visitor: V) -> Result<V::Value, ExecError> {
-        try!(self.begin_struct(name));
-        try!(self.next_value().and_then(<()>::from_value_ref));
-        try!(self.leave_seq());
+        self.begin_struct(name)?;
+        self.next_value().and_then(<()>::from_value_ref)?;
+        self.leave_seq()?;
 
         visitor.visit_unit()
     }
@@ -344,22 +344,22 @@ impl<'a, 'de: 'a> Deserializer<'de> for &'a mut VDeserializer<'de> {
     fn deserialize_struct<V: Visitor<'de>>(self, name: &'static str,
             _fields: &'static [&'static str], visitor: V)
             -> Result<V::Value, ExecError> {
-        let n = try!(self.enter_struct(name));
+        let n = self.enter_struct(name)?;
 
-        let v = try!(visitor.visit_map(MapVisitor{
+        let v = visitor.visit_map(MapVisitor{
             de: self,
             n: n,
             is_struct: true,
-        }));
+        })?;
 
-        try!(self.leave_seq());
-        try!(self.leave_seq());
+        self.leave_seq()?;
+        self.leave_seq()?;
         Ok(v)
     }
 
     fn deserialize_identifier<V: Visitor<'de>>(self, visitor: V)
             -> Result<V::Value, ExecError> {
-        match *try!(self.next_value()) {
+        match *self.next_value()? {
             Value::Keyword(name) => {
                 self.scope.with_name(name, |name| visitor.visit_str(name))
             }
@@ -370,15 +370,15 @@ impl<'a, 'de: 'a> Deserializer<'de> for &'a mut VDeserializer<'de> {
     fn deserialize_enum<V: Visitor<'de>>(self, name: &'static str,
             _variants: &'static [&'static str], visitor: V)
             -> Result<V::Value, ExecError> {
-        try!(self.enter_enum(name));
-        let v = try!(visitor.visit_enum(&mut *self));
-        try!(self.leave_seq());
+        self.enter_enum(name)?;
+        let v = visitor.visit_enum(&mut *self)?;
+        self.leave_seq()?;
         Ok(v)
     }
 
     fn deserialize_ignored_any<V: Visitor<'de>>(self, visitor: V)
             -> Result<V::Value, ExecError> {
-        try!(self.next_value());
+        self.next_value()?;
         visitor.visit_unit()
     }
 }
@@ -389,9 +389,9 @@ impl<'a, 'de: 'a> EnumAccess<'de> for &'a mut VDeserializer<'de> {
 
     fn variant_seed<V: DeserializeSeed<'de>>(self, seed: V)
             -> Result<(V::Value, Self), ExecError> {
-        let name = try!(self.read_name());
-        let v = try!(self.scope.with_name(name,
-            |name| seed.deserialize(name.into_deserializer())));
+        let name = self.read_name()?;
+        let v = self.scope.with_name(name,
+            |name| seed.deserialize(name.into_deserializer()))?;
 
         Ok((v, self))
     }
@@ -406,29 +406,29 @@ impl<'a, 'de: 'a> VariantAccess<'de> for &'a mut VDeserializer<'de> {
 
     fn newtype_variant_seed<T: DeserializeSeed<'de>>(self, seed: T)
             -> Result<T::Value, Self::Error> {
-        try!(self.enter_seq());
-        let v = try!(seed.deserialize(&mut *self));
-        try!(self.leave_seq());
+        self.enter_seq()?;
+        let v = seed.deserialize(&mut *self)?;
+        self.leave_seq()?;
         Ok(v)
     }
 
     fn tuple_variant<V: Visitor<'de>>(self, len: usize, visitor: V)
             -> Result<V::Value, Self::Error> {
-        let v = try!(self.deserialize_tuple(len, visitor));
+        let v = self.deserialize_tuple(len, visitor)?;
         Ok(v)
     }
 
     fn struct_variant<V: Visitor<'de>>(self, _fields: &'static [&'static str],
             visitor: V) -> Result<V::Value, Self::Error> {
-        let n = try!(self.enter_fields());
+        let n = self.enter_fields()?;
 
-        let v = try!(visitor.visit_map(MapVisitor{
+        let v = visitor.visit_map(MapVisitor{
             de: self,
             n: n,
             is_struct: true,
-        }));
+        })?;
 
-        try!(self.leave_seq());
+        self.leave_seq()?;
         Ok(v)
     }
 }
@@ -447,7 +447,7 @@ impl<'a, 'de: 'a> SeqAccess<'de> for SeqVisitor<'a, 'de> {
             Ok(None)
         } else {
             self.n -= 1;
-            let v = try!(seed.deserialize(&mut *self.de));
+            let v = seed.deserialize(&mut *self.de)?;
             Ok(Some(v))
         }
     }
@@ -474,10 +474,10 @@ impl<'a, 'de: 'a> MapAccess<'de> for MapVisitor<'a, 'de> {
             self.n -= 1;
 
             if !self.is_struct {
-                try!(self.de.enter_seq());
+                self.de.enter_seq()?;
             }
 
-            let k = try!(seed.deserialize(&mut *self.de));
+            let k = seed.deserialize(&mut *self.de)?;
 
             Ok(Some(k))
         }
@@ -488,8 +488,8 @@ impl<'a, 'de: 'a> MapAccess<'de> for MapVisitor<'a, 'de> {
         if self.is_struct {
             seed.deserialize(&mut *self.de)
         } else {
-            let v = try!(seed.deserialize(&mut *self.de));
-            try!(self.de.leave_seq());
+            let v = seed.deserialize(&mut *self.de)?;
+            self.de.leave_seq()?;
             Ok(v)
         }
     }

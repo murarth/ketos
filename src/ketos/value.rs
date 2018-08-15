@@ -90,7 +90,7 @@ impl Value {
             (&Value::Unit, &Value::Unit) => Ordering::Equal,
             (&Value::Bool(a), &Value::Bool(b)) => a.cmp(&b),
             (&Value::Float(a), &Value::Float(b)) =>
-                try!(a.partial_cmp(&b).ok_or(ExecError::CompareNaN)),
+                a.partial_cmp(&b).ok_or(ExecError::CompareNaN)?,
             (&Value::Integer(ref a), &Value::Integer(ref b)) => a.cmp(&b),
             (&Value::Ratio(ref a), &Value::Ratio(ref b)) => a.cmp(&b),
             (&Value::Name(a), &Value::Name(b)) => a.cmp(&b),
@@ -102,10 +102,10 @@ impl Value {
             (&Value::Unit, &Value::List(_)) => Ordering::Less,
             (&Value::List(_), &Value::Unit) => Ordering::Greater,
             (&Value::List(ref a), &Value::List(ref b)) =>
-                try!(cmp_value_slice(a, b)),
+                cmp_value_slice(a, b)?,
             (&Value::Struct(ref a), &Value::Struct(ref b)) => {
                 if a.def() == b.def() {
-                    try!(cmp_value_slice(a.fields(), b.fields()))
+                    cmp_value_slice(a.fields(), b.fields())?
                 } else {
                     return Err(ExecError::StructMismatch{
                         lhs: a.def().name(),
@@ -116,20 +116,20 @@ impl Value {
 
             // Coercible numeric comparisons
             (&Value::Float(a), &Value::Integer(ref b)) => {
-                try!(coerce_compare_float(a, true,
-                    b.to_f64(), b.is_positive()))
+                coerce_compare_float(a, true,
+                    b.to_f64(), b.is_positive())?
             }
             (&Value::Float(a), &Value::Ratio(ref b)) => {
-                try!(coerce_compare_float(a, true,
-                    b.to_f64(), b.is_positive()))
+                coerce_compare_float(a, true,
+                    b.to_f64(), b.is_positive())?
             }
             (&Value::Integer(ref a), &Value::Float(b)) => {
-                try!(coerce_compare_float(b, false,
-                    a.to_f64(), a.is_positive()))
+                coerce_compare_float(b, false,
+                    a.to_f64(), a.is_positive())?
             }
             (&Value::Ratio(ref a), &Value::Float(b)) => {
-                try!(coerce_compare_float(b, false,
-                    a.to_f64(), a.is_positive()))
+                coerce_compare_float(b, false,
+                    a.to_f64(), a.is_positive())?
             }
             (&Value::Integer(ref a), &Value::Ratio(ref b)) => {
                 let a = Ratio::from_integer(a.clone());
@@ -156,9 +156,9 @@ impl Value {
             (&Value::CommaAt(_, _), &Value::CommaAt(_, _)) =>
                 return Err(ExecError::CannotCompare("comma-at")),
 
-            (&Value::Foreign(ref a), ref b) => try!(a.compare_to_value(b)),
+            (&Value::Foreign(ref a), ref b) => a.compare_to_value(b)?,
             (ref a, &Value::Foreign(ref b)) =>
-                flip_ordering(try!(b.compare_to_value(a))),
+                flip_ordering(b.compare_to_value(a)?),
 
             // Type mismatch
             (a, b) => return Err(ExecError::TypeMismatch{
@@ -203,14 +203,14 @@ impl Value {
             (&Value::Bytes(ref a), &Value::Bytes(ref b)) => a == b,
             (&Value::Path(ref a), &Value::Path(ref b)) => a == b,
             (&Value::Quote(ref a, na), &Value::Quote(ref b, nb)) =>
-                na == nb && try!(a.is_equal(&b)),
+                na == nb && a.is_equal(&b)?,
             (&Value::Unit, &Value::List(_)) => false,
             (&Value::List(_), &Value::Unit) => false,
             (&Value::List(ref a), &Value::List(ref b)) =>
-                try!(eq_value_slice(a, b)),
+                eq_value_slice(a, b)?,
             (&Value::Struct(ref a), &Value::Struct(ref b)) => {
                 if a.def() == b.def() {
-                    try!(eq_value_slice(a.fields(), b.fields()))
+                    eq_value_slice(a.fields(), b.fields())?
                 } else {
                     return Err(ExecError::StructMismatch{
                         lhs: a.def().name(),
@@ -222,8 +222,8 @@ impl Value {
             (&Value::Function(ref a), &Value::Function(ref b)) => a == b,
             (&Value::Lambda(ref a), &Value::Lambda(ref b)) => a == b,
 
-            (&Value::Foreign(ref a), ref b) => try!(a.is_equal_to_value(b)),
-            (ref a, &Value::Foreign(ref b)) => try!(b.is_equal_to_value(a)),
+            (&Value::Foreign(ref a), ref b) => a.is_equal_to_value(b)?,
+            (ref a, &Value::Foreign(ref b)) => b.is_equal_to_value(a)?,
 
             (a, b) => return Err(ExecError::TypeMismatch{
                 lhs: a.type_name(),
@@ -550,12 +550,12 @@ macro_rules! ketos_fn {
 
                 let mut iter = (&*args).iter();
 
-                let res = try!($ident(
+                let res = $ident(
                     $( {
                         let v = iter.next().unwrap();
-                        try!(<$arg_ty as $crate::value::FromValueRef>::from_value_ref(v))
+                        <$arg_ty as $crate::value::FromValueRef>::from_value_ref(v)?
                     } ),*
-                ));
+                )?;
 
                 Ok(<$res as Into<$crate::value::Value>>::into(res))
             }))
@@ -578,14 +578,14 @@ impl NameDebug for Value {
             Value::Char(ch) => write!(f, "#{:?}", ch),
             Value::String(ref s) => write!(f, "{:?}", s),
             Value::Bytes(ref s) => {
-                try!(f.write_str("#b\""));
+                f.write_str("#b\"")?;
 
                 for &b in s {
                     match b {
-                        b'\\' => try!(f.write_str(r"\\")),
-                        b'"' => try!(f.write_str("\\\"")),
-                        b if is_printable(b) => try!(write!(f, "{}", b as char)),
-                        b => try!(write!(f, "\\x{:02x}", b))
+                        b'\\' => f.write_str(r"\\")?,
+                        b'"' => f.write_str("\\\"")?,
+                        b if is_printable(b) => write!(f, "{}", b as char)?,
+                        b => write!(f, "\\x{:02x}", b)?
                     }
                 }
 
@@ -595,34 +595,34 @@ impl NameDebug for Value {
             Value::Name(name) => write!(f, "{}", names.get(name)),
             Value::Keyword(name) => write!(f, ":{}", names.get(name)),
             Value::Quasiquote(ref v, depth) => {
-                for _ in 0..depth { try!(write!(f, "`")); }
+                for _ in 0..depth { write!(f, "`")?; }
                 NameDebug::fmt(v, names, f)
             }
             Value::Comma(ref v, depth) => {
-                for _ in 0..depth { try!(write!(f, ",")); }
+                for _ in 0..depth { write!(f, ",")?; }
                 NameDebug::fmt(v, names, f)
             }
             Value::CommaAt(ref v, depth) => {
-                for _ in 0..depth { try!(write!(f, ",")); }
-                try!(write!(f, "@"));
+                for _ in 0..depth { write!(f, ",")?; }
+                write!(f, "@")?;
                 NameDebug::fmt(v, names, f)
             }
             Value::Quote(ref v, depth) => {
-                for _ in 0..depth { try!(write!(f, "'")); }
+                for _ in 0..depth { write!(f, "'")?; }
                 NameDebug::fmt(v, names, f)
             }
             Value::List(ref l) => {
-                try!(write!(f, "("));
+                write!(f, "(")?;
 
                 let mut iter = l.iter();
 
                 if let Some(v) = iter.next() {
-                    try!(NameDebug::fmt(v, names, f));
+                    NameDebug::fmt(v, names, f)?;
                 }
 
                 for v in iter {
-                    try!(write!(f, " "));
-                    try!(NameDebug::fmt(v, names, f));
+                    write!(f, " ")?;
+                    NameDebug::fmt(v, names, f)?;
                 }
 
                 write!(f, ")")
@@ -635,19 +635,19 @@ impl NameDebug for Value {
                 } else {
                     let def = s.def();
 
-                    try!(write!(f, "{} {{ ", names.get(def.name())));
+                    write!(f, "{} {{ ", names.get(def.name()))?;
 
                     let mut iter = def.def().field_names().into_iter()
                         .zip(s.fields().iter());
 
                     if let Some((name, value)) = iter.next() {
-                        try!(write!(f, "{}: ", names.get(name)));
-                        try!(NameDebug::fmt(value, names, f));
+                        write!(f, "{}: ", names.get(name))?;
+                        NameDebug::fmt(value, names, f)?;
                     }
 
                     for (name, value) in iter {
-                        try!(write!(f, ", {}: ", names.get(name)));
-                        try!(NameDebug::fmt(value, names, f));
+                        write!(f, ", {}: ", names.get(name))?;
+                        NameDebug::fmt(value, names, f)?;
                     }
 
                     write!(f, " }}")
@@ -655,16 +655,16 @@ impl NameDebug for Value {
             }
             Value::StructDef(ref def) => {
                 if let Some(vdef) = def.def().downcast_ref::<StructValueDef>() {
-                    try!(write!(f, "{} def {{ ", names.get(def.name())));
+                    write!(f, "{} def {{ ", names.get(def.name()))?;
 
                     let mut iter = vdef.fields().iter();
 
                     if let Some(&(name, ty)) = iter.next() {
-                        try!(write!(f, "{}: {}", names.get(name), names.get(ty)));
+                        write!(f, "{}: {}", names.get(name), names.get(ty))?;
                     }
 
                     for &(name, ty) in iter {
-                        try!(write!(f, ", {}: {}", names.get(name), names.get(ty)));
+                        write!(f, ", {}: {}", names.get(name), names.get(ty))?;
                     }
 
                     write!(f, " }}")
@@ -707,7 +707,7 @@ fn coerce_compare_float(f: f64, is_lhs: bool, other: Option<f64>, is_pos: bool)
         f if f.is_nan() => return Err(ExecError::CompareNaN),
         _ => match other {
             Some(other) => {
-                let ord = try!(f.partial_cmp(&other).ok_or(ExecError::CompareNaN));
+                let ord = f.partial_cmp(&other).ok_or(ExecError::CompareNaN)?;
                 if is_lhs {
                     ord
                 } else {
@@ -762,7 +762,7 @@ fn flip_ordering(ord: Ordering) -> Ordering {
 
 fn cmp_value_slice(a: &[Value], b: &[Value]) -> Result<Ordering, ExecError> {
     for (a, b) in a.iter().zip(b) {
-        match try!(a.compare(b)) {
+        match a.compare(b)? {
             Ordering::Equal => (),
             ord => return Ok(ord),
         }
@@ -777,7 +777,7 @@ fn eq_value_slice(a: &[Value], b: &[Value]) -> Result<bool, ExecError> {
     }
 
     for (a, b) in a.iter().zip(b.iter()) {
-        if !try!(a.is_equal(b)) {
+        if !a.is_equal(b)? {
             return Ok(false);
         }
     }
@@ -1172,7 +1172,7 @@ macro_rules! conv_tuple {
                 };
 
                 Ok((
-                    $( try!($name::from_value(iter.next().unwrap())) , )+
+                    $( $name::from_value(iter.next().unwrap())? , )+
                 ))
             }
         }
@@ -1186,7 +1186,7 @@ macro_rules! conv_tuple {
                 };
 
                 Ok((
-                    $( try!($name::from_value_ref(iter.next().unwrap())) , )+
+                    $( $name::from_value_ref(iter.next().unwrap())? , )+
                 ))
             }
         }

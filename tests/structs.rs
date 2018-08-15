@@ -31,8 +31,8 @@ fn eval(interp: &Interpreter, code: &str) -> Result<Value, Error> {
 }
 
 fn conv<T: FromValue>(interp: &Interpreter, code: &str) -> Result<T, Error> {
-    let v = try!(eval(interp, code));
-    let t = try!(T::from_value(v));
+    let v = eval(interp, code)?;
+    let t = T::from_value(v)?;
     Ok(t)
 }
 

@@ -15,7 +15,7 @@ fn run(restrict: RestrictConfig, code: &str) -> Result<(), Error> {
         .restrict(restrict)
         .finish();
 
-    try!(interp.run_code(code, None));
+    interp.run_code(code, None)?;
     Ok(())
 }
 

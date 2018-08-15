@@ -6,7 +6,7 @@ use ketos::name::standard_names;
 
 fn lambda(s: &str) -> Result<Vec<u8>, Error> {
     let interp = Interpreter::new();
-    let _exprs = try!(interp.compile_exprs(s));
+    let _exprs = interp.compile_exprs(s)?;
 
     match interp.scope().get_named_value("test") {
         Some(Value::Lambda(ref l)) => Ok(l.code.code.clone().into_vec()),

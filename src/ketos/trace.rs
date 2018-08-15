@@ -111,37 +111,37 @@ impl NameDisplay for Trace {
 
         for item in &self.items {
             match *item {
-                CallCode(m, n) => try!(writeln!(f,
-                    "  In {}, function {}", names.get(m), names.get(n))),
-                CallExpr(m) => try!(writeln!(f,
-                    "  In {}, call expression", names.get(m))),
-                CallLambda(m) => try!(writeln!(f,
-                    "  In {}, lambda", names.get(m))),
-                CallMacro(m, n) => try!(writeln!(f,
-                    "  In {}, macro expansion {}", names.get(m), names.get(n))),
-                CallOperator(m, n) => try!(writeln!(f,
-                    "  In {}, operator {}", names.get(m), names.get(n))),
-                CallSys(n) => try!(writeln!(f,
-                    "  In system function {}", names.get(n))),
-                Define(m, n) => try!(writeln!(f,
-                    "  In {}, define {}", names.get(m), names.get(n))),
-                DefineConst(m, n) => try!(writeln!(f,
-                    "  In {}, const {}", names.get(m), names.get(n))),
-                DefineLambda(m) => try!(writeln!(f,
-                    "  In {}, lambda", names.get(m))),
-                DefineMacro(m, n) => try!(writeln!(f,
-                    "  In {}, macro {}", names.get(m), names.get(n))),
-                DefineStruct(m, n) => try!(writeln!(f,
-                    "  In {}, struct {}", names.get(m), names.get(n))),
-                UseModule(m, n) => try!(writeln!(f,
-                    "  In {}, use {}", names.get(m), names.get(n))),
+                CallCode(m, n) => writeln!(f,
+                    "  In {}, function {}", names.get(m), names.get(n))?,
+                CallExpr(m) => writeln!(f,
+                    "  In {}, call expression", names.get(m))?,
+                CallLambda(m) => writeln!(f,
+                    "  In {}, lambda", names.get(m))?,
+                CallMacro(m, n) => writeln!(f,
+                    "  In {}, macro expansion {}", names.get(m), names.get(n))?,
+                CallOperator(m, n) => writeln!(f,
+                    "  In {}, operator {}", names.get(m), names.get(n))?,
+                CallSys(n) => writeln!(f,
+                    "  In system function {}", names.get(n))?,
+                Define(m, n) => writeln!(f,
+                    "  In {}, define {}", names.get(m), names.get(n))?,
+                DefineConst(m, n) => writeln!(f,
+                    "  In {}, const {}", names.get(m), names.get(n))?,
+                DefineLambda(m) => writeln!(f,
+                    "  In {}, lambda", names.get(m))?,
+                DefineMacro(m, n) => writeln!(f,
+                    "  In {}, macro {}", names.get(m), names.get(n))?,
+                DefineStruct(m, n) => writeln!(f,
+                    "  In {}, struct {}", names.get(m), names.get(n))?,
+                UseModule(m, n) => writeln!(f,
+                    "  In {}, use {}", names.get(m), names.get(n))?,
             }
         }
 
         if let Some(ref expr) = self.expr {
-            try!(f.write_str("    "));
-            try!(pretty_print(f, names, expr, 4));
-            try!(f.write_char('\n'));
+            f.write_str("    ")?;
+            pretty_print(f, names, expr, 4)?;
+            f.write_char('\n')?;
         }
 
         Ok(())

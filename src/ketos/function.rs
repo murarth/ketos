@@ -452,9 +452,9 @@ fn coerce_numbers(lhs: Value, rhs: &Value) -> Result<(Value, Cow<Value>), ExecEr
         | (lhs @ Value::Ratio(_), rhs @ &Value::Ratio(_)) => (lhs, Borrowed(rhs)),
 
         (Value::Float(lhs), &Value::Integer(ref i)) =>
-            (lhs.into(), Owned(try!(i.to_f64().ok_or(ExecError::Overflow)).into())),
+            (lhs.into(), Owned(i.to_f64().ok_or(ExecError::Overflow)?.into())),
         (Value::Integer(ref i), rhs @ &Value::Float(_)) =>
-            (try!(i.to_f64().ok_or(ExecError::Overflow)).into(), Borrowed(rhs)),
+            (i.to_f64().ok_or(ExecError::Overflow)?.into(), Borrowed(rhs)),
 
         (ref mut lhs @ Value::Ratio(_), &Value::Integer(ref i)) =>
             (lhs.take(), Owned(Ratio::from_integer(i.clone()).into())),
@@ -462,9 +462,9 @@ fn coerce_numbers(lhs: Value, rhs: &Value) -> Result<(Value, Cow<Value>), ExecEr
             (Ratio::from_integer(i).into(), Borrowed(rhs)),
 
         (Value::Float(lhs), &Value::Ratio(ref r)) =>
-            (lhs.into(), Owned(try!(r.to_f64().ok_or(ExecError::Overflow)).into())),
+            (lhs.into(), Owned(r.to_f64().ok_or(ExecError::Overflow)?.into())),
         (Value::Ratio(ref r), rhs @ &Value::Float(_)) =>
-            (try!(r.to_f64().ok_or(ExecError::Overflow)).into(), Borrowed(rhs)),
+            (r.to_f64().ok_or(ExecError::Overflow)?.into(), Borrowed(rhs)),
 
         (lhs, rhs) => (lhs, Borrowed(rhs))
     };
@@ -485,11 +485,11 @@ fn fn_add(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 
     let mut v = args[0].take();
 
-    try!(expect_number(&v));
+    expect_number(&v)?;
 
     for arg in &args[1..] {
-        try!(expect_number(arg));
-        v = try!(add_number(ctx, v, arg));
+        expect_number(arg)?;
+        v = add_number(ctx, v, arg)?;
     }
 
     Ok(v)
@@ -497,12 +497,12 @@ fn fn_add(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 
 /// Returns the result of adding two values together.
 pub fn add_number(ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error> {
-    let (lhs, rhs) = try!(coerce_numbers(lhs, rhs));
+    let (lhs, rhs) = coerce_numbers(lhs, rhs)?;
 
     match (lhs, &*rhs) {
         (Value::Float(a), &Value::Float(b)) => Ok((a + b).into()),
         (Value::Integer(ref a), &Value::Integer(ref b)) => {
-            try!(check_bits(ctx, max(a.bits(), b.bits()) + 1));
+            check_bits(ctx, max(a.bits(), b.bits()) + 1)?;
             Ok((a + b).into())
         }
         (Value::Ratio(ref a), &Value::Ratio(ref b)) => {
@@ -510,8 +510,8 @@ pub fn add_number(ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error
             let dn = a.denom().bits() + b.numer().bits();
             let dd = a.denom().bits() + b.denom().bits();
 
-            try!(check_bits(ctx, nd + dn));
-            try!(check_bits(ctx, dd));
+            check_bits(ctx, nd + dn)?;
+            check_bits(ctx, dd)?;
 
             Ok((a + b).into())
         }
@@ -529,11 +529,11 @@ fn fn_sub(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     if args.len() == 1 {
         neg_number(v)
     } else {
-        try!(expect_number(&v));
+        expect_number(&v)?;
 
         for arg in &args[1..] {
-            try!(expect_number(arg));
-            v = try!(sub_number(ctx, v, arg));
+            expect_number(arg)?;
+            v = sub_number(ctx, v, arg)?;
         }
 
         Ok(v)
@@ -552,12 +552,12 @@ pub fn neg_number(v: Value) -> Result<Value, Error> {
 
 /// Returns the resulting of subtracting a value from another.
 pub fn sub_number(ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error> {
-    let (lhs, rhs) = try!(coerce_numbers(lhs, rhs));
+    let (lhs, rhs) = coerce_numbers(lhs, rhs)?;
 
     match (lhs, &*rhs) {
         (Value::Float(a), &Value::Float(b)) => Ok((a - b).into()),
         (Value::Integer(ref a), &Value::Integer(ref b)) => {
-            try!(check_bits(ctx, max(a.bits(), b.bits()) + 1));
+            check_bits(ctx, max(a.bits(), b.bits()) + 1)?;
             Ok((a - b).into())
         }
         (Value::Ratio(ref a), &Value::Ratio(ref b)) => {
@@ -565,8 +565,8 @@ pub fn sub_number(ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error
             let dn = a.denom().bits() + b.numer().bits();
             let dd = a.denom().bits() + b.denom().bits();
 
-            try!(check_bits(ctx, nd + dn));
-            try!(check_bits(ctx, dd));
+            check_bits(ctx, nd + dn)?;
+            check_bits(ctx, dd)?;
 
             Ok((a - b).into())
         }
@@ -587,11 +587,11 @@ fn fn_mul(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 
     let mut v = args[0].take();
 
-    try!(expect_number(&v));
+    expect_number(&v)?;
 
     for arg in &args[1..] {
-        try!(expect_number(arg));
-        v = try!(mul_number(ctx, v, arg));
+        expect_number(arg)?;
+        v = mul_number(ctx, v, arg)?;
     }
 
     Ok(v)
@@ -599,20 +599,20 @@ fn fn_mul(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 
 /// Returns the result of multiplying two values together.
 pub fn mul_number(ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error> {
-    let (lhs, rhs) = try!(coerce_numbers(lhs, rhs));
+    let (lhs, rhs) = coerce_numbers(lhs, rhs)?;
 
     match (lhs, &*rhs) {
         (Value::Float(a), &Value::Float(b)) => Ok((a * b).into()),
         (Value::Integer(ref a), &Value::Integer(ref b)) => {
-            try!(check_bits(ctx, a.bits() + b.bits()));
+            check_bits(ctx, a.bits() + b.bits())?;
             Ok((a * b).into())
         }
         (Value::Ratio(ref a), &Value::Ratio(ref b)) => {
             let nn = a.numer().bits() + b.numer().bits();
             let dd = a.denom().bits() + b.denom().bits();
 
-            try!(check_bits(ctx, nn));
-            try!(check_bits(ctx, dd));
+            check_bits(ctx, nn)?;
+            check_bits(ctx, dd)?;
 
             Ok((a * b).into())
         }
@@ -628,8 +628,8 @@ fn fn_pow(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let a = args[0].take();
     let b = args[1].take();
 
-    try!(expect_number(&a));
-    try!(expect_number(&b));
+    expect_number(&a)?;
+    expect_number(&b)?;
 
     pow_number(ctx, a, b)
 }
@@ -647,7 +647,7 @@ fn try_pow(ctx: &Context, mut base: Integer, mut exp: u32) -> Result<Integer, Er
     }
 
     while exp & 1 == 0 {
-        base = try!(try_mul(ctx, base.clone(), base));
+        base = try_mul(ctx, base.clone(), base)?;
         exp >>= 1;
     }
 
@@ -659,10 +659,10 @@ fn try_pow(ctx: &Context, mut base: Integer, mut exp: u32) -> Result<Integer, Er
 
     while exp > 1 {
         exp >>= 1;
-        base = try!(try_mul(ctx, base.clone(), base));
+        base = try_mul(ctx, base.clone(), base)?;
 
         if exp & 1 == 1 {
-            acc = try!(try_mul(ctx, acc, base.clone()));
+            acc = try_mul(ctx, acc, base.clone())?;
         }
     }
 
@@ -670,7 +670,7 @@ fn try_pow(ctx: &Context, mut base: Integer, mut exp: u32) -> Result<Integer, Er
 }
 
 fn try_mul(ctx: &Context, lhs: Integer, rhs: Integer) -> Result<Integer, Error> {
-    try!(check_bits(ctx, lhs.bits() + rhs.bits()));
+    check_bits(ctx, lhs.bits() + rhs.bits())?;
 
     Ok(lhs * rhs)
 }
@@ -692,7 +692,7 @@ fn pow_number(ctx: &Context, lhs: Value, rhs: Value) -> Result<Value, Error> {
         _ => ()
     }
 
-    let (lhs, rhs) = try!(coerce_numbers(lhs, &rhs));
+    let (lhs, rhs) = coerce_numbers(lhs, &rhs)?;
 
     match (lhs, &*rhs) {
         (Value::Float(a), &Value::Float(b)) => {
@@ -700,17 +700,17 @@ fn pow_number(ctx: &Context, lhs: Value, rhs: Value) -> Result<Value, Error> {
         }
         (Value::Integer(ref a), &Value::Integer(ref b)) => {
             if b.is_negative() {
-                let a = try!(a.to_f64().ok_or(ExecError::Overflow));
-                let b = try!(b.to_f64().ok_or(ExecError::Overflow));
+                let a = a.to_f64().ok_or(ExecError::Overflow)?;
+                let b = b.to_f64().ok_or(ExecError::Overflow)?;
                 Ok(a.powf(b).into())
             } else {
-                let exp = try!(b.to_u32().ok_or(ExecError::Overflow));
+                let exp = b.to_u32().ok_or(ExecError::Overflow)?;
                 try_pow(ctx, a.clone(), exp).map(|i| i.into())
             }
         }
         (Value::Ratio(ref a), &Value::Ratio(ref b)) => {
-            let a = try!(a.to_f64().ok_or(ExecError::Overflow));
-            let b = try!(b.to_f64().ok_or(ExecError::Overflow));
+            let a = a.to_f64().ok_or(ExecError::Overflow)?;
+            let b = b.to_f64().ok_or(ExecError::Overflow)?;
 
             Ok(a.powf(b).into())
         }
@@ -723,14 +723,14 @@ fn pow_number(ctx: &Context, lhs: Value, rhs: Value) -> Result<Value, Error> {
 
 fn pow_ratio_integer(ctx: &Context, lhs: &Ratio, rhs: &Integer) -> Result<Value, Error> {
     if rhs.is_negative() {
-        let lhs = try!(lhs.to_f64().ok_or(ExecError::Overflow));
-        let rhs = try!(rhs.to_f64().ok_or(ExecError::Overflow));
+        let lhs = lhs.to_f64().ok_or(ExecError::Overflow)?;
+        let rhs = rhs.to_f64().ok_or(ExecError::Overflow)?;
 
         Ok(lhs.powf(rhs).into())
     } else {
-        let rhs = try!(rhs.to_u32().ok_or(ExecError::Overflow));
-        let a = try!(try_pow(ctx, lhs.numer().clone(), rhs));
-        let b = try!(try_pow(ctx, lhs.denom().clone(), rhs));
+        let rhs = rhs.to_u32().ok_or(ExecError::Overflow)?;
+        let a = try_pow(ctx, lhs.numer().clone(), rhs)?;
+        let b = try_pow(ctx, lhs.denom().clone(), rhs)?;
 
         Ok(Ratio::new(a, b).into())
     }
@@ -740,15 +740,15 @@ fn pow_ratio_integer(ctx: &Context, lhs: &Ratio, rhs: &Integer) -> Result<Value,
 fn fn_div(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let mut v = args[0].take();
 
-    try!(expect_number(&v));
+    expect_number(&v)?;
 
     if args.len() == 1 {
         // Call div instead of recip so that (/ 1) = 1
         div_number(ctx, 1.into(), &v)
     } else {
         for arg in &args[1..] {
-            try!(expect_number(arg));
-            v = try!(div_number(ctx, v, arg));
+            expect_number(arg)?;
+            v = div_number(ctx, v, arg)?;
         }
 
         Ok(v)
@@ -760,14 +760,14 @@ fn fn_div(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 fn fn_floor_div(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let mut v = args[0].take();
 
-    try!(expect_number(&v));
+    expect_number(&v)?;
 
     if args.len() == 1 {
         floor_recip_number(v)
     } else {
         for arg in &args[1..] {
-            try!(expect_number(arg));
-            v = try!(floor_div_number_step(ctx, v, arg));
+            expect_number(arg)?;
+            v = floor_div_number_step(ctx, v, arg)?;
         }
 
         floor_number(v)
@@ -777,14 +777,14 @@ fn fn_floor_div(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 fn floor_recip_number(v: Value) -> Result<Value, Error> {
     match v {
         Value::Integer(ref i) => {
-            try!(test_zero(i));
+            test_zero(i)?;
             Ok((Integer::one() / i).into())
         }
         Value::Float(f) => {
             Ok(f.recip().floor().into())
         }
         Value::Ratio(ref r) => {
-            try!(test_zero(r));
+            test_zero(r)?;
             Ok(r.recip().floor().into())
         }
         ref v => Err(From::from(ExecError::expected("number", v)))
@@ -793,14 +793,14 @@ fn floor_recip_number(v: Value) -> Result<Value, Error> {
 
 /// Returns the result of dividing two values.
 pub fn div_number(ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error> {
-    let (lhs, rhs) = try!(coerce_numbers(lhs, rhs));
+    let (lhs, rhs) = coerce_numbers(lhs, rhs)?;
 
     match (lhs, &*rhs) {
         (Value::Float(a), &Value::Float(b)) => {
             Ok((a / b).into())
         }
         (Value::Integer(ref a), &Value::Integer(ref b)) => {
-            try!(test_zero(b));
+            test_zero(b)?;
             if a.is_multiple_of(b) {
                 Ok((a / b).into())
             } else {
@@ -808,13 +808,13 @@ pub fn div_number(ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error
             }
         }
         (Value::Ratio(ref a), &Value::Ratio(ref b)) => {
-            try!(test_zero(b));
+            test_zero(b)?;
 
             let nd = a.numer().bits() + b.denom().bits();
             let dn = a.denom().bits() + b.numer().bits();
 
-            try!(check_bits(ctx, nd));
-            try!(check_bits(ctx, dn));
+            check_bits(ctx, nd)?;
+            check_bits(ctx, dn)?;
 
             Ok((a / b).into())
         }
@@ -828,11 +828,11 @@ pub fn div_number(ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error
 /// Returns the result of floor-dividing two values,
 /// without calling `floor` on the result.
 pub fn floor_div_number_step(ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error> {
-    let (lhs, rhs) = try!(coerce_numbers(lhs, rhs));
+    let (lhs, rhs) = coerce_numbers(lhs, rhs)?;
 
     match (lhs, &*rhs) {
         (Value::Integer(ref a), &Value::Integer(ref b)) => {
-            try!(test_zero(b));
+            test_zero(b)?;
             Ok((a / b).into())
         }
         (lhs, rhs) => div_number(ctx, lhs, rhs)
@@ -842,27 +842,27 @@ pub fn floor_div_number_step(ctx: &Context, lhs: Value, rhs: &Value) -> Result<V
 /// `rem` returns the remainder of two arguments.
 fn fn_rem(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let a = args[0].take();
-    try!(expect_number(&a));
+    expect_number(&a)?;
 
     let b = &args[1];
-    try!(expect_number(b));
+    expect_number(b)?;
 
     rem_number(a, b)
 }
 
 fn rem_number(lhs: Value, rhs: &Value) -> Result<Value, Error> {
-    let (lhs, rhs) = try!(coerce_numbers(lhs, rhs));
+    let (lhs, rhs) = coerce_numbers(lhs, rhs)?;
 
     match (lhs, &*rhs) {
         (Value::Float(a), &Value::Float(b)) => {
             Ok((a % b).into())
         }
         (Value::Integer(ref a), &Value::Integer(ref b)) => {
-            try!(test_zero(b));
+            test_zero(b)?;
             Ok((a % b).into())
         }
         (Value::Ratio(ref a), &Value::Ratio(ref b)) => {
-            try!(test_zero(b));
+            test_zero(b)?;
             Ok((a % b).into())
         }
         (a, b) => Err(From::from(ExecError::TypeMismatch{
@@ -881,14 +881,14 @@ fn fn_shl(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 fn shl_integer(ctx: &Context, lhs: &Value, rhs: &Value) -> Result<Value, Error> {
-    try!(expect_integer(lhs));
-    try!(expect_integer(rhs));
+    expect_integer(lhs)?;
+    expect_integer(rhs)?;
 
     match (lhs, rhs) {
         (&Value::Integer(ref a), &Value::Integer(ref b)) => {
             match b.to_u32() {
                 Some(n) => {
-                    try!(check_bits(ctx, a.bits() + n as usize));
+                    check_bits(ctx, a.bits() + n as usize)?;
                     Ok((a << (n as usize)).into())
                 }
                 None => Err(From::from(ExecError::Overflow)),
@@ -907,8 +907,8 @@ fn fn_shr(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 fn shr_integer(lhs: &Value, rhs: &Value) -> Result<Value, Error> {
-    try!(expect_integer(lhs));
-    try!(expect_integer(rhs));
+    expect_integer(lhs)?;
+    expect_integer(rhs)?;
 
     match (lhs, rhs) {
         (&Value::Integer(ref a), &Value::Integer(ref b)) => {
@@ -930,7 +930,7 @@ fn fn_eq(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let v = &args[0];
 
     for arg in &args[1..] {
-        let eq = try!(v.is_equal(arg));
+        let eq = v.is_equal(arg)?;
 
         if !eq {
             r = false;
@@ -950,7 +950,7 @@ fn fn_ne(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 
     'outer: for (i, lhs) in args.iter().enumerate() {
         for rhs in &args[i + 1..] {
-            let eq = try!(lhs.is_equal(rhs));
+            let eq = lhs.is_equal(rhs)?;
 
             if eq {
                 r = false;
@@ -991,7 +991,7 @@ fn fn_lt(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let mut v = &args[0];
 
     for arg in &args[1..] {
-        let ord = try!(v.compare(arg));
+        let ord = v.compare(arg)?;
 
         if ord != Ordering::Less {
             r = false;
@@ -1012,7 +1012,7 @@ fn fn_gt(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let mut v = &args[0];
 
     for arg in &args[1..] {
-        let ord = try!(v.compare(arg));
+        let ord = v.compare(arg)?;
 
         if ord != Ordering::Greater {
             r = false;
@@ -1034,7 +1034,7 @@ fn fn_le(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let mut v = &args[0];
 
     for arg in &args[1..] {
-        let ord = try!(v.compare(arg));
+        let ord = v.compare(arg)?;
 
         if ord == Ordering::Greater {
             r = false;
@@ -1056,7 +1056,7 @@ fn fn_ge(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let mut v = &args[0];
 
     for arg in &args[1..] {
-        let ord = try!(v.compare(arg));
+        let ord = v.compare(arg)?;
 
         if ord == Ordering::Less {
             r = false;
@@ -1124,14 +1124,14 @@ fn fn_id(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 /// `is` also accepts `'number` as a type name, which matches `integer`, `float`,
 /// and `ratio` type values.
 fn fn_is(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let name = try!(get_name(&args[0]));
+    let name = get_name(&args[0])?;
     Ok(Value::Bool(value_is(ctx.scope(), &args[1], name)))
 }
 
 /// `is-instance` returns whether a given struct value is an instance of
 /// the named struct definition.
 fn fn_is_instance(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let def = try!(get_struct_def(&args[0]));
+    let def = get_struct_def(&args[0])?;
 
     let sv = &args[1];
 
@@ -1190,8 +1190,8 @@ fn fn_type_of(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 /// (. foo :bar)
 /// ```
 fn fn_dot(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let def = try!(get_struct_def_for(ctx.scope(), &args[0]));
-    let field = try!(get_keyword(&args[1]));
+    let def = get_struct_def_for(ctx.scope(), &args[0])?;
+    let field = get_keyword(&args[1])?;
 
     def.def().get_field(ctx.scope(), &def, &args[0], field)
 }
@@ -1204,14 +1204,14 @@ fn fn_dot(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 fn fn_dot_eq(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let value = args[0].take();
 
-    let def = try!(get_struct_def_for(ctx.scope(), &value));
+    let def = get_struct_def_for(ctx.scope(), &value)?;
 
     let mut fields = Vec::with_capacity(args.len() / 2);
 
     let mut iter = args[1..].iter_mut();
 
     while let Some(name) = iter.next() {
-        let name = try!(get_keyword(name));
+        let name = get_keyword(name)?;
 
         let value = match iter.next() {
             Some(v) => v.take(),
@@ -1234,13 +1234,13 @@ fn fn_dot_eq(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 /// (new 'foo :a 1 :b 2)
 /// ```
 fn fn_new(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let def = try!(get_struct_def(&args[0])).clone();
+    let def = get_struct_def(&args[0])?.clone();
 
     let mut fields = Vec::with_capacity(args.len() / 2);
     let mut iter = args[1..].iter_mut();
 
     while let Some(name) = iter.next() {
-        let name = try!(get_keyword(name));
+        let name = get_keyword(name)?;
 
         let value = match iter.next() {
             Some(value) => value.take(),
@@ -1259,37 +1259,37 @@ fn fn_new(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 
 /// `format` returns a formatted string.
 fn fn_format(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let fmt = try!(get_string(&args[0]));
+    let fmt = get_string(&args[0])?;
 
-    let s = try!(format_string(&ctx.scope().borrow_names(), fmt, &args[1..]));
+    let s = format_string(&ctx.scope().borrow_names(), fmt, &args[1..])?;
     Ok(s.into())
 }
 
 /// `print` prints a formatted string to `stdout`.
 fn fn_print(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let fmt = try!(get_string(&args[0]));
+    let fmt = get_string(&args[0])?;
     let scope = ctx.scope();
 
-    let s = try!(format_string(&scope.borrow_names(), fmt, &args[1..]));
+    let s = format_string(&scope.borrow_names(), fmt, &args[1..])?;
 
-    try!(scope.io().stdout.write_all(s.as_bytes()));
-    try!(scope.io().stdout.flush());
+    scope.io().stdout.write_all(s.as_bytes())?;
+    scope.io().stdout.flush()?;
 
     Ok(Value::Unit)
 }
 
 /// `println` prints a formatted string to `stdout`, followed by a newline.
 fn fn_println(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let fmt = try!(get_string(&args[0]));
+    let fmt = get_string(&args[0])?;
     let scope = ctx.scope();
 
-    let mut s = try!(format_string(&scope.borrow_names(), fmt, &args[1..]));
+    let mut s = format_string(&scope.borrow_names(), fmt, &args[1..])?;
     if !s.ends_with('\n') {
         s.push('\n');
     }
 
-    try!(scope.io().stdout.write_all(s.as_bytes()));
-    try!(scope.io().stdout.flush());
+    scope.io().stdout.write_all(s.as_bytes())?;
+    scope.io().stdout.flush()?;
 
     Ok(Value::Unit)
 }
@@ -1320,7 +1320,7 @@ fn fn_elt(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let li = &args[0];
     let idx = &args[1];
 
-    let idx = try!(usize::from_value_ref(idx));
+    let idx = usize::from_value_ref(idx)?;
 
     match *li {
         Value::List(ref li) => li.get(idx).cloned()
@@ -1393,7 +1393,7 @@ fn concat_bytes(args: &mut [Value]) -> Result<Value, Error> {
     let mut res = Vec::new();
 
     for arg in args {
-        let b = try!(<&[u8]>::from_value_ref(arg));
+        let b = <&[u8]>::from_value_ref(arg)?;
         res.extend(b);
     }
 
@@ -1408,7 +1408,7 @@ fn concat_path(args: &mut [Value]) -> Result<Value, Error> {
     let mut res = PathBuf::new();
 
     for arg in args {
-        let p = try!(<&Path>::from_value_ref(arg));
+        let p = <&Path>::from_value_ref(arg)?;
 
         res.push(p);
     }
@@ -1492,13 +1492,13 @@ fn join_bytes(sep: &Bytes, args: &mut [Value]) -> Result<Value, Error> {
     let sep: &[u8] = sep;
 
     if let Some(arg) = args.first() {
-        let b = try!(<&[u8]>::from_value_ref(arg));
+        let b = <&[u8]>::from_value_ref(arg)?;
 
         res.extend(b);
 
         for arg in &args[1..] {
             res.extend(sep);
-            let b = try!(<&[u8]>::from_value_ref(arg));
+            let b = <&[u8]>::from_value_ref(arg)?;
             res.extend(b);
         }
     }
@@ -1521,7 +1521,7 @@ fn fn_len(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 
 /// `slice` returns a subsequence of a list or string.
 fn fn_slice(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let begin = try!(usize::from_value_ref(&args[1]));
+    let begin = usize::from_value_ref(&args[1])?;
 
     if args.len() == 2 {
         match args[0] {
@@ -1561,7 +1561,7 @@ fn fn_slice(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
             ref v => Err(From::from(ExecError::expected("list or string", v)))
         }
     } else {
-        let end = try!(usize::from_value_ref(&args[2]));
+        let end = usize::from_value_ref(&args[2])?;
 
         if end < begin {
             return Err(From::from(ExecError::InvalidSlice(begin, end)));
@@ -1839,8 +1839,8 @@ fn fn_int(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 fn fn_float(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0] {
         Value::Float(f) => Ok(f.into()),
-        Value::Integer(ref i) => Ok(try!(i.to_f64().ok_or(ExecError::Overflow)).into()),
-        Value::Ratio(ref r) => Ok(try!(r.to_f64().ok_or(ExecError::Overflow)).into()),
+        Value::Integer(ref i) => Ok(i.to_f64().ok_or(ExecError::Overflow)?.into()),
+        Value::Ratio(ref r) => Ok(r.to_f64().ok_or(ExecError::Overflow)?.into()),
         ref v => Err(From::from(ExecError::expected("number", v)))
     }
 }
@@ -1854,7 +1854,7 @@ fn fn_inf(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
         let mut r = true;
 
         for arg in args {
-            if try!(get_float(arg)).is_finite() {
+            if get_float(arg)?.is_finite() {
                 r = false;
                 break;
             }
@@ -1873,7 +1873,7 @@ fn fn_nan(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
         let mut r = true;
 
         for arg in args {
-            if !try!(get_float(arg)).is_nan() {
+            if !get_float(arg)?.is_nan() {
                 r = false;
                 break;
             }
@@ -1927,7 +1927,7 @@ fn fn_rat(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 
         match (a, b) {
             (Value::Integer(a), Value::Integer(b)) => {
-                try!(test_zero(&b));
+                test_zero(&b)?;
                 Ok(Ratio::new(a, b).into())
             }
             (Value::Integer(_), ref b) => Err(From::from(ExecError::expected("integer", b))),
@@ -1946,11 +1946,11 @@ fn recip_number(v: Value) -> Result<Value, Error> {
     match v {
         Value::Float(f) => Ok(f.recip().into()),
         Value::Integer(a) => {
-            try!(test_zero(&a));
+            test_zero(&a)?;
             Ok(Ratio::new(Integer::one(), a).into())
         }
         Value::Ratio(ref a) => {
-            try!(test_zero(a.numer()));
+            test_zero(a.numer())?;
             Ok(a.recip().into())
         }
         ref v => Err(From::from(ExecError::expected("number", v)))
@@ -1959,7 +1959,7 @@ fn recip_number(v: Value) -> Result<Value, Error> {
 
 /// `chars` returns a string transformed into a list of characters.
 fn fn_chars(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let s = try!(get_string(&args[0]));
+    let s = get_string(&args[0])?;
     Ok(s.chars().collect::<Vec<_>>().into())
 }
 
@@ -2003,7 +2003,7 @@ fn fn_max(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let mut v = args[0].take();
 
     for arg in &mut args[1..] {
-        if try!(v.compare(arg)) == Ordering::Less {
+        if v.compare(arg)? == Ordering::Less {
             v = arg.take();
         }
     }
@@ -2016,7 +2016,7 @@ fn fn_min(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let mut v = args[0].take();
 
     for arg in &mut args[1..] {
-        if try!(v.compare(arg)) == Ordering::Greater {
+        if v.compare(arg)? == Ordering::Greater {
             v = arg.take();
         }
     }

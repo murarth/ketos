@@ -16,16 +16,17 @@ pub fn run_code(ctx: &Context, input: &str) -> Result<Value, Error> {
     let exprs = {
         let mut p = Parser::new(ctx, Lexer::new(input, offset));
 
-        try!(p.parse_exprs())
+        p.parse_exprs()?
     };
 
-    let code: Vec<_> = try!(exprs.iter()
-        .map(|v| compile(ctx, v)).collect());
+    let code = exprs.iter()
+        .map(|v| compile(ctx, v))
+        .collect::<Result<Vec<_>, _>>()?;
 
     let mut r = Value::Unit;
 
     for c in code {
-        r = try!(execute(ctx, Rc::new(c)));
+        r = execute(ctx, Rc::new(c))?;
     }
 
     Ok(r)
