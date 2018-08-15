@@ -1,5 +1,4 @@
-extern crate gumdrop;
-#[macro_use] extern crate gumdrop_derive;
+#[macro_use] extern crate gumdrop;
 extern crate ketos;
 extern crate linefeed;
 
@@ -25,7 +24,7 @@ fn main() {
     std::process::exit(status);
 }
 
-#[derive(Default, Options)]
+#[derive(Options)]
 struct KetosOpts {
     #[options(free)]
     free: Vec<String>,

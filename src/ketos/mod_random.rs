@@ -21,7 +21,8 @@ pub fn load(scope: Scope) -> Module {
 
 /// `random` returns a random float value in the range `[0.0, 1.0)`.
 fn fn_random(_ctx: &Context, _args: &mut [Value]) -> Result<Value, Error> {
-    Ok(thread_rng().next_f64().into())
+    let value: f64 = thread_rng().gen();
+    Ok(value.into())
 }
 
 /// `shuffle` shuffles the values of a list.
