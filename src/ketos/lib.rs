@@ -34,7 +34,6 @@ extern crate rand;
 #[cfg(test)]
 #[macro_use] extern crate assert_matches;
 
-pub use buffer::{CodeBuffer, More, MoreResult};
 pub use bytecode::Code;
 pub use bytes::Bytes;
 pub use completion::complete_name;
@@ -60,7 +59,6 @@ pub use value::{ForeignValue, FromValue, FromValueRef, Value};
 
 #[macro_use] pub mod any;
 pub mod args;
-pub mod buffer;
 pub mod bytecode;
 pub mod bytes;
 pub mod completion;

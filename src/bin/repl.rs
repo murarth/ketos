@@ -1,23 +1,26 @@
+extern crate dirs;
 #[macro_use] extern crate gumdrop;
 extern crate ketos;
 extern crate linefeed;
 
+use std::cell::RefCell;
 use std::env::{split_paths, var_os};
-use std::io::{stderr, Write};
+use std::io::{self, stderr, Write};
 use std::iter::repeat;
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
 use std::str::FromStr;
+use std::sync::Arc;
 use std::time::Duration;
 
 use gumdrop::{Options, ParsingStyle};
 use ketos::{
     Builder, Interpreter, complete_name,
-    Error, RestrictConfig,
-    CodeBuffer, MoreResult,
-    Scope,
+    Context, Error, RestrictConfig, ParseError, ParseErrorKind,
 };
-use linefeed::{Completion, Reader, ReadResult, Signal, Suffix, Terminal};
+use linefeed::{
+    Interface, Prompter, Command, Completer,
+    Completion, Function, ReadResult, Signal, Suffix, Terminal,
+};
 
 fn main() {
     let status = run();
@@ -115,7 +118,7 @@ fn run() -> i32 {
 
     if interactive {
         if !opts.no_rc {
-            if let Some(p) = std::env::home_dir() {
+            if let Some(p) = dirs::home_dir() {
                 let rc = p.join(".ketosrc.ket");
                 if rc.is_file() {
                     // Ignore error in interactive mode
@@ -124,7 +127,9 @@ fn run() -> i32 {
             }
         }
 
-        run_repl(&interp);
+        if let Err(e) = run_repl(&interp) {
+            eprintln!("terminal device error: {}", e);
+        }
     }
 
     0
@@ -202,41 +207,42 @@ fn run_file(interp: &Interpreter, file: &Path) -> bool {
     }
 }
 
-fn run_repl(interp: &Interpreter) {
-    let mut buf = CodeBuffer::new();
+fn run_repl(interp: &Interpreter) -> io::Result<()> {
+    let interface = Interface::new("ketos")?;
 
-    let mut reader = match Reader::new("ketos") {
-        Ok(r) => r,
-        Err(_) => return
-    };
+    set_thread_context(interp.context().clone());
+    interface.set_completer(Arc::new(KetosCompleter));
 
-    reader.set_completer(Rc::new(Completer{
-        scope: interp.scope().clone(),
-    }));
+    interface.set_prompt("ketos=> ")?;
 
-    reader.set_report_signal(Signal::Interrupt, true);
+    interface.set_report_signal(Signal::Interrupt, true);
 
-    reader.set_prompt("ketos=> ");
-    reader.set_word_break_chars(" \t\n#\"'(),:;@[\\]`{}");
-    reader.set_string_chars("\"");
+    interface.define_function("ketos-accept", Arc::new(KetosAccept));
 
-    reader.set_blink_matching_paren(true);
+    interface.bind_sequence("\r", Command::from_str("ketos-accept"));
+    interface.bind_sequence("\n", Command::from_str("ketos-accept"));
 
-    while let Ok(res) = reader.read_line() {
-        match res {
+    {
+        let mut reader = interface.lock_reader();
+
+        reader.set_word_break_chars(" \t\n#\"'(),:;@[\\]`{}");
+        reader.set_string_chars("\"");
+        reader.set_blink_matching_paren(true);
+    }
+
+    loop {
+        match interface.read_line()? {
             ReadResult::Eof => break,
             ReadResult::Input(mut line) => {
                 if line.chars().all(|c| c.is_whitespace()) {
                     continue;
                 }
 
-                reader.add_history(line.clone());
+                interface.add_history(line.clone());
                 line.push('\n');
 
-                match buf.feed_compile(&interp, &line) {
-                    Ok(MoreResult::Complete(code)) => {
-                        reader.set_prompt("ketos=> ");
-
+                match interp.compile_exprs(&line) {
+                    Ok(code) => {
                         if !code.is_empty() {
                             match interp.execute_program(code) {
                                 Ok(v) => interp.display_value(&v),
@@ -244,41 +250,59 @@ fn run_repl(interp: &Interpreter) {
                             }
                         }
                     }
-                    Ok(MoreResult::More(more)) => {
-                        reader.set_prompt(&format!("ketos{}> ", more.as_char()));
-                    }
-                    Err(ref e) => {
-                        reader.set_prompt("ketos=> ");
-                        display_error(&interp, e);
+                    Err(e) => {
+                        display_error(&interp, &e);
                     }
                 }
 
                 interp.clear_codemap();
             }
             ReadResult::Signal(_) => {
-                buf.clear();
-                reader.set_prompt("ketos=> ");
                 println!("^C");
+                interface.cancel_read_line()?;
             }
         }
     }
 
-    println!("");
+    println!();
+
+    Ok(())
 }
 
-struct Completer {
-    scope: Scope,
+struct KetosCompleter;
+
+thread_local!{
+    // linefeed requires a Completer to impl Send + Sync.
+    // Because a Context object contains Rc, it does not impl these traits.
+    // Therefore, we must store the Context object in thread-local storage.
+    // (We only use the linefeed Interface from a single thread, anyway.)
+    static CONTEXT: RefCell<Option<Context>> = RefCell::new(None);
 }
 
-impl<Term: Terminal> linefeed::Completer<Term> for Completer {
-    fn complete(&self, word: &str, reader: &Reader<Term>,
+fn set_thread_context(ctx: Context) {
+    CONTEXT.with(|key| {
+        *key.borrow_mut() = Some(ctx);
+    });
+}
+
+fn thread_context() -> Context {
+    CONTEXT.with(|key| {
+        key.borrow().clone().unwrap_or_else(
+            || panic!("no thread-local Context object set"))
+    })
+}
+
+impl<Term: Terminal> Completer<Term> for KetosCompleter {
+    fn complete(&self, word: &str, prompter: &Prompter<Term>,
             start: usize, end: usize) -> Option<Vec<Completion>> {
-        let is_whitespace = reader.buffer()[..start]
+        let line_start = prompter.buffer()[..start].rfind('\n')
+            .map(|pos| pos + 1).unwrap_or(0);
+        let is_whitespace = prompter.buffer()[line_start..start]
             .chars().all(|ch| ch.is_whitespace());
 
         if is_whitespace && start == end {
             // Indent when there's no word to complete
-            let n = 2 - start % 2;
+            let n = 2 - (start - line_start) % 2;
 
             Some(vec![Completion{
                 completion: repeat(' ').take(n).collect(),
@@ -286,8 +310,34 @@ impl<Term: Terminal> linefeed::Completer<Term> for Completer {
                 suffix: Suffix::None,
             }])
         } else {
-            complete_name(word, &self.scope).map(
+            let ctx = thread_context();
+            complete_name(word, ctx.scope()).map(
                 |words| words.into_iter().map(Completion::simple).collect())
+        }
+    }
+}
+
+struct KetosAccept;
+
+impl<Term: Terminal> Function<Term> for KetosAccept {
+    fn execute(&self, prompter: &mut Prompter<Term>, count: i32, _ch: char) -> io::Result<()> {
+        let interp = Interpreter::with_context(thread_context());
+
+        let r = interp.parse_exprs(prompter.buffer(), None);
+        interp.clear_codemap();
+
+        match r {
+            Err(Error::ParseError(ParseError{kind: ParseErrorKind::MissingCloseParen, ..})) |
+            Err(Error::ParseError(ParseError{kind: ParseErrorKind::UnterminatedComment, ..})) |
+            Err(Error::ParseError(ParseError{kind: ParseErrorKind::UnterminatedString, ..})) |
+            Err(Error::ParseError(ParseError{kind: ParseErrorKind::DocCommentEof, ..})) => {
+                if count > 0 {
+                    prompter.insert(count as usize, '\n')
+                } else {
+                    Ok(())
+                }
+            }
+            Ok(_) | Err(_) => prompter.accept_input(),
         }
     }
 }
