@@ -649,8 +649,8 @@ impl Machine {
                     self.jump_if_eq_const(frame, label, n)?,
                 JumpIfNotEqConst(label, n) =>
                     self.jump_if_not_eq_const(frame, label, n)?,
-                Null => self.is_null(),
-                NotNull => self.is_not_null(),
+                Null => self.test_is_null(),
+                NotNull => self.test_is_not_null(),
                 Eq => self.equal()?,
                 NotEq => self.not_equal()?,
                 EqConst(n) => self.equal_const(&frame.code, n)?,
@@ -1350,7 +1350,7 @@ impl Machine {
         }
     }
 
-    fn is_null(&mut self) {
+    fn test_is_null(&mut self) {
         let null = match self.value {
             Value::Unit => true,
             _ => false
@@ -1359,7 +1359,7 @@ impl Machine {
         self.value = null.into();
     }
 
-    fn is_not_null(&mut self) {
+    fn test_is_not_null(&mut self) {
         let null = match self.value {
             Value::Unit => true,
             _ => false

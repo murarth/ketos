@@ -885,7 +885,7 @@ impl<'a> Compiler<'a> {
 
     /// Compiles the expression `Quasiquote(value, depth)`
     fn compile_quasiquote(&mut self, value: &Value, depth: u32) -> Result<(), Error> {
-        if self.is_quasi_const(value, depth)? {
+        if self.check_quasi_const(value, depth)? {
             match depth {
                 1 => self.load_quoted_value(Borrowed(value))?,
                 _ => self.load_quoted_value(Owned(
@@ -903,7 +903,7 @@ impl<'a> Compiler<'a> {
 
     /// Compiles a value found within a quasiquoted expression
     fn compile_quasi_value(&mut self, value: &Value, depth: u32) -> Result<(), Error> {
-        if self.is_quasi_const(value, depth)? {
+        if self.check_quasi_const(value, depth)? {
             self.load_quoted_value(Borrowed(value))?;
             return Ok(());
         }
@@ -932,7 +932,7 @@ impl<'a> Compiler<'a> {
                 Ok(())
             }
             Value::Quasiquote(ref v, n) => {
-                if self.is_quasi_const(v, n)? {
+                if self.check_quasi_const(v, n)? {
                     match n {
                         1 => self.load_const_value(v)?,
                         _ => {
@@ -955,7 +955,7 @@ impl<'a> Compiler<'a> {
                     Ok(())
                 }
             }
-            // Handled by `if is_quasi_const { ... }` above
+            // Handled by `if check_quasi_const { ... }` above
             _ => unreachable!()
         }
     }
@@ -1021,19 +1021,19 @@ impl<'a> Compiler<'a> {
 
     /// Returns true if a value found within a quasiquoted value does not
     /// contain any expressions to be evaluated.
-    fn is_quasi_const(&mut self, value: &Value, depth: u32) -> Result<bool, Error> {
+    fn check_quasi_const(&mut self, value: &Value, depth: u32) -> Result<bool, Error> {
         match *value {
             Value::List(ref li) => {
                 for v in li {
-                    if !self.is_quasi_const(v, depth)? {
+                    if !self.check_quasi_const(v, depth)? {
                         return Ok(false);
                     }
                 }
 
                 Ok(true)
             }
-            Value::Quasiquote(ref v, n) => self.is_quasi_const(v, depth + n),
-            Value::Quote(ref v, _) => self.is_quasi_const(v, depth),
+            Value::Quasiquote(ref v, n) => self.check_quasi_const(v, depth + n),
+            Value::Quote(ref v, _) => self.check_quasi_const(v, depth),
             Value::Comma(_, n)
             | Value::CommaAt(_, n) if n > depth => {
                 self.set_trace_expr(value);
@@ -1043,7 +1043,7 @@ impl<'a> Compiler<'a> {
             | Value::CommaAt(_, n) if n == depth => Ok(false),
             Value::Comma(ref v, n)
             | Value::CommaAt(ref v, n) =>
-                self.is_quasi_const(v, depth - n),
+                self.check_quasi_const(v, depth - n),
             _ => Ok(true)
         }
     }
@@ -1053,152 +1053,184 @@ impl<'a> Compiler<'a> {
     ///
     /// If specialized instructions cannot be generated, returns `Ok(false)`.
     fn specialize_call(&mut self, name: Name, args: &[Value]) -> Result<bool, Error> {
+        let n_args = args.len();
+
         match name {
-            standard_names::ADD if args.len() == 2 => {
+            standard_names::ADD if n_args == 2 => {
                 let lhs = &args[0];
                 let rhs = &args[1];
 
-                if is_one(lhs) {
-                    self.compile_value(rhs)?;
-                    self.push_instruction(Instruction::Inc)?;
-                } else if is_one(rhs) {
-                    self.compile_value(lhs)?;
-                    self.push_instruction(Instruction::Inc)?;
-                } else if is_negative_one(lhs) {
-                    self.compile_value(rhs)?;
-                    self.push_instruction(Instruction::Dec)?;
-                } else if is_negative_one(rhs) {
-                    self.compile_value(lhs)?;
-                    self.push_instruction(Instruction::Dec)?;
-                } else {
-                    return Ok(false);
-                }
+                return self.specialize_add(lhs, rhs);
             }
-            standard_names::SUB if args.len() == 2 => {
+            standard_names::SUB if n_args == 2 => {
                 let lhs = &args[0];
                 let rhs = &args[1];
 
-                if is_one(rhs) {
-                    self.compile_value(lhs)?;
-                    self.push_instruction(Instruction::Dec)?;
-                } else if is_negative_one(rhs) {
-                    self.compile_value(lhs)?;
-                    self.push_instruction(Instruction::Inc)?;
-                } else {
-                    return Ok(false);
-                }
+                return self.specialize_sub(lhs, rhs);
             }
-            standard_names::NULL if args.len() == 1 => {
+            standard_names::NULL if n_args == 1 => {
                 self.compile_value(&args[0])?;
                 self.push_instruction(Instruction::Null)?;
             }
-            standard_names::EQ if args.len() == 2 => {
+            standard_names::EQ if n_args == 2 => {
                 let lhs = &args[0];
                 let rhs = &args[1];
 
-                let lhs_const = match self.eval_constant(lhs)? {
-                    ConstResult::IsConstant => Some(Borrowed(lhs)),
-                    ConstResult::Constant(v) => Some(Owned(v)),
-                    _ => None
-                };
-
-                let rhs_const = match self.eval_constant(rhs)? {
-                    ConstResult::IsConstant => Some(Borrowed(rhs)),
-                    ConstResult::Constant(v) => Some(Owned(v)),
-                    _ => None
-                };
-
-                if let Some(rhs) = rhs_const {
-                    self.compile_value(lhs)?;
-                    let c = self.add_const(rhs);
-                    self.push_instruction(Instruction::EqConst(c))?;
-                } else if let Some(lhs) = lhs_const {
-                    let c = self.add_const(lhs);
-                    self.compile_value(rhs)?;
-                    self.push_instruction(Instruction::EqConst(c))?;
-                } else {
-                    self.compile_value(lhs)?;
-                    self.push_instruction(Instruction::Push)?;
-                    self.compile_value(rhs)?;
-                    self.push_instruction(Instruction::Eq)?;
-                }
+                self.specialize_eq(lhs, rhs)?;
             }
-            standard_names::NOT_EQ if args.len() == 2 => {
+            standard_names::NOT_EQ if n_args == 2 => {
                 let lhs = &args[0];
                 let rhs = &args[1];
 
-                let lhs_const = match self.eval_constant(lhs)? {
-                    ConstResult::IsConstant => Some(Borrowed(lhs)),
-                    ConstResult::Constant(v) => Some(Owned(v)),
-                    _ => None
-                };
-
-                let rhs_const = match self.eval_constant(rhs)? {
-                    ConstResult::IsConstant => Some(Borrowed(rhs)),
-                    ConstResult::Constant(v) => Some(Owned(v)),
-                    _ => None
-                };
-
-                if let Some(rhs) = rhs_const {
-                    self.compile_value(lhs)?;
-                    let c = self.add_const(rhs);
-                    self.push_instruction(Instruction::NotEqConst(c))?;
-                } else if let Some(lhs) = lhs_const {
-                    let c = self.add_const(lhs);
-                    self.compile_value(rhs)?;
-                    self.push_instruction(Instruction::NotEqConst(c))?;
-                } else {
-                    self.compile_value(lhs)?;
-                    self.push_instruction(Instruction::Push)?;
-                    self.compile_value(rhs)?;
-                    self.push_instruction(Instruction::NotEq)?;
-                }
+                self.specialize_ne(lhs, rhs)?;
             }
-            standard_names::NOT if args.len() == 1 => {
+            standard_names::NOT if n_args == 1 => {
                 self.compile_value(&args[0])?;
                 self.push_instruction(Instruction::Not)?;
             }
-            standard_names::APPEND if args.len() == 2 => {
+            standard_names::APPEND if n_args == 2 => {
                 self.compile_value(&args[0])?;
                 self.push_instruction(Instruction::Push)?;
                 self.compile_value(&args[1])?;
                 self.push_instruction(Instruction::Append)?;
             }
-            standard_names::FIRST if args.len() == 1 => {
+            standard_names::FIRST if n_args == 1 => {
                 self.compile_value(&args[0])?;
                 self.push_instruction(Instruction::First)?;
             }
-            standard_names::TAIL if args.len() == 1 => {
+            standard_names::TAIL if n_args == 1 => {
                 self.compile_value(&args[0])?;
                 self.push_instruction(Instruction::Tail)?;
             }
-            standard_names::INIT if args.len() == 1 => {
+            standard_names::INIT if n_args == 1 => {
                 self.compile_value(&args[0])?;
                 self.push_instruction(Instruction::Init)?;
             }
-            standard_names::LAST if args.len() == 1 => {
+            standard_names::LAST if n_args == 1 => {
                 self.compile_value(&args[0])?;
                 self.push_instruction(Instruction::Last)?;
             }
             standard_names::LIST => {
-                if args.is_empty() {
-                    self.push_instruction(Instruction::Unit)?;
-                } else {
-                    for arg in args {
-                        self.compile_value(arg)?;
-                        self.push_instruction(Instruction::Push)?;
-                    }
-                    self.push_instruction(
-                        Instruction::List(args.len() as u32))?;
-                }
+                self.specialize_list(args)?;
             }
-            standard_names::ID if args.len() == 1 => {
+            standard_names::ID if n_args == 1 => {
                 self.compile_value(&args[0])?;
             }
             _ => return Ok(false)
         }
 
         Ok(true)
+    }
+
+    fn specialize_add(&mut self, lhs: &Value, rhs: &Value) -> Result<bool, Error> {
+        if is_one(lhs) {
+            self.compile_value(rhs)?;
+            self.push_instruction(Instruction::Inc)?;
+        } else if is_one(rhs) {
+            self.compile_value(lhs)?;
+            self.push_instruction(Instruction::Inc)?;
+        } else if is_negative_one(lhs) {
+            self.compile_value(rhs)?;
+            self.push_instruction(Instruction::Dec)?;
+        } else if is_negative_one(rhs) {
+            self.compile_value(lhs)?;
+            self.push_instruction(Instruction::Dec)?;
+        } else {
+            return Ok(false);
+        }
+
+        Ok(true)
+    }
+
+    fn specialize_sub(&mut self, lhs: &Value, rhs: &Value) -> Result<bool, Error> {
+        if is_one(rhs) {
+            self.compile_value(lhs)?;
+            self.push_instruction(Instruction::Dec)?;
+        } else if is_negative_one(rhs) {
+            self.compile_value(lhs)?;
+            self.push_instruction(Instruction::Inc)?;
+        } else {
+            return Ok(false);
+        }
+
+        Ok(true)
+    }
+
+    fn specialize_eq(&mut self, lhs: &Value, rhs: &Value) -> Result<(), Error> {
+        let lhs_const = match self.eval_constant(lhs)? {
+            ConstResult::IsConstant => Some(Borrowed(lhs)),
+            ConstResult::Constant(v) => Some(Owned(v)),
+            _ => None
+        };
+
+        let rhs_const = match self.eval_constant(rhs)? {
+            ConstResult::IsConstant => Some(Borrowed(rhs)),
+            ConstResult::Constant(v) => Some(Owned(v)),
+            _ => None
+        };
+
+        if let Some(rhs) = rhs_const {
+            self.compile_value(lhs)?;
+            let c = self.add_const(rhs);
+            self.push_instruction(Instruction::EqConst(c))?;
+        } else if let Some(lhs) = lhs_const {
+            let c = self.add_const(lhs);
+            self.compile_value(rhs)?;
+            self.push_instruction(Instruction::EqConst(c))?;
+        } else {
+            self.compile_value(lhs)?;
+            self.push_instruction(Instruction::Push)?;
+            self.compile_value(rhs)?;
+            self.push_instruction(Instruction::Eq)?;
+        }
+
+        Ok(())
+    }
+
+    fn specialize_ne(&mut self, lhs: &Value, rhs: &Value) -> Result<(), Error> {
+        let lhs_const = match self.eval_constant(lhs)? {
+            ConstResult::IsConstant => Some(Borrowed(lhs)),
+            ConstResult::Constant(v) => Some(Owned(v)),
+            _ => None
+        };
+
+        let rhs_const = match self.eval_constant(rhs)? {
+            ConstResult::IsConstant => Some(Borrowed(rhs)),
+            ConstResult::Constant(v) => Some(Owned(v)),
+            _ => None
+        };
+
+        if let Some(rhs) = rhs_const {
+            self.compile_value(lhs)?;
+            let c = self.add_const(rhs);
+            self.push_instruction(Instruction::NotEqConst(c))?;
+        } else if let Some(lhs) = lhs_const {
+            let c = self.add_const(lhs);
+            self.compile_value(rhs)?;
+            self.push_instruction(Instruction::NotEqConst(c))?;
+        } else {
+            self.compile_value(lhs)?;
+            self.push_instruction(Instruction::Push)?;
+            self.compile_value(rhs)?;
+            self.push_instruction(Instruction::NotEq)?;
+        }
+
+        Ok(())
+    }
+
+    fn specialize_list(&mut self, args: &[Value]) -> Result<(), Error> {
+        if args.is_empty() {
+            self.push_instruction(Instruction::Unit)?;
+        } else {
+            for arg in args {
+                self.compile_value(arg)?;
+                self.push_instruction(Instruction::Push)?;
+            }
+            self.push_instruction(
+                Instruction::List(args.len() as u32))?;
+        }
+
+        Ok(())
     }
 
     fn add_const(&mut self, value: Cow<Value>) -> u32 {
