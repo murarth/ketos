@@ -258,7 +258,7 @@ fn fn_get_const(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
             let n = usize::from_value_ref(&args[1])?;
 
             let v = l.code.consts.get(n)
-                .ok_or(ExecError::OutOfBounds(n))?;
+                .ok_or_else(|| ExecError::OutOfBounds(n))?;
 
             Ok(v.clone())
         }
@@ -273,7 +273,7 @@ fn fn_get_value(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
             let n = usize::from_value_ref(&args[1])?;
 
             let v = l.values.as_ref().and_then(|v| v.get(n))
-                .ok_or(ExecError::OutOfBounds(n))?;
+                .ok_or_else(|| ExecError::OutOfBounds(n))?;
 
             Ok(v.clone())
         }
@@ -288,7 +288,7 @@ fn fn_get_value(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 ///
 /// When given no parameters, the documentation for the current scope is returned.
 fn fn_module_documentation(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    if args.len() == 0 {
+    if args.is_empty() {
         return Ok(ctx.scope().with_module_doc(|d| d.into())
             .unwrap_or(Value::Unit));
     }

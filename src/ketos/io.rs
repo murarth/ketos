@@ -17,9 +17,7 @@ pub struct GlobalIo {
 impl GlobalIo {
     /// Creates a `GlobalIo` instance using the given `stdout` writer.
     pub fn new(stdout: Rc<SharedWrite>) -> GlobalIo {
-        GlobalIo{
-            stdout: stdout,
-        }
+        GlobalIo{ stdout }
     }
 
     /// Creates a `GlobalIo` instance whose `stdout` ignores all output.
@@ -159,10 +157,7 @@ pub struct File {
 impl File {
     /// Creates a new `File` from an open filehandle and path.
     pub fn new(file: fs::File, path: PathBuf) -> File {
-        File{
-            file: file,
-            path: path,
-        }
+        File{ file, path }
     }
 }
 

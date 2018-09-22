@@ -94,7 +94,6 @@ macro_rules! impl_eq_vec {
     ( $lhs:ty, $rhs:ty ) => {
         impl<'a> PartialEq<$rhs> for $lhs {
             fn eq(&self, rhs: &$rhs) -> bool { self[..] == rhs[..] }
-            fn ne(&self, rhs: &$rhs) -> bool { self[..] != rhs[..] }
         }
     }
 }
@@ -104,12 +103,10 @@ macro_rules! impl_eq_array {
         $(
             impl PartialEq<[u8; $n]> for Bytes {
                 fn eq(&self, rhs: &[u8; $n]) -> bool { self[..] == rhs[..] }
-                fn ne(&self, rhs: &[u8; $n]) -> bool { self[..] != rhs[..] }
             }
 
             impl<'a> PartialEq<&'a [u8; $n]> for Bytes {
                 fn eq(&self, rhs: &&'a [u8; $n]) -> bool { self[..] == rhs[..] }
-                fn ne(&self, rhs: &&'a [u8; $n]) -> bool { self[..] != rhs[..] }
             }
         )+
     }

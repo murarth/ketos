@@ -588,7 +588,7 @@ impl<T> NameMapSlice<T> {
     /// Creates a `NameMapSlice` wrapping the given boxed slice,
     /// which must already be sorted by name.
     fn new(values: Box<[(Name, T)]>) -> NameMapSlice<T> {
-        NameMapSlice{values: values}
+        NameMapSlice{ values }
     }
 
     /// Returns whether the map contains a value for the given name.
@@ -735,7 +735,7 @@ impl NameSetSlice {
     /// Creates a `NameSetSlice` wrapping the given boxed slice,
     /// which must already be sorted.
     fn new(map: NameMapSlice<()>) -> NameSetSlice {
-        NameSetSlice{map: map}
+        NameSetSlice{ map }
     }
 
     /// Returns whether the set contains the given name.

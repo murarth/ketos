@@ -183,7 +183,6 @@ macro_rules! impl_eq_str {
     ( $lhs:ty, $rhs:ty ) => {
         impl<'a> PartialEq<$rhs> for $lhs {
             fn eq(&self, rhs: &$rhs) -> bool { self[..] == rhs[..] }
-            fn ne(&self, rhs: &$rhs) -> bool { self[..] != rhs[..] }
         }
     }
 }
@@ -373,7 +372,6 @@ macro_rules! impl_eq_vec {
     ( $lhs:ty, $rhs:ty ) => {
         impl<'a, A, B> PartialEq<$rhs> for $lhs where A: PartialEq<B> {
             fn eq(&self, rhs: &$rhs) -> bool { self[..] == rhs[..] }
-            fn ne(&self, rhs: &$rhs) -> bool { self[..] != rhs[..] }
         }
     }
 }
@@ -383,12 +381,10 @@ macro_rules! impl_eq_array {
         $(
             impl<A, B> PartialEq<[B; $n]> for RcVec<A> where A: PartialEq<B> {
                 fn eq(&self, rhs: &[B; $n]) -> bool { self[..] == rhs[..] }
-                fn ne(&self, rhs: &[B; $n]) -> bool { self[..] != rhs[..] }
             }
 
             impl<'a, A, B> PartialEq<&'a [B; $n]> for RcVec<A> where A: PartialEq<B> {
                 fn eq(&self, rhs: &&'a [B; $n]) -> bool { self[..] == rhs[..] }
-                fn ne(&self, rhs: &&'a [B; $n]) -> bool { self[..] != rhs[..] }
             }
         )+
     }

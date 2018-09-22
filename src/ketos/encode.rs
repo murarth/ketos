@@ -25,7 +25,7 @@ use structs::{StructDef, StructValueDef};
 use value::Value;
 
 /// First four bytes written to a compiled bytecode file.
-pub const MAGIC_NUMBER: &'static [u8; 4] = b"\0MUR";
+pub const MAGIC_NUMBER: &[u8; 4] = b"\0MUR";
 
 /// Error in decoding bytecode file format
 #[derive(Debug)]
@@ -426,13 +426,13 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
                 let c = self.read_u32()?;
                 from_u32(c)
                     .map(Value::Char)
-                    .ok_or(DecodeError::InvalidChar(c))
+                    .ok_or_else(|| DecodeError::InvalidChar(c))
             }
             STRING => self.read_string().map(|s| s.into()),
             BYTES => self.read_byte_string().map(|s| s.into()),
             PATH => self.read_string().map(|s| PathBuf::from(s).into()),
             // XXX: Decoding struct values is not implemented
-            STRUCT => return Err(DecodeError::InvalidType(STRUCT)),
+            STRUCT => Err(DecodeError::InvalidType(STRUCT)),
             STRUCT_DEF => {
                 let name = self.read_name(names)?;
                 let n = self.read_uint()?;
@@ -570,7 +570,7 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
 
     fn read_name(&mut self, names: &NameInputConversion) -> Result<Name, DecodeError> {
         let n = self.read_uint()?;
-        names.get(n).ok_or(DecodeError::InvalidName(n))
+        names.get(n).ok_or_else(|| DecodeError::InvalidName(n))
     }
 
     fn read_string(&mut self) -> Result<&'data str, DecodeError> {

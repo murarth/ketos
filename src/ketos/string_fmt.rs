@@ -1002,8 +1002,7 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
                 n => n,
             };
 
-            let total_text = strs.iter().map(|s| s.len())
-                .fold(0, |a, b| a + b) as u32;
+            let total_text = strs.iter().map(|s| s.len() as u32).sum::<u32>();
             let cols = max(min_col, total_text + pads * min_pad);
             let cols = cols + ((cols + (col_inc - 1)) % col_inc);
             let total_pad = cols - total_text;
@@ -1715,7 +1714,7 @@ fn low_cardinal(n: u32) -> Cardinal {
     LOW_CARDINALS[(n - 1) as usize]
 }
 
-const MID_CARDINALS: &'static [Cardinal] = &[
+const MID_CARDINALS: &[Cardinal] = &[
     ("twenty", "twentieth"),
     ("thirty", "thirtieth"),
     ("forty", "fortieth"),
@@ -1726,7 +1725,7 @@ const MID_CARDINALS: &'static [Cardinal] = &[
     ("ninety", "ninetieth"),
 ];
 
-const LOW_CARDINALS: &'static [Cardinal] = &[
+const LOW_CARDINALS: &[Cardinal] = &[
     ("one", "first"),
     ("two", "second"),
     ("three", "third"),

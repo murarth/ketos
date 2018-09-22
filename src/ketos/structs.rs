@@ -160,7 +160,7 @@ pub struct StructValueDef {
 impl StructValueDef {
     /// Creates a new `StructValueDef` from a mapping of field name to type name.
     pub fn new(fields: NameMapSlice<Name>) -> StructValueDef {
-        StructValueDef{fields: fields}
+        StructValueDef{ fields }
     }
 
     /// Returns a borrowed reference to the contained fields.
@@ -283,10 +283,7 @@ pub struct Struct {
 impl Struct {
     /// Creates a new `Struct` value with the given `StructDef` and field values.
     pub fn new(def: Rc<StructDef>, fields: Box<[Value]>) -> Struct {
-        Struct{
-            def: def,
-            fields: fields,
-        }
+        Struct{ def, fields }
     }
 
     /// Returns the struct definition.
@@ -339,10 +336,7 @@ fn ptr_eq<T>(a: *const T, b: *const T) -> bool {
 impl StructDef {
     /// Creates a new `StructDef` with the given name and fields.
     pub fn new(name: Name, def: Box<StructDefinition>) -> StructDef {
-        StructDef{
-            name: name,
-            def: def,
-        }
+        StructDef{ name, def }
     }
 
     /// Returns the struct name.

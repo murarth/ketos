@@ -664,7 +664,7 @@ fn try_pow(ctx: &Context, base: &Integer, mut exp: u32) -> Result<Integer, Error
     }
 
     if exp == 0 {
-        return Ok(Integer::one().into());
+        return Ok(Integer::one());
     }
 
     let mut base = base.clone();
@@ -675,7 +675,7 @@ fn try_pow(ctx: &Context, base: &Integer, mut exp: u32) -> Result<Integer, Error
     }
 
     if exp == 1 {
-        return Ok(base.into());
+        return Ok(base);
     }
 
     let mut acc = base.clone();
@@ -1421,10 +1421,10 @@ fn fn_elt(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 
     match *li {
         Value::List(ref li) => li.get(idx).cloned()
-            .ok_or(From::from(ExecError::OutOfBounds(idx))),
+            .ok_or_else(|| From::from(ExecError::OutOfBounds(idx))),
         Value::Bytes(ref b) => b.get(idx).cloned()
             .map(|b| b.into())
-            .ok_or(From::from(ExecError::OutOfBounds(idx))),
+            .ok_or_else(|| From::from(ExecError::OutOfBounds(idx))),
         ref v => Err(From::from(ExecError::expected("indexable sequence", v)))
     }
 }
@@ -1722,7 +1722,7 @@ fn fn_first(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 fn fn_second(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     match args[0] {
         Value::List(ref mut li) => li.get(1).cloned()
-            .ok_or(From::from(ExecError::OutOfBounds(1))),
+            .ok_or_else(|| From::from(ExecError::OutOfBounds(1))),
         ref v => Err(From::from(ExecError::expected("list", v)))
     }
 }
@@ -1924,7 +1924,7 @@ fn fn_int(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
         Value::Float(f) => match f {
             f if f.is_infinite() || f.is_nan() => Err(From::from(ExecError::Overflow)),
             f => Integer::from_f64(f)
-                .map(Value::Integer).ok_or(From::from(ExecError::Overflow)),
+                .map(Value::Integer).ok_or_else(|| From::from(ExecError::Overflow)),
         },
         Value::Integer(i) => Ok(i.into()),
         Value::Ratio(ref r) => Ok(r.to_integer().into()),
@@ -2012,7 +2012,7 @@ fn fn_rat(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     if args.len() == 1 {
         match args[0].take() {
             Value::Float(f) => Ratio::from_f64(f)
-                .map(Value::Ratio).ok_or(From::from(ExecError::Overflow)),
+                .map(Value::Ratio).ok_or_else(|| From::from(ExecError::Overflow)),
             Value::Integer(a) =>
                 Ok(Ratio::from_integer(a).into()),
             Value::Ratio(r) => Ok(r.into()),

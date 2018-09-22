@@ -439,15 +439,10 @@ impl PartialEq<Integer> for Ratio {
     fn eq(&self, rhs: &Integer) -> bool {
         self.denom().is_one() && self.numer() == rhs
     }
-
-    fn ne(&self, rhs: &Integer) -> bool {
-        !self.denom().is_one() || self.numer() != rhs
-    }
 }
 
 impl PartialEq<Ratio> for Integer {
     fn eq(&self, rhs: &Ratio) -> bool { rhs == self }
-    fn ne(&self, rhs: &Ratio) -> bool { rhs != self }
 }
 
 impl fmt::Display for Integer {

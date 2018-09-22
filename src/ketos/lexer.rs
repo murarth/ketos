@@ -159,10 +159,7 @@ impl CodeMap {
         let begin = self.text.len() as BytePos;
 
         self.text.push_str(text);
-        self.files.push(File{
-            path: path,
-            begin: begin,
-        });
+        self.files.push(File{ path, begin });
 
         begin
     }
@@ -543,7 +540,7 @@ fn parse_number(input: &str) -> Result<(Token, usize), ParseErrorKind> {
                 }
             }
             '+' | '-' => {
-                if !(exp && !exp_digit) {
+                if exp_digit || !exp {
                     return Err(ParseErrorKind::InvalidLiteral);
                 }
                 exp_digit = true;

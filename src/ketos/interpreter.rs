@@ -239,9 +239,7 @@ impl Interpreter {
 
     /// Creates a new `Interpreter` using the given `Context` instance.
     pub fn with_context(context: Context) -> Interpreter {
-        Interpreter{
-            context: context,
-        }
+        Interpreter{ context }
     }
 
     /// Creates a new `Interpreter` using the given `Scope` instance.
@@ -359,7 +357,7 @@ impl Interpreter {
     pub fn call(&self, name: &str, args: Vec<Value>) -> Result<Value, Error> {
         let name = self.scope().borrow_names_mut().add(name);
 
-        let v = self.scope().get_value(name).ok_or(ExecError::NameError(name))?;
+        let v = self.scope().get_value(name).ok_or_else(|| ExecError::NameError(name))?;
         self.call_value(v, args)
     }
 
