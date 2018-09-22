@@ -1,8 +1,9 @@
-#[macro_use] extern crate assert_matches;
+#[macro_use]
+extern crate assert_matches;
 
 extern crate ketos;
 
-use ketos::{CompileError, Error, ExecError, Interpreter, FromValue, Value};
+use ketos::{CompileError, Error, ExecError, FromValue, Interpreter, Value};
 
 fn eval(s: &str) -> Result<String, Error> {
     let interp = Interpreter::new();
@@ -24,20 +25,25 @@ fn run(s: &str) -> Result<Vec<String>, Error> {
     let interp = Interpreter::new();
 
     let c = interp.compile_exprs(s)?;
-    c.into_iter().map(|c| interp.execute(c)
-        .map(|v| interp.format_value(&v))).collect()
+    c.into_iter()
+        .map(|c| interp.execute(c).map(|v| interp.format_value(&v)))
+        .collect()
 }
 
 #[test]
 fn test_const() {
-    assert_eq!(run("
+    assert_eq!(
+        run("
         (const foo 2)
         (const bar (* foo 3))
         (const baz (+ bar 1))
         baz
-        ").unwrap(), ["foo", "bar", "baz", "7"]);
+        ").unwrap(),
+        ["foo", "bar", "baz", "7"]
+    );
 
-    assert_eq!(run("
+    assert_eq!(
+        run("
         (const foo `(foo 1 2 3))
         (const bar `(bar ,foo))
         (const baz `(baz ,@foo))
@@ -45,36 +51,50 @@ fn test_const() {
         bar
         baz
         ").unwrap(),
-        ["foo", "bar", "baz",
-        "(foo 1 2 3)", "(bar (foo 1 2 3))", "(baz foo 1 2 3)"]);
+        [
+            "foo",
+            "bar",
+            "baz",
+            "(foo 1 2 3)",
+            "(bar (foo 1 2 3))",
+            "(baz foo 1 2 3)"
+        ]
+    );
 
-    assert_eq!(run("
+    assert_eq!(
+        run("
         (const a 123)
         (const b 456)
         (const c (if (< a b) a b))
         c
         ").unwrap(),
-        ["a", "b", "c", "123"]);
+        ["a", "b", "c", "123"]
+    );
 }
 
 #[test]
 fn test_const_error() {
-    assert_matches!(run("
+    assert_matches!(
+        run("
         (define (foo) ())
         (const bar (foo))
         ").unwrap_err(),
-        Error::CompileError(CompileError::NotConstant(_)));
+        Error::CompileError(CompileError::NotConstant(_))
+    );
 
-    assert_matches!(run("
+    assert_matches!(
+        run("
         (define foo 1)
         (const bar foo)
         ").unwrap_err(),
-        Error::CompileError(CompileError::NotConstant(_)));
+        Error::CompileError(CompileError::NotConstant(_))
+    );
 }
 
 #[test]
 fn test_docs() {
-    assert_eq!(run(r#"
+    assert_eq!(
+        run(r#"
         (use code (documentation))
 
         (const foo
@@ -94,13 +114,20 @@ fn test_docs() {
         (documentation 'baz)
         (documentation (lambda () "lambda doc" 0))
         "#).unwrap(),
-        ["()", "foo", "bar", "baz",
+        [
+            "()",
+            "foo",
+            "bar",
+            "baz",
             r#""foo doc""#,
             r#""bar doc""#,
             r#""baz doc""#,
-            r#""lambda doc""#]);
+            r#""lambda doc""#
+        ]
+    );
 
-    assert_eq!(run(r#"
+    assert_eq!(
+        run(r#"
         (use code (documentation))
 
         ;; foo doc
@@ -122,12 +149,17 @@ fn test_docs() {
             ;; lambda doc
             (lambda () 0))
         "#).unwrap(),
-        ["()", "foo", "bar", "baz",
+        [
+            "()",
+            "foo",
+            "bar",
+            "baz",
             r#""foo doc\n""#,
             r#""bar doc\nwith multiple lines\n""#,
             r#""baz doc\n\n  with indentation\n""#,
             r#""lambda doc\n""#
-            ]);
+        ]
+    );
 }
 
 #[test]
@@ -154,17 +186,25 @@ fn test_quasiquote() {
     assert_eq!(eval("```foo").unwrap(), "``foo");
     assert_eq!(eval("`(foo ,(id 1))").unwrap(), "(foo 1)");
     assert_eq!(eval("``(foo ,(id ,(id 1)))").unwrap(), "`(foo ,(id 1))");
-    assert_eq!(eval("```(foo ,(id ,(id ,(id 1))))").unwrap(),
-        "``(foo ,(id ,(id 1)))");
+    assert_eq!(
+        eval("```(foo ,(id ,(id ,(id 1))))").unwrap(),
+        "``(foo ,(id ,(id 1)))"
+    );
 
     assert_eq!(eval("`(,@(list 1 2 3))").unwrap(), "(1 2 3)");
     assert_eq!(eval("`(foo ,@(list 1 2 3))").unwrap(), "(foo 1 2 3)");
-    assert_eq!(eval("`(foo ,@(list 1 2 3) bar)").unwrap(),
-        "(foo 1 2 3 bar)");
-    assert_eq!(eval("`(foo ,@(list 1 2 3) bar ,@(list 4 5 6))").unwrap(),
-        "(foo 1 2 3 bar 4 5 6)");
-    assert_eq!(eval("`(foo ,@(list 1 2 3) bar ,@(list 4 5 6) baz)").unwrap(),
-        "(foo 1 2 3 bar 4 5 6 baz)");
+    assert_eq!(
+        eval("`(foo ,@(list 1 2 3) bar)").unwrap(),
+        "(foo 1 2 3 bar)"
+    );
+    assert_eq!(
+        eval("`(foo ,@(list 1 2 3) bar ,@(list 4 5 6))").unwrap(),
+        "(foo 1 2 3 bar 4 5 6)"
+    );
+    assert_eq!(
+        eval("`(foo ,@(list 1 2 3) bar ,@(list 4 5 6) baz)").unwrap(),
+        "(foo 1 2 3 bar 4 5 6 baz)"
+    );
 
     assert_eq!(eval("`(foo ,1)").unwrap(), "(foo 1)");
     assert_eq!(eval("``(foo ,,1)").unwrap(), "`(foo 1)");
@@ -173,16 +213,19 @@ fn test_quasiquote() {
 
 #[test]
 fn test_struct() {
-    assert_eq!(run("
+    assert_eq!(
+        run("
         (struct foo ())
         (struct bar ())
         (define my-foo (new foo))
         (is-instance foo my-foo)
         (is-instance bar my-foo)
         ").unwrap(),
-        ["foo", "bar", "my-foo", "true", "false"]);
+        ["foo", "bar", "my-foo", "true", "false"]
+    );
 
-    assert_eq!(run("
+    assert_eq!(
+        run("
         (struct foo ((a integer)
                      (b list)
                      (c bool)))
@@ -205,59 +248,76 @@ fn test_struct() {
         (. new-foo :b)
         (. new-foo :c)
         ").unwrap(),
-        ["foo",
-            "my-foo", "123", "(4 5 6)", "true",
-            "new-foo", "456", "(7 8 9)", "false"]);
+        ["foo", "my-foo", "123", "(4 5 6)", "true", "new-foo", "456", "(7 8 9)", "false"]
+    );
 
-    assert_eq!(run("
+    assert_eq!(
+        run("
         (struct foo ((a number)))
         (new foo :a 1)
         (new foo :a 1.0)
-        ").unwrap(), ["foo", "foo { a: 1 }", "foo { a: 1.0 }"]);
+        ").unwrap(),
+        ["foo", "foo { a: 1 }", "foo { a: 1.0 }"]
+    );
 
-    assert_eq!(run("
+    assert_eq!(
+        run("
         (struct foo ())
         (define my-foo (new foo))
         (is-instance foo my-foo)
         (struct foo ())
         (is-instance foo my-foo)
-        ").unwrap(), ["foo", "my-foo", "true", "foo", "false"]);
+        ").unwrap(),
+        ["foo", "my-foo", "true", "foo", "false"]
+    );
 
-    assert_matches!(run("
+    assert_matches!(
+        run("
         (struct foo ((a integer)))
         (new foo)
         ").unwrap_err(),
-        Error::ExecError(ExecError::MissingField{..}));
+        Error::ExecError(ExecError::MissingField { .. })
+    );
 
-    assert_matches!(run("
+    assert_matches!(
+        run("
         (struct foo ((a integer)))
         (new foo :a 1.0)
         ").unwrap_err(),
-        Error::ExecError(ExecError::FieldTypeError{..}));
+        Error::ExecError(ExecError::FieldTypeError { .. })
+    );
 
-    assert_matches!(run("
+    assert_matches!(
+        run("
         (struct foo ((a integer)))
         (.= (new foo :a 1) :a 1.0)
         ").unwrap_err(),
-        Error::ExecError(ExecError::FieldTypeError{..}));
+        Error::ExecError(ExecError::FieldTypeError { .. })
+    );
 
-    assert_matches!(run("
+    assert_matches!(
+        run("
         (struct foo ((a integer)))
         (. (new foo :a 1) :b)
         ").unwrap_err(),
-        Error::ExecError(ExecError::FieldError{..}));
+        Error::ExecError(ExecError::FieldError { .. })
+    );
 
-    assert_matches!(run("
+    assert_matches!(
+        run("
         (struct foo ((a integer)))
         (.= (new foo :a 1) :b 0)
         ").unwrap_err(),
-        Error::ExecError(ExecError::FieldError{..}));
+        Error::ExecError(ExecError::FieldError { .. })
+    );
 
-    assert_eq!(run("
+    assert_eq!(
+        run("
         (struct foo ((a number)))
         (= (new foo :a 1) (new foo :a 1.0))
         ").unwrap(),
-        ["foo", "true"]);
+        ["foo", "true"]
+    );
 }
 
 #[test]
@@ -285,9 +345,15 @@ fn test_format() {
     assert_eq!(eval_str(r#"(format "~s" #p"foo")"#).unwrap(), "#p\"foo\"");
     assert_eq!(eval_str(r#"(format "~a" #b"foo")"#).unwrap(), r#"#b"foo""#);
     assert_eq!(eval_str(r#"(format "~s" #b"foo")"#).unwrap(), r#"#b"foo""#);
-    assert_eq!(eval_str(r#"(format "~a" #b"foo\xff")"#).unwrap(), r#"#b"foo\xff""#);
+    assert_eq!(
+        eval_str(r#"(format "~a" #b"foo\xff")"#).unwrap(),
+        r#"#b"foo\xff""#
+    );
 
-    assert_eq!(eval_str(r#"(format "foo~c~c~c" #'b' #'a' #'r')"#).unwrap(), "foobar");
+    assert_eq!(
+        eval_str(r#"(format "foo~c~c~c" #'b' #'a' #'r')"#).unwrap(),
+        "foobar"
+    );
 
     assert_eq!(eval_str(r#"(format "~f" 1.0)"#).unwrap(), "1");
     assert_eq!(eval_str(r#"(format "~e" 1.0)"#).unwrap(), "1e0");
@@ -309,16 +375,29 @@ fn test_format() {
     assert_eq!(eval_str(r#"(format "~@d" -1)"#).unwrap(), "-1");
 
     assert_eq!(eval_str(r#"(format "~5d" 123)"#).unwrap(), "  123");
-    assert_eq!(eval_str(r#"(format "~:d" 1234567890)"#).unwrap(), "1,234,567,890");
+    assert_eq!(
+        eval_str(r#"(format "~:d" 1234567890)"#).unwrap(),
+        "1,234,567,890"
+    );
     assert_eq!(eval_str(r#"(format "~:d" -123456)"#).unwrap(), "-123,456");
-    assert_eq!(eval_str(r#"(format "~,,' ,2:d" 12345)"#).unwrap(), "1 23 45");
+    assert_eq!(
+        eval_str(r#"(format "~,,' ,2:d" 12345)"#).unwrap(),
+        "1 23 45"
+    );
 
-    assert_matches!(eval_str(r#"(format "~v,vd" 5 6 123)"#).unwrap_err(),
-        Error::ExecError(ExecError::FormatError{..}));
+    assert_matches!(
+        eval_str(r#"(format "~v,vd" 5 6 123)"#).unwrap_err(),
+        Error::ExecError(ExecError::FormatError { .. })
+    );
     assert_eq!(eval_str(r#"(format "~v,vd" 5 #'*' 123)"#).unwrap(), "**123");
-    assert_eq!(eval_str(r#"(format "~,,v,v:d" #'.' 2 123)"#).unwrap(), "1.23");
-    assert_eq!(eval_str(r#"(format "~v,v,v,v:d" 5 #'*' #'.' 2 123)"#).unwrap(),
-        "*1.23");
+    assert_eq!(
+        eval_str(r#"(format "~,,v,v:d" #'.' 2 123)"#).unwrap(),
+        "1.23"
+    );
+    assert_eq!(
+        eval_str(r#"(format "~v,v,v,v:d" 5 #'*' #'.' 2 123)"#).unwrap(),
+        "*1.23"
+    );
 
     assert_eq!(eval_str(r#"(format "~4@f" 1.0)"#).unwrap(), "  +1");
     assert_eq!(eval_str(r#"(format "~,3@f" 1.0)"#).unwrap(), "+1.000");
@@ -328,11 +407,23 @@ fn test_format() {
     assert_eq!(eval_str(r#"(format "~d thing~:p" 1)"#).unwrap(), "1 thing");
     assert_eq!(eval_str(r#"(format "~d thing~:p" 2)"#).unwrap(), "2 things");
 
-    assert_eq!(eval_str(r#"(format "~d thing~:@p" 0)"#).unwrap(), "0 thingies");
-    assert_eq!(eval_str(r#"(format "~d thing~:@p" 1)"#).unwrap(), "1 thingy");
-    assert_eq!(eval_str(r#"(format "~d thing~:@p" 2)"#).unwrap(), "2 thingies");
+    assert_eq!(
+        eval_str(r#"(format "~d thing~:@p" 0)"#).unwrap(),
+        "0 thingies"
+    );
+    assert_eq!(
+        eval_str(r#"(format "~d thing~:@p" 1)"#).unwrap(),
+        "1 thingy"
+    );
+    assert_eq!(
+        eval_str(r#"(format "~d thing~:@p" 2)"#).unwrap(),
+        "2 thingies"
+    );
 
-    assert_eq!(eval_str(r#"(format "~d thing~p" 1 2)"#).unwrap(), "1 things");
+    assert_eq!(
+        eval_str(r#"(format "~d thing~p" 1 2)"#).unwrap(),
+        "1 things"
+    );
 
     assert_eq!(eval_str(r#"(format "~t")"#).unwrap(), " ");
     assert_eq!(eval_str(r#"(format "~4t")"#).unwrap(), "    ");
@@ -342,7 +433,10 @@ fn test_format() {
     assert_eq!(eval_str(r#"(format "abcde~4,4t")"#).unwrap(), "abcde   ");
     assert_eq!(eval_str(r#"(format "abcdef~4,4t")"#).unwrap(), "abcdef  ");
     assert_eq!(eval_str(r#"(format "abcdefg~4,4t")"#).unwrap(), "abcdefg ");
-    assert_eq!(eval_str(r#"(format "abcdefgh~4,4t")"#).unwrap(), "abcdefgh    ");
+    assert_eq!(
+        eval_str(r#"(format "abcdefgh~4,4t")"#).unwrap(),
+        "abcdefgh    "
+    );
     assert_eq!(eval_str(r#"(format "ab~2,4@t")"#).unwrap(), "ab  ");
     assert_eq!(eval_str(r#"(format "abc~2,4@t")"#).unwrap(), "abc     ");
 
@@ -351,8 +445,13 @@ fn test_format() {
     assert_eq!(eval_str(r#"(format "~v~" 5)"#).unwrap(), "~~~~~");
     assert_eq!(eval_str(r#"(format "~#~" 1 2)"#).unwrap(), "~~");
     assert_eq!(eval_str(r#"(format "~%")"#).unwrap(), "\n");
-    assert_eq!(eval_str(r#"(format "foo~
-                                    bar")"#).unwrap(), "foobar");
+    assert_eq!(
+        eval_str(
+            r#"(format "foo~
+                                    bar")"#
+        ).unwrap(),
+        "foobar"
+    );
     assert_eq!(eval_str(r#"(format "~&")"#).unwrap(), "");
     assert_eq!(eval_str(r#"(format "a~&b")"#).unwrap(), "a\nb");
     assert_eq!(eval_str(r#"(format "a~%~&b")"#).unwrap(), "a\nb");
@@ -362,8 +461,10 @@ fn test_format() {
 
     assert_eq!(eval_str(r#"(format "~a ~*~a" 0 1 2)"#).unwrap(), "0 2");
     assert_eq!(eval_str(r#"(format "~a ~:*~a" 0)"#).unwrap(), "0 0");
-    assert_matches!(eval_str(r#"(format "~*~*~*~a" 0 1 2)"#).unwrap_err(),
-        Error::ExecError(ExecError::FormatError{..}));
+    assert_matches!(
+        eval_str(r#"(format "~*~*~*~a" 0 1 2)"#).unwrap_err(),
+        Error::ExecError(ExecError::FormatError { .. })
+    );
     assert_eq!(eval_str(r#"(format "~a ~@*~a" 0)"#).unwrap(), "0 0");
     assert_eq!(eval_str(r#"(format "~a ~2@*~a" 0 1 2)"#).unwrap(), "0 2");
 
@@ -372,23 +473,52 @@ fn test_format() {
 
     assert_eq!(eval_str(r#"(format "FOO~(BAR~)")"#).unwrap(), "FOObar");
     assert_eq!(eval_str(r#"(format "foo~:@(bar~)")"#).unwrap(), "fooBAR");
-    assert_eq!(eval_str(r#"(format "foo ~@(bar baz~)")"#).unwrap(), "foo Bar baz");
-    assert_eq!(eval_str(r#"(format "foo~@( bar baz~)")"#).unwrap(), "foo Bar baz");
-    assert_eq!(eval_str(r#"(format "foo ~:(bar baz~)")"#).unwrap(), "foo Bar Baz");
+    assert_eq!(
+        eval_str(r#"(format "foo ~@(bar baz~)")"#).unwrap(),
+        "foo Bar baz"
+    );
+    assert_eq!(
+        eval_str(r#"(format "foo~@( bar baz~)")"#).unwrap(),
+        "foo Bar baz"
+    );
+    assert_eq!(
+        eval_str(r#"(format "foo ~:(bar baz~)")"#).unwrap(),
+        "foo Bar Baz"
+    );
     assert_eq!(eval_str(r#"(format "~(FOO~^BAR~)")"#).unwrap(), "foo");
 
-    assert_eq!(eval_str(r#"(format "~[foo~;bar~;baz~]" 0)"#).unwrap(), "foo");
-    assert_eq!(eval_str(r#"(format "~[foo~;bar~;baz~]" 1)"#).unwrap(), "bar");
-    assert_eq!(eval_str(r#"(format "~[foo~;bar~;baz~]" 2)"#).unwrap(), "baz");
+    assert_eq!(
+        eval_str(r#"(format "~[foo~;bar~;baz~]" 0)"#).unwrap(),
+        "foo"
+    );
+    assert_eq!(
+        eval_str(r#"(format "~[foo~;bar~;baz~]" 1)"#).unwrap(),
+        "bar"
+    );
+    assert_eq!(
+        eval_str(r#"(format "~[foo~;bar~;baz~]" 2)"#).unwrap(),
+        "baz"
+    );
     assert_eq!(eval_str(r#"(format "~[foo~;bar~;baz~]" 3)"#).unwrap(), "");
 
-    assert_eq!(eval_str(r#"(format "~[foo~;bar~:;baz~]" 3)"#).unwrap(), "baz");
-    assert_eq!(eval_str(r#"(format "~[foo~;bar~:;baz~;quux~]" 3)"#).unwrap(), "baz");
+    assert_eq!(
+        eval_str(r#"(format "~[foo~;bar~:;baz~]" 3)"#).unwrap(),
+        "baz"
+    );
+    assert_eq!(
+        eval_str(r#"(format "~[foo~;bar~:;baz~;quux~]" 3)"#).unwrap(),
+        "baz"
+    );
 
-    assert_eq!(eval_str(r#"(format "~:[foo~;bar~]" false)"#).unwrap(), "foo");
+    assert_eq!(
+        eval_str(r#"(format "~:[foo~;bar~]" false)"#).unwrap(),
+        "foo"
+    );
     assert_eq!(eval_str(r#"(format "~:[foo~;bar~]" true)"#).unwrap(), "bar");
-    assert_matches!(eval_str(r#"(format "~:[foo~;bar~]" 'other)"#).unwrap_err(),
-        Error::ExecError(ExecError::FormatError{..}));
+    assert_matches!(
+        eval_str(r#"(format "~:[foo~;bar~]" 'other)"#).unwrap_err(),
+        Error::ExecError(ExecError::FormatError { .. })
+    );
 
     assert_eq!(eval_str(r#"(format "~@[~a~]" ())"#).unwrap(), "");
     assert_eq!(eval_str(r#"(format "~@[~a~]" "foo")"#).unwrap(), "foo");
@@ -397,52 +527,98 @@ fn test_format() {
     assert_eq!(eval_str(r#"(format "~{~a~}" '(1 2 3))"#).unwrap(), "123");
     assert_eq!(eval_str(r#"(format "~{~}" "~a" '(1 2 3))"#).unwrap(), "123");
 
-    assert_eq!(eval_str(r#"(format "~{~{~a ~a~}~^, ~}" '((a b) (c d)))"#).unwrap(), "a b, c d");
+    assert_eq!(
+        eval_str(r#"(format "~{~{~a ~a~}~^, ~}" '((a b) (c d)))"#).unwrap(),
+        "a b, c d"
+    );
 
     assert_eq!(eval_str(r#"(format "~{foo~^~a~:}" '())"#).unwrap(), "foo");
-    assert_eq!(eval_str(r#"(format "~{foo~^~a~:}" '(1 2))"#).unwrap(), "foo1foo2");
+    assert_eq!(
+        eval_str(r#"(format "~{foo~^~a~:}" '(1 2))"#).unwrap(),
+        "foo1foo2"
+    );
     assert_eq!(eval_str(r#"(format "~0{foo~:}" '())"#).unwrap(), "");
     assert_eq!(eval_str(r#"(format "~2{~a~:}" '(1 2 3))"#).unwrap(), "12");
-    assert_eq!(eval_str(r#"(format "~{foo~0^~:}" '(1 2 3))"#).unwrap(), "foo");
-    assert_eq!(eval_str(r#"(format "~:{~@?~^:~}" '(("a") ("b")))"#).unwrap(), "ab");
-    assert_eq!(eval_str(r#"(format "~:{~@?~:^:~}" '(("a") ("b")))"#).unwrap(), "a:b");
+    assert_eq!(
+        eval_str(r#"(format "~{foo~0^~:}" '(1 2 3))"#).unwrap(),
+        "foo"
+    );
+    assert_eq!(
+        eval_str(r#"(format "~:{~@?~^:~}" '(("a") ("b")))"#).unwrap(),
+        "ab"
+    );
+    assert_eq!(
+        eval_str(r#"(format "~:{~@?~:^:~}" '(("a") ("b")))"#).unwrap(),
+        "a:b"
+    );
 
-    assert_eq!(eval_str(r#"(format "~:{foo~a~0^bar~:}" '((1 2) (3 4)))"#).unwrap(),
-        "foo1foo3");
-    assert_eq!(eval_str(r#"(format "~:{foo~a~0:^bar~:}" '((1 2) (3 4)))"#).unwrap(),
-        "foo1");
+    assert_eq!(
+        eval_str(r#"(format "~:{foo~a~0^bar~:}" '((1 2) (3 4)))"#).unwrap(),
+        "foo1foo3"
+    );
+    assert_eq!(
+        eval_str(r#"(format "~:{foo~a~0:^bar~:}" '((1 2) (3 4)))"#).unwrap(),
+        "foo1"
+    );
 
-    assert_matches!(eval_str(r#"(format "~{infinite-loop~}" '(1 2 3))"#).unwrap_err(),
-        Error::ExecError(ExecError::FormatError{..}));
-    assert_matches!(eval_str(r#"(format "~@{infinite-loop~}" 1 2 3)"#).unwrap_err(),
-        Error::ExecError(ExecError::FormatError{..}));
+    assert_matches!(
+        eval_str(r#"(format "~{infinite-loop~}" '(1 2 3))"#).unwrap_err(),
+        Error::ExecError(ExecError::FormatError { .. })
+    );
+    assert_matches!(
+        eval_str(r#"(format "~@{infinite-loop~}" 1 2 3)"#).unwrap_err(),
+        Error::ExecError(ExecError::FormatError { .. })
+    );
 
-    assert_eq!(eval_str(r#"(format "~?baz" "foo~^bar" ())"#).unwrap(), "foobaz");
+    assert_eq!(
+        eval_str(r#"(format "~?baz" "foo~^bar" ())"#).unwrap(),
+        "foobaz"
+    );
 
     assert_eq!(eval_str(r#"(format "foo~^bar")"#).unwrap(), "foo");
     assert_eq!(eval_str(r#"(format "~:@(foo~^bar~)baz")"#).unwrap(), "FOO");
-    assert_eq!(eval_str(r#"(format "~[foo~^bar~;baz~]quux" 0)"#).unwrap(),
-        "foo");
-    assert_eq!(eval_str(r#"(format "~[foo~^bar~;baz~]quux" 1)"#).unwrap(),
-        "bazquux");
-    assert_eq!(eval_str(r#"(format "~[foo~^bar~;baz~]quux" 2)"#).unwrap(),
-        "quux");
+    assert_eq!(
+        eval_str(r#"(format "~[foo~^bar~;baz~]quux" 0)"#).unwrap(),
+        "foo"
+    );
+    assert_eq!(
+        eval_str(r#"(format "~[foo~^bar~;baz~]quux" 1)"#).unwrap(),
+        "bazquux"
+    );
+    assert_eq!(
+        eval_str(r#"(format "~[foo~^bar~;baz~]quux" 2)"#).unwrap(),
+        "quux"
+    );
 
-    assert_eq!(eval_str(r#"(format "~{foo ~a ~^bar ~}baz" '())"#).unwrap(),
-        "baz");
-    assert_eq!(eval_str(r#"(format "~{foo ~a ~^bar ~}baz" '(1))"#).unwrap(),
-        "foo 1 baz");
-    assert_eq!(eval_str(r#"(format "~{foo ~a ~^bar ~}baz" '(1 2))"#).unwrap(),
-        "foo 1 bar foo 2 baz");
+    assert_eq!(
+        eval_str(r#"(format "~{foo ~a ~^bar ~}baz" '())"#).unwrap(),
+        "baz"
+    );
+    assert_eq!(
+        eval_str(r#"(format "~{foo ~a ~^bar ~}baz" '(1))"#).unwrap(),
+        "foo 1 baz"
+    );
+    assert_eq!(
+        eval_str(r#"(format "~{foo ~a ~^bar ~}baz" '(1 2))"#).unwrap(),
+        "foo 1 bar foo 2 baz"
+    );
 
-    assert_eq!(eval_str(r#"(format "~{a ~a~^ b ~a~^ ~}" '())"#).unwrap(),
-        "");
-    assert_eq!(eval_str(r#"(format "~{a ~a~^ b ~a~^ ~}" '(1))"#).unwrap(),
-        "a 1");
-    assert_eq!(eval_str(r#"(format "~{a ~a~^ b ~a~^ ~}" '(1 2))"#).unwrap(),
-        "a 1 b 2");
-    assert_eq!(eval_str(r#"(format "~{a ~a~^ b ~a~^ ~}" '(1 2 3))"#).unwrap(),
-        "a 1 b 2 a 3");
+    assert_eq!(
+        eval_str(r#"(format "~{a ~a~^ b ~a~^ ~}" '())"#).unwrap(),
+        ""
+    );
+    assert_eq!(
+        eval_str(r#"(format "~{a ~a~^ b ~a~^ ~}" '(1))"#).unwrap(),
+        "a 1"
+    );
+    assert_eq!(
+        eval_str(r#"(format "~{a ~a~^ b ~a~^ ~}" '(1 2))"#).unwrap(),
+        "a 1 b 2"
+    );
+    assert_eq!(
+        eval_str(r#"(format "~{a ~a~^ b ~a~^ ~}" '(1 2 3))"#).unwrap(),
+        "a 1 b 2 a 3"
+    );
 
     assert_eq!(eval_str(r#"(format "~<~>")"#).unwrap(), "");
     assert_eq!(eval_str(r#"(format "~<a~>")"#).unwrap(), "a");
@@ -455,41 +631,67 @@ fn test_format() {
     assert_eq!(eval_str(r#"(format "~6<a~;b~;c~>")"#).unwrap(), "a  b c");
     assert_eq!(eval_str(r#"(format "~7<a~;b~;c~>")"#).unwrap(), "a  b  c");
 
-    assert_eq!(eval_str(r#"(format "~<foo:~,5:;aaaaa~>")"#).unwrap(), "aaaaa");
-    assert_eq!(eval_str(r#"(format "~<foo:~,5:;aaaaaa~>")"#).unwrap(), "foo:aaaaaa");
+    assert_eq!(
+        eval_str(r#"(format "~<foo:~,5:;aaaaa~>")"#).unwrap(),
+        "aaaaa"
+    );
+    assert_eq!(
+        eval_str(r#"(format "~<foo:~,5:;aaaaaa~>")"#).unwrap(),
+        "foo:aaaaaa"
+    );
 
-    assert_matches!(eval_str(r#"(format "~(~]")"#).unwrap_err(),
-        Error::ExecError(ExecError::FormatError{..}));
-    assert_matches!(eval_str(r#"(format "~}")"#).unwrap_err(),
-        Error::ExecError(ExecError::FormatError{..}));
+    assert_matches!(
+        eval_str(r#"(format "~(~]")"#).unwrap_err(),
+        Error::ExecError(ExecError::FormatError { .. })
+    );
+    assert_matches!(
+        eval_str(r#"(format "~}")"#).unwrap_err(),
+        Error::ExecError(ExecError::FormatError { .. })
+    );
 }
 
 #[test]
 fn test_format_radix() {
-    assert_matches!(eval_str(r#"(format "~@r" 0)"#).unwrap_err(),
-        Error::ExecError(ExecError::FormatError{..}));
-    assert_matches!(eval_str(r#"(format "~@:r" 0)"#).unwrap_err(),
-        Error::ExecError(ExecError::FormatError{..}));
+    assert_matches!(
+        eval_str(r#"(format "~@r" 0)"#).unwrap_err(),
+        Error::ExecError(ExecError::FormatError { .. })
+    );
+    assert_matches!(
+        eval_str(r#"(format "~@:r" 0)"#).unwrap_err(),
+        Error::ExecError(ExecError::FormatError { .. })
+    );
 
     assert_eq!(eval_str(r#"(format "~10r" 0)"#).unwrap(), "0");
     assert_eq!(eval_str(r#"(format "~10r" 123)"#).unwrap(), "123");
     assert_eq!(eval_str(r#"(format "~vr" 10 123)"#).unwrap(), "123");
     assert_eq!(eval_str(r#"(format "~10,5,'*r" 123)"#).unwrap(), "**123");
 
-    assert_eq!(eval_str(r#"(format "~2r" 0b111000111000)"#).unwrap(), "111000111000");
+    assert_eq!(
+        eval_str(r#"(format "~2r" 0b111000111000)"#).unwrap(),
+        "111000111000"
+    );
     assert_eq!(eval_str(r#"(format "~8r" 0o777)"#).unwrap(), "777");
-    assert_eq!(eval_str(r#"(format "~16r" 0xdeadbeef)"#).unwrap(), "deadbeef");
+    assert_eq!(
+        eval_str(r#"(format "~16r" 0xdeadbeef)"#).unwrap(),
+        "deadbeef"
+    );
     assert_eq!(eval_str(r#"(format "~16r" (- 0xff))"#).unwrap(), "-ff");
-    assert_eq!(eval_str(r#"(format "~36r"
-        158401117505150402526146910133459374380313782878846610247207502179)"#)
-        .unwrap(), "omghowdidthisgethereiamnotgoodwithcomputer");
+    assert_eq!(
+        eval_str(
+            r#"(format "~36r"
+        158401117505150402526146910133459374380313782878846610247207502179)"#
+        ).unwrap(),
+        "omghowdidthisgethereiamnotgoodwithcomputer"
+    );
 
     assert_eq!(eval_str(r#"(format "~b" 0b1010)"#).unwrap(), "1010");
     assert_eq!(eval_str(r#"(format "~o" 0o321)"#).unwrap(), "321");
     assert_eq!(eval_str(r#"(format "~x" 0xabcdef)"#).unwrap(), "abcdef");
 
-    assert_eq!(eval_str(r#"(format "~2,,,' ,4:r" 0b101011001111)"#).unwrap(),
-        "1010 1100 1111");
+    assert_eq!(
+        eval_str(r#"(format "~2,,,' ,4:r" 0b101011001111)"#).unwrap(),
+        "1010 1100 1111"
+    );
 
     assert_eq!(eval_str(r#"(format "~r" 0)"#).unwrap(), "zero");
     assert_eq!(eval_str(r#"(format "~r" 1)"#).unwrap(), "one");
@@ -498,7 +700,10 @@ fn test_format_radix() {
     assert_eq!(eval_str(r#"(format "~r" 15)"#).unwrap(), "fifteen");
     assert_eq!(eval_str(r#"(format "~r" 41)"#).unwrap(), "forty-one");
     assert_eq!(eval_str(r#"(format "~r" 101)"#).unwrap(), "one hundred one");
-    assert_eq!(eval_str(r#"(format "~r" 1204)"#).unwrap(), "one thousand two hundred four");
+    assert_eq!(
+        eval_str(r#"(format "~r" 1204)"#).unwrap(),
+        "one thousand two hundred four"
+    );
 
     assert_eq!(eval_str(r#"(format "~:r" 0)"#).unwrap(), "zeroth");
     assert_eq!(eval_str(r#"(format "~:r" 1)"#).unwrap(), "first");
@@ -506,8 +711,14 @@ fn test_format_radix() {
     assert_eq!(eval_str(r#"(format "~:r" 3)"#).unwrap(), "third");
     assert_eq!(eval_str(r#"(format "~:r" 15)"#).unwrap(), "fifteenth");
     assert_eq!(eval_str(r#"(format "~:r" 41)"#).unwrap(), "forty-first");
-    assert_eq!(eval_str(r#"(format "~:r" 101)"#).unwrap(), "one hundred first");
-    assert_eq!(eval_str(r#"(format "~:r" 1204)"#).unwrap(), "one thousand two hundred fourth");
+    assert_eq!(
+        eval_str(r#"(format "~:r" 101)"#).unwrap(),
+        "one hundred first"
+    );
+    assert_eq!(
+        eval_str(r#"(format "~:r" 1204)"#).unwrap(),
+        "one thousand two hundred fourth"
+    );
 
     assert_eq!(eval_str(r#"(format "~@r" 1)"#).unwrap(), "I");
     assert_eq!(eval_str(r#"(format "~@r" 2)"#).unwrap(), "II");
@@ -595,36 +806,52 @@ fn test_div() {
     assert_eq!(eval("(/ 2 4)").unwrap(), "1/2");
     assert_eq!(eval("(/ 2 4.0)").unwrap(), "0.5");
 
-    assert_matches!(eval("(/ 1 0)").unwrap_err(),
-        Error::ExecError(ExecError::DivideByZero));
+    assert_matches!(
+        eval("(/ 1 0)").unwrap_err(),
+        Error::ExecError(ExecError::DivideByZero)
+    );
     assert_eq!(eval("(/ 1.0 0.0)").unwrap(), "inf");
-    assert_matches!(eval("(/ 1/1 0/1)").unwrap_err(),
-        Error::ExecError(ExecError::DivideByZero));
+    assert_matches!(
+        eval("(/ 1/1 0/1)").unwrap_err(),
+        Error::ExecError(ExecError::DivideByZero)
+    );
 }
 
 #[test]
 fn test_rem() {
     assert_eq!(eval("(rem 10 3)").unwrap(), "1");
 
-    assert_matches!(eval("(rem 1 0)").unwrap_err(),
-        Error::ExecError(ExecError::DivideByZero));
+    assert_matches!(
+        eval("(rem 1 0)").unwrap_err(),
+        Error::ExecError(ExecError::DivideByZero)
+    );
     assert_eq!(eval("(rem 1.0 0.0)").unwrap(), "NaN");
-    assert_matches!(eval("(rem 1/1 0/1)").unwrap_err(),
-        Error::ExecError(ExecError::DivideByZero));
+    assert_matches!(
+        eval("(rem 1/1 0/1)").unwrap_err(),
+        Error::ExecError(ExecError::DivideByZero)
+    );
 }
 
 #[test]
 fn test_shift() {
     assert_eq!(eval("(<< 1 10)").unwrap(), "1024");
     assert_eq!(eval("(>> 128 7)").unwrap(), "1");
-    assert_matches!(eval("(<< 1 -1)").unwrap_err(),
-        Error::ExecError(ExecError::Overflow));
-    assert_matches!(eval("(<< 1 10000000000000)").unwrap_err(),
-        Error::ExecError(ExecError::Overflow));
-    assert_matches!(eval("(>> 1 -1)").unwrap_err(),
-        Error::ExecError(ExecError::Overflow));
-    assert_matches!(eval("(>> 1 10000000000000)").unwrap_err(),
-        Error::ExecError(ExecError::Overflow));
+    assert_matches!(
+        eval("(<< 1 -1)").unwrap_err(),
+        Error::ExecError(ExecError::Overflow)
+    );
+    assert_matches!(
+        eval("(<< 1 10000000000000)").unwrap_err(),
+        Error::ExecError(ExecError::Overflow)
+    );
+    assert_matches!(
+        eval("(>> 1 -1)").unwrap_err(),
+        Error::ExecError(ExecError::Overflow)
+    );
+    assert_matches!(
+        eval("(>> 1 10000000000000)").unwrap_err(),
+        Error::ExecError(ExecError::Overflow)
+    );
 }
 
 #[test]
@@ -657,13 +884,16 @@ fn test_eq() {
     assert_eq!(eval("(= = =)").unwrap(), "true");
     assert_eq!(eval("(= id =)").unwrap(), "false");
 
-    assert_eq!(run("
+    assert_eq!(
+        run("
         (define (foo n) (+ n 1))
         (define (bar n) (+ n 1))
 
         (= foo foo)
         (= foo bar)
-        ").unwrap(), ["foo", "bar", "true", "false"]);
+        ").unwrap(),
+        ["foo", "bar", "true", "false"]
+    );
 
     assert_eq!(eval("(= 1 1.0)").unwrap(), "true");
     assert_eq!(eval("(= 2 1.0)").unwrap(), "false");
@@ -715,15 +945,23 @@ fn test_cmp() {
     assert!(eval("(< 'a 'b)").is_ok());
     assert!(eval("(< :a :b)").is_ok());
 
-    assert_matches!(eval("(< < <)").unwrap_err(),
-        Error::ExecError(ExecError::CannotCompare("function")));
+    assert_matches!(
+        eval("(< < <)").unwrap_err(),
+        Error::ExecError(ExecError::CannotCompare("function"))
+    );
 
-    assert_matches!(eval("(< 1.0 (nan))").unwrap_err(),
-        Error::ExecError(ExecError::CompareNaN));
-    assert_matches!(eval("(< 1 (nan))").unwrap_err(),
-        Error::ExecError(ExecError::CompareNaN));
-    assert_matches!(eval("(< 1/2 (nan))").unwrap_err(),
-        Error::ExecError(ExecError::CompareNaN));
+    assert_matches!(
+        eval("(< 1.0 (nan))").unwrap_err(),
+        Error::ExecError(ExecError::CompareNaN)
+    );
+    assert_matches!(
+        eval("(< 1 (nan))").unwrap_err(),
+        Error::ExecError(ExecError::CompareNaN)
+    );
+    assert_matches!(
+        eval("(< 1/2 (nan))").unwrap_err(),
+        Error::ExecError(ExecError::CompareNaN)
+    );
 }
 
 #[test]
@@ -768,12 +1006,14 @@ fn test_zero() {
     assert_eq!(eval("(zero 0 1 0)").unwrap(), "false");
     assert_eq!(eval("(zero 0 0.0 0/1)").unwrap(), "true");
 
-    assert_matches!(eval("(zero ())").unwrap_err(), Error::ExecError(
-        ExecError::TypeError{
+    assert_matches!(
+        eval("(zero ())").unwrap_err(),
+        Error::ExecError(ExecError::TypeError {
             expected: "number",
             found: "unit",
             value: Some(Value::Unit),
-        }));
+        })
+    );
 }
 
 #[test]
@@ -789,12 +1029,14 @@ fn test_and() {
     assert_eq!(eval("(and false true)").unwrap(), "false");
     assert_eq!(eval("(and false (panic))").unwrap(), "false");
 
-    assert_matches!(eval("(and () true)").unwrap_err(), Error::ExecError(
-        ExecError::TypeError{
+    assert_matches!(
+        eval("(and () true)").unwrap_err(),
+        Error::ExecError(ExecError::TypeError {
             expected: "bool",
             found: "unit",
             value: Some(Value::Unit),
-        }));
+        })
+    );
 }
 
 #[test]
@@ -804,12 +1046,14 @@ fn test_or() {
     assert_eq!(eval("(or false true)").unwrap(), "true");
     assert_eq!(eval("(or true (panic))").unwrap(), "true");
 
-    assert_matches!(eval("(or () true)").unwrap_err(), Error::ExecError(
-        ExecError::TypeError{
+    assert_matches!(
+        eval("(or () true)").unwrap_err(),
+        Error::ExecError(ExecError::TypeError {
             expected: "bool",
             found: "unit",
             value: Some(Value::Unit),
-        }));
+        })
+    );
 }
 
 #[test]
@@ -819,12 +1063,14 @@ fn test_xor() {
     assert_eq!(eval("(xor true false)").unwrap(), "true");
     assert_eq!(eval("(xor false false)").unwrap(), "false");
 
-    assert_matches!(eval("(xor () ())").unwrap_err(), Error::ExecError(
-        ExecError::TypeError{
+    assert_matches!(
+        eval("(xor () ())").unwrap_err(),
+        Error::ExecError(ExecError::TypeError {
             expected: "bool",
             found: "unit",
             value: Some(Value::Unit),
-        }));
+        })
+    );
 }
 
 #[test]
@@ -832,12 +1078,14 @@ fn test_not() {
     assert_eq!(eval("(not true)").unwrap(), "false");
     assert_eq!(eval("(not false)").unwrap(), "true");
 
-    assert_matches!(eval("(not ())").unwrap_err(), Error::ExecError(
-        ExecError::TypeError{
+    assert_matches!(
+        eval("(not ())").unwrap_err(),
+        Error::ExecError(ExecError::TypeError {
             expected: "bool",
             found: "unit",
             value: Some(Value::Unit),
-        }));
+        })
+    );
 }
 
 #[test]
@@ -850,66 +1098,121 @@ fn test_if() {
     assert_eq!(eval("(if (= 1 0) 'a 'b)").unwrap(), "b");
     assert_eq!(eval("(if (/= 1 0) 'a 'b)").unwrap(), "a");
 
-    assert_matches!(eval("(if 0 () ())").unwrap_err(), Error::ExecError(
-        ExecError::TypeError{
+    assert_matches!(
+        eval("(if 0 () ())").unwrap_err(),
+        Error::ExecError(ExecError::TypeError {
             expected: "bool",
             found: "integer",
             value: Some(Value::Integer(_)),
-        }));
+        })
+    );
 }
 
 #[test]
 fn test_case() {
-    assert_eq!(eval("(case 1
-                           ((0) 'a))").unwrap(), "()");
+    assert_eq!(
+        eval(
+            "(case 1
+                           ((0) 'a))"
+        ).unwrap(),
+        "()"
+    );
 
-    assert_eq!(eval("(case 1
-                           ((0 1 2) 'a))").unwrap(), "a");
+    assert_eq!(
+        eval(
+            "(case 1
+                           ((0 1 2) 'a))"
+        ).unwrap(),
+        "a"
+    );
 
-    assert_eq!(eval("(case 1
+    assert_eq!(
+        eval(
+            "(case 1
                            ((0)  'a)
-                           (else 'b))").unwrap(), "b");
+                           (else 'b))"
+        ).unwrap(),
+        "b"
+    );
 
-    assert_eq!(eval("(case 2
+    assert_eq!(
+        eval(
+            "(case 2
                            ((0) 'a)
                            ((1) 'b)
-                           ((2) 'c))").unwrap(), "c");
+                           ((2) 'c))"
+        ).unwrap(),
+        "c"
+    );
 
-    assert_matches!(eval("(case 0
+    assert_matches!(
+        eval(
+            "(case 0
                                 ((0) 'a)
                                 (else 'b)
-                                ((1) 'c))").unwrap_err(),
-        Error::CompileError(_));
+                                ((1) 'c))"
+        ).unwrap_err(),
+        Error::CompileError(_)
+    );
 }
 
 #[test]
 fn test_cond() {
-    assert_eq!(eval("(cond (false 'a)
-                           (true 'b))").unwrap(), "b");
+    assert_eq!(
+        eval(
+            "(cond (false 'a)
+                           (true 'b))"
+        ).unwrap(),
+        "b"
+    );
 
-    assert_eq!(eval("(cond (true 'a)
-                           (true 'b))").unwrap(), "a");
+    assert_eq!(
+        eval(
+            "(cond (true 'a)
+                           (true 'b))"
+        ).unwrap(),
+        "a"
+    );
 
-    assert_eq!(eval("(cond (false 'a)
-                           (false 'b))").unwrap(), "()");
+    assert_eq!(
+        eval(
+            "(cond (false 'a)
+                           (false 'b))"
+        ).unwrap(),
+        "()"
+    );
 
-    assert_eq!(eval("(cond (false 'a)
+    assert_eq!(
+        eval(
+            "(cond (false 'a)
                            (false 'b)
-                           (else 'c))").unwrap(), "c");
+                           (else 'c))"
+        ).unwrap(),
+        "c"
+    );
 
-    assert_matches!(eval("(cond (false 'a)
+    assert_matches!(
+        eval(
+            "(cond (false 'a)
                             (else 'b)
-                            (true 'c))").unwrap_err(),
-        Error::CompileError(_));
+                            (true 'c))"
+        ).unwrap_err(),
+        Error::CompileError(_)
+    );
 }
 
 #[test]
 fn test_let() {
-    assert_eq!(eval("
+    assert_eq!(
+        eval(
+            "
         (let ((a 1)
               (b 2))
           (+ a b))
-        ").unwrap(), "3");
+        "
+        ).unwrap(),
+        "3"
+    );
 
     // Standard names CAN be overriden with let
     assert_eq!(eval("(let ((id 0)) id)").unwrap(), "0");
@@ -919,8 +1222,10 @@ fn test_let() {
 fn test_chars() {
     assert_eq!(eval(r#"(chars "")"#).unwrap(), "()");
     assert_eq!(eval(r#"(chars "foo")"#).unwrap(), "(#'f' #'o' #'o')");
-    assert_eq!(eval(r#"(chars "halo thar")"#).unwrap(),
-        "(#'h' #'a' #'l' #'o' #' ' #'t' #'h' #'a' #'r')");
+    assert_eq!(
+        eval(r#"(chars "halo thar")"#).unwrap(),
+        "(#'h' #'a' #'l' #'o' #' ' #'t' #'h' #'a' #'r')"
+    );
 }
 
 #[test]
@@ -934,7 +1239,10 @@ fn test_string() {
 fn test_bytes() {
     assert_eq!(eval(r#"(bytes ())"#).unwrap(), r#"#b"""#);
     assert_eq!(eval(r#"(bytes '(97 98 99))"#).unwrap(), r#"#b"abc""#);
-    assert_eq!(eval(r#"(bytes '(#b'a' #b'b' #b'c'))"#).unwrap(), r#"#b"abc""#);
+    assert_eq!(
+        eval(r#"(bytes '(#b'a' #b'b' #b'c'))"#).unwrap(),
+        r#"#b"abc""#
+    );
     assert_eq!(eval(r#"(bytes "foo")"#).unwrap(), r#"#b"foo""#);
     assert_eq!(eval(r#"(bytes #b"bar")"#).unwrap(), r#"#b"bar""#);
 }
@@ -943,10 +1251,14 @@ fn test_bytes() {
 fn test_slice() {
     assert_eq!(eval("(slice () 0 0)").unwrap(), "()");
     assert_eq!(eval("(slice () 0)").unwrap(), "()");
-    assert_matches!(eval("(slice () 0 1)").unwrap_err(),
-        Error::ExecError(ExecError::OutOfBounds(1)));
-    assert_matches!(eval("(slice () 1)").unwrap_err(),
-        Error::ExecError(ExecError::OutOfBounds(1)));
+    assert_matches!(
+        eval("(slice () 0 1)").unwrap_err(),
+        Error::ExecError(ExecError::OutOfBounds(1))
+    );
+    assert_matches!(
+        eval("(slice () 1)").unwrap_err(),
+        Error::ExecError(ExecError::OutOfBounds(1))
+    );
 
     assert_eq!(eval("(slice '(1 2 3) 0 2)").unwrap(), "(1 2)");
     assert_eq!(eval("(slice '(1 2 3) 1 3)").unwrap(), "(2 3)");
@@ -956,10 +1268,14 @@ fn test_slice() {
     assert_eq!(eval(r#"(slice "" 0)"#).unwrap(), r#""""#);
     assert_eq!(eval(r#"(slice "foobar" 3 6)"#).unwrap(), r#""bar""#);
     assert_eq!(eval(r#"(slice "foobar" 3)"#).unwrap(), r#""bar""#);
-    assert_matches!(eval(r#"(slice "a\u{2022}" 1 2)"#).unwrap_err(),
-        Error::ExecError(ExecError::NotCharBoundary(2)));
-    assert_matches!(eval(r#"(slice "a\u{2022}" 2)"#).unwrap_err(),
-        Error::ExecError(ExecError::NotCharBoundary(2)));
+    assert_matches!(
+        eval(r#"(slice "a\u{2022}" 1 2)"#).unwrap_err(),
+        Error::ExecError(ExecError::NotCharBoundary(2))
+    );
+    assert_matches!(
+        eval(r#"(slice "a\u{2022}" 2)"#).unwrap_err(),
+        Error::ExecError(ExecError::NotCharBoundary(2))
+    );
 }
 
 #[test]
@@ -975,10 +1291,14 @@ fn test_elt() {
     assert_eq!(eval(r#"(elt #b"abc" 0)"#).unwrap(), "97");
     assert_eq!(eval(r#"(elt #b"abc" 1)"#).unwrap(), "98");
 
-    assert_matches!(eval("(elt '(1 2) 2)").unwrap_err(),
-        Error::ExecError(ExecError::OutOfBounds(2)));
-    assert_matches!(eval("(elt () -1)").unwrap_err(),
-        Error::ExecError(ExecError::Overflow));
+    assert_matches!(
+        eval("(elt '(1 2) 2)").unwrap_err(),
+        Error::ExecError(ExecError::OutOfBounds(2))
+    );
+    assert_matches!(
+        eval("(elt () -1)").unwrap_err(),
+        Error::ExecError(ExecError::Overflow)
+    );
 }
 
 #[test]
@@ -987,25 +1307,48 @@ fn test_concat() {
 
     assert_eq!(eval(r#"(concat "foo" "" "bar")"#).unwrap(), r#""foobar""#);
     assert_eq!(eval(r#"(concat #'a' #'b')"#).unwrap(), r#""ab""#);
-    assert_eq!(eval(r#"(concat "foo" #'b' #'a' #'r')"#).unwrap(), r#""foobar""#);
+    assert_eq!(
+        eval(r#"(concat "foo" #'b' #'a' #'r')"#).unwrap(),
+        r#""foobar""#
+    );
 
-    assert_eq!(eval(r#"(concat #p"foo" #p"bar")"#).unwrap(), r#"#p"foo/bar""#);
+    assert_eq!(
+        eval(r#"(concat #p"foo" #p"bar")"#).unwrap(),
+        r#"#p"foo/bar""#
+    );
 
-    assert_eq!(eval(r#"(concat #b"foo" #b"bar")"#).unwrap(), r#"#b"foobar""#);
+    assert_eq!(
+        eval(r#"(concat #b"foo" #b"bar")"#).unwrap(),
+        r#"#b"foobar""#
+    );
 }
 
 #[test]
 fn test_join() {
-    assert_eq!(eval("(join '(0) '(1 2) () '(3 4))").unwrap(), "(1 2 0 0 3 4)");
+    assert_eq!(
+        eval("(join '(0) '(1 2) () '(3 4))").unwrap(),
+        "(1 2 0 0 3 4)"
+    );
     assert_eq!(eval("(join '(0))").unwrap(), "()");
     assert_eq!(eval(r#"(join ":")"#).unwrap(), r#""""#);
-    assert_eq!(eval(r#"(join ":" "foo" "" "bar")"#).unwrap(), r#""foo::bar""#);
-    assert_eq!(eval(r#"(join #':' "foo" "" "bar")"#).unwrap(), r#""foo::bar""#);
+    assert_eq!(
+        eval(r#"(join ":" "foo" "" "bar")"#).unwrap(),
+        r#""foo::bar""#
+    );
+    assert_eq!(
+        eval(r#"(join #':' "foo" "" "bar")"#).unwrap(),
+        r#""foo::bar""#
+    );
     assert_eq!(eval(r#"(join #':' #'a' #'b')"#).unwrap(), r#""a:b""#);
-    assert_eq!(eval(r#"(join ":" "foo" #'a' #'b' "bar")"#).unwrap(),
-        r#""foo:a:b:bar""#);
+    assert_eq!(
+        eval(r#"(join ":" "foo" #'a' #'b' "bar")"#).unwrap(),
+        r#""foo:a:b:bar""#
+    );
 
-    assert_eq!(eval(r#"(join #b":" #b"foo" #b"" #b"bar")"#).unwrap(), r#"#b"foo::bar""#);
+    assert_eq!(
+        eval(r#"(join #b":" #b"foo" #b"" #b"bar")"#).unwrap(),
+        r#"#b"foo::bar""#
+    );
 }
 
 #[test]
@@ -1018,18 +1361,21 @@ fn test_len() {
 
     assert_eq!(eval(r#"(len #b"foo")"#).unwrap(), "3");
 
-    assert_matches!(eval("(len 123)").unwrap_err(),
-        Error::ExecError(ExecError::TypeError{..}));
+    assert_matches!(
+        eval("(len 123)").unwrap_err(),
+        Error::ExecError(ExecError::TypeError { .. })
+    );
 }
 
 #[test]
 fn test_first_second() {
     assert_eq!(eval("(first '(1 2))").unwrap(), "1");
     assert_eq!(eval("(second '(1 2))").unwrap(), "2");
-    assert_matches!(eval("(first ())").unwrap_err(),
-        Error::ExecError(_));
-    assert_matches!(eval("(second '(1))").unwrap_err(),
-        Error::ExecError(ExecError::OutOfBounds(1)));
+    assert_matches!(eval("(first ())").unwrap_err(), Error::ExecError(_));
+    assert_matches!(
+        eval("(second '(1))").unwrap_err(),
+        Error::ExecError(ExecError::OutOfBounds(1))
+    );
 }
 
 #[test]
@@ -1050,14 +1396,22 @@ fn test_str_fns() {
     assert_eq!(eval(r#"(init  "x")"#).unwrap(), r#""""#);
     assert_eq!(eval(r#"(tail  "x")"#).unwrap(), r#""""#);
 
-    assert_matches!(eval(r#"(first "")"#).unwrap_err(),
-        Error::ExecError(ExecError::OutOfBounds(0)));
-    assert_matches!(eval(r#"(last "")"#).unwrap_err(),
-        Error::ExecError(ExecError::OutOfBounds(0)));
-    assert_matches!(eval(r#"(init "")"#).unwrap_err(),
-        Error::ExecError(ExecError::OutOfBounds(0)));
-    assert_matches!(eval(r#"(tail "")"#).unwrap_err(),
-        Error::ExecError(ExecError::OutOfBounds(0)));
+    assert_matches!(
+        eval(r#"(first "")"#).unwrap_err(),
+        Error::ExecError(ExecError::OutOfBounds(0))
+    );
+    assert_matches!(
+        eval(r#"(last "")"#).unwrap_err(),
+        Error::ExecError(ExecError::OutOfBounds(0))
+    );
+    assert_matches!(
+        eval(r#"(init "")"#).unwrap_err(),
+        Error::ExecError(ExecError::OutOfBounds(0))
+    );
+    assert_matches!(
+        eval(r#"(tail "")"#).unwrap_err(),
+        Error::ExecError(ExecError::OutOfBounds(0))
+    );
 }
 
 #[test]
@@ -1069,14 +1423,22 @@ fn test_bytes_fns() {
     assert_eq!(eval(r#"(init  #b"x")"#).unwrap(), r#"#b"""#);
     assert_eq!(eval(r#"(tail  #b"x")"#).unwrap(), r#"#b"""#);
 
-    assert_matches!(eval(r#"(first #b"")"#).unwrap_err(),
-        Error::ExecError(ExecError::OutOfBounds(0)));
-    assert_matches!(eval(r#"(last #b"")"#).unwrap_err(),
-        Error::ExecError(ExecError::OutOfBounds(0)));
-    assert_matches!(eval(r#"(init #b"")"#).unwrap_err(),
-        Error::ExecError(ExecError::OutOfBounds(0)));
-    assert_matches!(eval(r#"(tail #b"")"#).unwrap_err(),
-        Error::ExecError(ExecError::OutOfBounds(0)));
+    assert_matches!(
+        eval(r#"(first #b"")"#).unwrap_err(),
+        Error::ExecError(ExecError::OutOfBounds(0))
+    );
+    assert_matches!(
+        eval(r#"(last #b"")"#).unwrap_err(),
+        Error::ExecError(ExecError::OutOfBounds(0))
+    );
+    assert_matches!(
+        eval(r#"(init #b"")"#).unwrap_err(),
+        Error::ExecError(ExecError::OutOfBounds(0))
+    );
+    assert_matches!(
+        eval(r#"(tail #b"")"#).unwrap_err(),
+        Error::ExecError(ExecError::OutOfBounds(0))
+    );
 }
 
 #[test]
@@ -1125,10 +1487,14 @@ fn test_int() {
     assert_eq!(eval("(int 123.0)").unwrap(), "123");
     assert_eq!(eval("(int 123/1)").unwrap(), "123");
 
-    assert_matches!(eval("(int (inf))").unwrap_err(),
-        Error::ExecError(ExecError::Overflow));
-    assert_matches!(eval("(int (nan))").unwrap_err(),
-        Error::ExecError(ExecError::Overflow));
+    assert_matches!(
+        eval("(int (inf))").unwrap_err(),
+        Error::ExecError(ExecError::Overflow)
+    );
+    assert_matches!(
+        eval("(int (nan))").unwrap_err(),
+        Error::ExecError(ExecError::Overflow)
+    );
 }
 
 #[test]
@@ -1137,8 +1503,10 @@ fn test_float() {
     assert_eq!(eval("(float 123.0)").unwrap(), "123.0");
     assert_eq!(eval("(float 123/1)").unwrap(), "123.0");
 
-    assert_matches!(eval("(float (^ 10 309))").unwrap_err(),
-        Error::ExecError(ExecError::Overflow));
+    assert_matches!(
+        eval("(float (^ 10 309))").unwrap_err(),
+        Error::ExecError(ExecError::Overflow)
+    );
 }
 
 #[test]
@@ -1169,10 +1537,14 @@ fn test_recip() {
     assert_eq!(eval("(recip 10.0)").unwrap(), "0.1");
     assert_eq!(eval("(recip 2/3)").unwrap(), "3/2");
 
-    assert_matches!(eval("(recip 0)").unwrap_err(),
-        Error::ExecError(ExecError::DivideByZero));
-    assert_matches!(eval("(recip 0/1)").unwrap_err(),
-        Error::ExecError(ExecError::DivideByZero));
+    assert_matches!(
+        eval("(recip 0)").unwrap_err(),
+        Error::ExecError(ExecError::DivideByZero)
+    );
+    assert_matches!(
+        eval("(recip 0/1)").unwrap_err(),
+        Error::ExecError(ExecError::DivideByZero)
+    );
 }
 
 #[test]
@@ -1187,10 +1559,14 @@ fn test_ratio() {
     assert_eq!(eval("(rat 1/3)").unwrap(), "1/3");
     assert_eq!(eval("(rat 3)").unwrap(), "3/1");
     assert_eq!(eval("(rat 1 2)").unwrap(), "1/2");
-    assert_matches!(eval("(rat (inf))").unwrap_err(),
-        Error::ExecError(ExecError::Overflow));
-    assert_matches!(eval("(rat (nan))").unwrap_err(),
-        Error::ExecError(ExecError::Overflow));
+    assert_matches!(
+        eval("(rat (inf))").unwrap_err(),
+        Error::ExecError(ExecError::Overflow)
+    );
+    assert_matches!(
+        eval("(rat (nan))").unwrap_err(),
+        Error::ExecError(ExecError::Overflow)
+    );
 }
 
 #[test]
@@ -1254,61 +1630,89 @@ fn test_type_of() {
 
 #[test]
 fn test_define() {
-    assert_eq!(run("(define foo 123) foo").unwrap(),
-        ["foo", "123"]);
+    assert_eq!(run("(define foo 123) foo").unwrap(), ["foo", "123"]);
 
     // Standard names cannot be overriden in global scope
-    assert_matches!(run("(define (=) ())").unwrap_err(),
-        Error::CompileError(_));
-    assert_matches!(run("(define (if) ())").unwrap_err(),
-        Error::CompileError(_));
+    assert_matches!(run("(define (=) ())").unwrap_err(), Error::CompileError(_));
+    assert_matches!(run("(define (if) ())").unwrap_err(), Error::CompileError(_));
 
-    assert_eq!(run("(define (foo n) (* n n)) (foo 3)").unwrap(),
-        ["foo", "9"]);
-    assert_eq!(run("
+    assert_eq!(
+        run("(define (foo n) (* n n)) (foo 3)").unwrap(),
+        ["foo", "9"]
+    );
+    assert_eq!(
+        run("
         (define (foo a b :optional c d) (list a b c d))
         (foo 1 2)
         (foo 1 2 3)
         (foo 1 2 3 4)
         ").unwrap(),
-        ["foo", "(1 2 () ())", "(1 2 3 ())", "(1 2 3 4)"]);
+        ["foo", "(1 2 () ())", "(1 2 3 ())", "(1 2 3 4)"]
+    );
 
-    assert_eq!(run("
+    assert_eq!(
+        run("
         (define (foo a b :key c d) (list a b c d))
         (foo 1 2)
         (foo 1 2 :c 3)
         (foo 1 2 :d 3)
         (foo 1 2 :c 3 :d 4)
         ").unwrap(),
-        ["foo", "(1 2 () ())", "(1 2 3 ())", "(1 2 () 3)", "(1 2 3 4)"]);
+        [
+            "foo",
+            "(1 2 () ())",
+            "(1 2 3 ())",
+            "(1 2 () 3)",
+            "(1 2 3 4)"
+        ]
+    );
 
-    assert_eq!(run("
+    assert_eq!(
+        run("
         (define (foo a b :key (c 10) d) (list a b c d))
         (foo 1 2)
         (foo 1 2 :c 3)
         (foo 1 2 :d 3)
         (foo 1 2 :c 3 :d 4)
         ").unwrap(),
-        ["foo", "(1 2 10 ())", "(1 2 3 ())", "(1 2 10 3)", "(1 2 3 4)"]);
+        [
+            "foo",
+            "(1 2 10 ())",
+            "(1 2 3 ())",
+            "(1 2 10 3)",
+            "(1 2 3 4)"
+        ]
+    );
 
-    assert_eq!(run("
+    assert_eq!(
+        run("
         (define (foo a b :key c (d 10)) (list a b c d))
         (foo 1 2)
         (foo 1 2 :c 3)
         (foo 1 2 :d 3)
         (foo 1 2 :c 3 :d 4)
         ").unwrap(),
-        ["foo", "(1 2 () 10)", "(1 2 3 10)", "(1 2 () 3)", "(1 2 3 4)"]);
+        [
+            "foo",
+            "(1 2 () 10)",
+            "(1 2 3 10)",
+            "(1 2 () 3)",
+            "(1 2 3 4)"
+        ]
+    );
 
-    assert_eq!(run("
+    assert_eq!(
+        run("
         (define (foo a b :rest rest) (list a b rest))
         (foo 1 2)
         (foo 1 2 3)
         (foo 1 2 3 4)
         ").unwrap(),
-        ["foo", "(1 2 ())", "(1 2 (3))", "(1 2 (3 4))"]);
+        ["foo", "(1 2 ())", "(1 2 (3))", "(1 2 (3 4))"]
+    );
 
-    assert_eq!(run("
+    assert_eq!(
+        run("
         (define (foo a b :optional c d :rest rest) (list a b c d rest))
         (foo 1 2)
         (foo 1 2 3)
@@ -1316,26 +1720,38 @@ fn test_define() {
         (foo 1 2 3 4 5)
         (foo 1 2 3 4 5 6)
         ").unwrap(),
-        ["foo", "(1 2 () () ())", "(1 2 3 () ())", "(1 2 3 4 ())",
-            "(1 2 3 4 (5))", "(1 2 3 4 (5 6))"]);
+        [
+            "foo",
+            "(1 2 () () ())",
+            "(1 2 3 () ())",
+            "(1 2 3 4 ())",
+            "(1 2 3 4 (5))",
+            "(1 2 3 4 (5 6))"
+        ]
+    );
 
-    assert_eq!(run("
+    assert_eq!(
+        run("
         (define (foo a b :optional (c 10) d) (list a b c d))
         (foo 1 2)
         (foo 1 2 3)
         (foo 1 2 3 4)
         ").unwrap(),
-        ["foo", "(1 2 10 ())", "(1 2 3 ())", "(1 2 3 4)"]);
+        ["foo", "(1 2 10 ())", "(1 2 3 ())", "(1 2 3 4)"]
+    );
 
-    assert_eq!(run("
+    assert_eq!(
+        run("
         (define (foo a b :optional c (d 10)) (list a b c d))
         (foo 1 2)
         (foo 1 2 3)
         (foo 1 2 3 4)
         ").unwrap(),
-        ["foo", "(1 2 () 10)", "(1 2 3 10)", "(1 2 3 4)"]);
+        ["foo", "(1 2 () 10)", "(1 2 3 10)", "(1 2 3 4)"]
+    );
 
-    assert_eq!(run("
+    assert_eq!(
+        run("
         (define (foo a b :optional (c 10) (d 20) :rest rest) (list a b c d rest))
         (foo 1 2)
         (foo 1 2 3)
@@ -1343,40 +1759,58 @@ fn test_define() {
         (foo 1 2 3 4 5)
         (foo 1 2 3 4 5 6)
         ").unwrap(),
-        ["foo", "(1 2 10 20 ())", "(1 2 3 20 ())", "(1 2 3 4 ())",
-            "(1 2 3 4 (5))", "(1 2 3 4 (5 6))"]);
+        [
+            "foo",
+            "(1 2 10 20 ())",
+            "(1 2 3 20 ())",
+            "(1 2 3 4 ())",
+            "(1 2 3 4 (5))",
+            "(1 2 3 4 (5 6))"
+        ]
+    );
 
-    assert_matches!(run("
+    assert_matches!(
+        run("
         (define (foo a :optional b :key c) ())
         ").unwrap_err(),
-        Error::CompileError(CompileError::SyntaxError(_)));
+        Error::CompileError(CompileError::SyntaxError(_))
+    );
 
-    assert_matches!(run("
+    assert_matches!(
+        run("
         (define (foo a :key b :optional c) ())
         ").unwrap_err(),
-        Error::CompileError(CompileError::SyntaxError(_)));
+        Error::CompileError(CompileError::SyntaxError(_))
+    );
 
-    assert_matches!(run("
+    assert_matches!(
+        run("
         (define (foo a :key b :rest rest) ())
         ").unwrap_err(),
-        Error::CompileError(CompileError::SyntaxError(_)));
+        Error::CompileError(CompileError::SyntaxError(_))
+    );
 }
 
 #[test]
 fn test_const_define() {
     // Test that a non-capturing lambda is available to macros at compile time
-    assert_eq!(run("
+    assert_eq!(
+        run("
         (macro (foo) `(do ,(bar)))
         (define (bar) 123)
         (foo)
         ").unwrap(),
-        ["foo", "bar", "123"]);
+        ["foo", "bar", "123"]
+    );
 }
 
 #[test]
 fn test_lambda() {
     assert_eq!(eval("((lambda (n) n) 1)").unwrap(), "1");
-    assert_eq!(eval("((lambda (:rest rest) rest) 1 2 3)").unwrap(), "(1 2 3)");
+    assert_eq!(
+        eval("((lambda (:rest rest) rest) 1 2 3)").unwrap(),
+        "(1 2 3)"
+    );
 }
 
 #[test]
@@ -1386,21 +1820,27 @@ fn test_do() {
 
 #[test]
 fn test_macro() {
-    assert_eq!(run("
+    assert_eq!(
+        run("
         (macro (quote a) `',a)
         (quote foo)
         ").unwrap(),
-        ["quote", "foo"]);
+        ["quote", "foo"]
+    );
 
-    assert_matches!(eval("(define (foo a) (macro (bar) a))").unwrap_err(),
-        Error::CompileError(_));
+    assert_matches!(
+        eval("(define (foo a) (macro (bar) a))").unwrap_err(),
+        Error::CompileError(_)
+    );
 
-    assert_matches!(run("
+    assert_matches!(
+        run("
         (macro (foo) '(bar))
         (macro (bar) '(foo))
         (foo)
         ").unwrap_err(),
-        Error::CompileError(CompileError::MacroRecursionExceeded));
+        Error::CompileError(CompileError::MacroRecursionExceeded)
+    );
 }
 
 #[test]
@@ -1411,8 +1851,10 @@ fn test_apply() {
 
 #[test]
 fn test_panic() {
-    assert_matches!(eval("(panic)").unwrap_err(),
-        Error::ExecError(ExecError::Panic(None)));
+    assert_matches!(
+        eval("(panic)").unwrap_err(),
+        Error::ExecError(ExecError::Panic(None))
+    );
     assert_matches!(eval("(panic 123)").unwrap_err(),
         Error::ExecError(ExecError::Panic(Some(Value::Integer(ref i))))
             if i.to_u32() == Some(123));
@@ -1423,20 +1865,26 @@ fn test_panic() {
 
 #[test]
 fn test_use() {
-    assert_eq!(run("
+    assert_eq!(
+        run("
         (use math (sqrt))
         (sqrt 4.0)
         ").unwrap(),
-        ["()", "2.0"]);
+        ["()", "2.0"]
+    );
 
-    assert_eq!(run("
+    assert_eq!(
+        run("
         (use math :all)
         (sqrt 4.0)
         ").unwrap(),
-        ["()", "2.0"]);
+        ["()", "2.0"]
+    );
 
-    assert_matches!(run("
+    assert_matches!(
+        run("
         (use math (does-not-exist))
         ").unwrap_err(),
-        Error::CompileError(CompileError::ImportError{..}));
+        Error::CompileError(CompileError::ImportError { .. })
+    );
 }

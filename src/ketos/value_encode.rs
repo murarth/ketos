@@ -28,8 +28,8 @@ use std::fmt;
 
 use serde::ser::{self, Serialize, Serializer};
 
-use exec::{ExecError, panic};
 use error::Error;
+use exec::{panic, ExecError};
 use name::Name;
 use scope::Scope;
 use value::Value;
@@ -74,7 +74,7 @@ enum SerializeState {
 
 impl<'a> VSerializer<'a> {
     fn new(scope: &Scope) -> VSerializer {
-        VSerializer{
+        VSerializer {
             scope: scope,
             value: None,
             state: Vec::new(),
@@ -121,7 +121,7 @@ impl<'a> VSerializer<'a> {
     fn expect_field(&self) -> bool {
         match self.state.last() {
             Some(&SerializeState::StructKey(_)) => true,
-            _ => false
+            _ => false,
         }
     }
 
@@ -145,9 +145,10 @@ impl<'a> VSerializer<'a> {
                 v.push(Value::Name(variant));
 
                 self.state.push(SerializeState::Sequence(v));
-                self.state.push(SerializeState::Sequence(Vec::with_capacity(len)));
+                self.state
+                    .push(SerializeState::Sequence(Vec::with_capacity(len)));
             }
-            _ => panic!("missing begin_enum")
+            _ => panic!("missing begin_enum"),
         }
     }
 
@@ -161,10 +162,10 @@ impl<'a> VSerializer<'a> {
                 v.push(Value::Name(variant));
 
                 self.state.push(SerializeState::Sequence(v));
-                self.state.push(SerializeState::StructKey(
-                    Vec::with_capacity(len * 2)));
+                self.state
+                    .push(SerializeState::StructKey(Vec::with_capacity(len * 2)));
             }
-            _ => panic!("missing begin_enum")
+            _ => panic!("missing begin_enum"),
         }
     }
 
@@ -179,7 +180,8 @@ impl<'a> VSerializer<'a> {
         v.push(Value::Name(name));
 
         self.state.push(SerializeState::Sequence(v));
-        self.state.push(SerializeState::StructKey(Vec::with_capacity(len * 2)));
+        self.state
+            .push(SerializeState::StructKey(Vec::with_capacity(len * 2)));
     }
 
     fn end_struct(&mut self) {
@@ -187,7 +189,7 @@ impl<'a> VSerializer<'a> {
             SerializeState::StructKey(v) => {
                 self.emit_value(v);
             }
-            _ => panic!("missing struct state")
+            _ => panic!("missing struct state"),
         }
         self.end_seq();
     }
@@ -210,7 +212,8 @@ impl<'a> VSerializer<'a> {
         v.push(Value::Name(name));
 
         self.state.push(SerializeState::Sequence(v));
-        self.state.push(SerializeState::Sequence(Vec::with_capacity(len)));
+        self.state
+            .push(SerializeState::Sequence(Vec::with_capacity(len)));
     }
 
     // For now, Option values are encoded as:
@@ -221,7 +224,8 @@ impl<'a> VSerializer<'a> {
     }
 
     fn begin_seq(&mut self, len: usize) {
-        self.state.push(SerializeState::Sequence(Vec::with_capacity(len)));
+        self.state
+            .push(SerializeState::Sequence(Vec::with_capacity(len)));
     }
 
     fn end_seq(&mut self) {
@@ -229,7 +233,7 @@ impl<'a> VSerializer<'a> {
             SerializeState::Sequence(v) => {
                 self.emit_value(v);
             }
-            _ => panic!("missing sequence")
+            _ => panic!("missing sequence"),
         }
     }
 
@@ -343,8 +347,12 @@ impl<'a, 'b: 'a> Serializer for &'a mut VSerializer<'b> {
         Ok(())
     }
 
-    fn serialize_unit_variant(self, name: &'static str,
-            _index: u32, variant: &'static str) -> Result<(), ExecError> {
+    fn serialize_unit_variant(
+        self,
+        name: &'static str,
+        _index: u32,
+        variant: &'static str,
+    ) -> Result<(), ExecError> {
         self.emit_unit_variant(name, variant);
         Ok(())
     }
@@ -354,35 +362,37 @@ impl<'a, 'b: 'a> Serializer for &'a mut VSerializer<'b> {
         Ok(())
     }
 
-    fn serialize_some<V: ?Sized + Serialize>(self, value: &V)
-            -> Result<(), ExecError> {
+    fn serialize_some<V: ?Sized + Serialize>(self, value: &V) -> Result<(), ExecError> {
         value.serialize(self)
     }
 
-    fn serialize_seq(self, len: Option<usize>)
-            -> Result<SubSerializer<'a, 'b>, ExecError> {
+    fn serialize_seq(self, len: Option<usize>) -> Result<SubSerializer<'a, 'b>, ExecError> {
         self.begin_seq(len.unwrap_or(0));
         Ok(SubSerializer(self))
     }
 
-    fn serialize_tuple(self, len: usize)
-            -> Result<SubSerializer<'a, 'b>, ExecError> {
+    fn serialize_tuple(self, len: usize) -> Result<SubSerializer<'a, 'b>, ExecError> {
         self.serialize_seq(Some(len))
     }
 
-    fn serialize_map(self, len: Option<usize>)
-            -> Result<SubSerializer<'a, 'b>, ExecError> {
+    fn serialize_map(self, len: Option<usize>) -> Result<SubSerializer<'a, 'b>, ExecError> {
         self.serialize_seq(len)
     }
 
-    fn serialize_struct(self, name: &'static str, len: usize)
-            -> Result<SubSerializer<'a, 'b>, ExecError> {
+    fn serialize_struct(
+        self,
+        name: &'static str,
+        len: usize,
+    ) -> Result<SubSerializer<'a, 'b>, ExecError> {
         self.begin_struct(name, len);
         Ok(SubSerializer(self))
     }
 
-    fn serialize_newtype_struct<T: ?Sized + Serialize>(self,
-            name: &'static str, value: &T) -> Result<(), ExecError> {
+    fn serialize_newtype_struct<T: ?Sized + Serialize>(
+        self,
+        name: &'static str,
+        value: &T,
+    ) -> Result<(), ExecError> {
         use serde::ser::SerializeTupleStruct;
 
         let mut ser = self.serialize_tuple_struct(name, 1)?;
@@ -391,15 +401,22 @@ impl<'a, 'b: 'a> Serializer for &'a mut VSerializer<'b> {
         ser.end()
     }
 
-    fn serialize_tuple_struct(self, name: &'static str, len: usize)
-            -> Result<SubSerializer<'a, 'b>, ExecError> {
+    fn serialize_tuple_struct(
+        self,
+        name: &'static str,
+        len: usize,
+    ) -> Result<SubSerializer<'a, 'b>, ExecError> {
         self.begin_tuple_struct(name, len);
         Ok(SubSerializer(self))
     }
 
-    fn serialize_newtype_variant<T: ?Sized + Serialize>(self, name: &'static str,
-            index: u32, variant: &'static str, value: &T)
-            -> Result<(), ExecError> {
+    fn serialize_newtype_variant<T: ?Sized + Serialize>(
+        self,
+        name: &'static str,
+        index: u32,
+        variant: &'static str,
+        value: &T,
+    ) -> Result<(), ExecError> {
         use serde::ser::SerializeTupleVariant;
 
         let mut ser = self.serialize_tuple_variant(name, index, variant, 1)?;
@@ -408,17 +425,25 @@ impl<'a, 'b: 'a> Serializer for &'a mut VSerializer<'b> {
         ser.end()
     }
 
-    fn serialize_tuple_variant(self, name: &'static str,
-            _index: u32, variant: &'static str, len: usize)
-            -> Result<SubSerializer<'a, 'b>, ExecError> {
+    fn serialize_tuple_variant(
+        self,
+        name: &'static str,
+        _index: u32,
+        variant: &'static str,
+        len: usize,
+    ) -> Result<SubSerializer<'a, 'b>, ExecError> {
         self.begin_enum(name);
         self.enum_variant(variant, len);
         Ok(SubSerializer(self))
     }
 
-    fn serialize_struct_variant(self, name: &'static str,
-            _index: u32, variant: &'static str, len: usize)
-            -> Result<SubSerializer<'a, 'b>, ExecError> {
+    fn serialize_struct_variant(
+        self,
+        name: &'static str,
+        _index: u32,
+        variant: &'static str,
+        len: usize,
+    ) -> Result<SubSerializer<'a, 'b>, ExecError> {
         self.begin_enum(name);
         self.struct_variant(variant, len);
         Ok(SubSerializer(self))
@@ -429,8 +454,7 @@ impl<'a, 'b: 'a> ser::SerializeSeq for SubSerializer<'a, 'b> {
     type Ok = ();
     type Error = ExecError;
 
-    fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T)
-            -> Result<(), ExecError> {
+    fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), ExecError> {
         value.serialize(&mut *self.0)
     }
 
@@ -444,8 +468,7 @@ impl<'a, 'b: 'a> ser::SerializeTuple for SubSerializer<'a, 'b> {
     type Ok = ();
     type Error = ExecError;
 
-    fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T)
-            -> Result<(), ExecError> {
+    fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), ExecError> {
         value.serialize(&mut *self.0)
     }
 
@@ -459,8 +482,7 @@ impl<'a, 'b: 'a> ser::SerializeTupleStruct for SubSerializer<'a, 'b> {
     type Ok = ();
     type Error = ExecError;
 
-    fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T)
-            -> Result<(), ExecError> {
+    fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), ExecError> {
         value.serialize(&mut *self.0)
     }
 
@@ -475,8 +497,7 @@ impl<'a, 'b: 'a> ser::SerializeTupleVariant for SubSerializer<'a, 'b> {
     type Ok = ();
     type Error = ExecError;
 
-    fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T)
-            -> Result<(), ExecError> {
+    fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), ExecError> {
         value.serialize(&mut *self.0)
     }
 
@@ -490,14 +511,12 @@ impl<'a, 'b: 'a> ser::SerializeMap for SubSerializer<'a, 'b> {
     type Ok = ();
     type Error = ExecError;
 
-    fn serialize_key<T: ?Sized + Serialize>(&mut self, value: &T)
-            -> Result<(), ExecError> {
+    fn serialize_key<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), ExecError> {
         self.0.emit_map_key();
         value.serialize(&mut *self.0)
     }
 
-    fn serialize_value<T: ?Sized + Serialize>(&mut self, value: &T)
-            -> Result<(), ExecError> {
+    fn serialize_value<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), ExecError> {
         value.serialize(&mut *self.0)
     }
 
@@ -511,8 +530,11 @@ impl<'a, 'b: 'a> ser::SerializeStruct for SubSerializer<'a, 'b> {
     type Ok = ();
     type Error = ExecError;
 
-    fn serialize_field<T: ?Sized + Serialize>(&mut self, name: &'static str, value: &T)
-            -> Result<(), ExecError> {
+    fn serialize_field<T: ?Sized + Serialize>(
+        &mut self,
+        name: &'static str,
+        value: &T,
+    ) -> Result<(), ExecError> {
         self.0.field_name(name);
         value.serialize(&mut *self.0)
     }
@@ -527,8 +549,11 @@ impl<'a, 'b: 'a> ser::SerializeStructVariant for SubSerializer<'a, 'b> {
     type Ok = ();
     type Error = ExecError;
 
-    fn serialize_field<T: ?Sized + Serialize>(&mut self, name: &'static str, value: &T)
-            -> Result<(), ExecError> {
+    fn serialize_field<T: ?Sized + Serialize>(
+        &mut self,
+        name: &'static str,
+        value: &T,
+    ) -> Result<(), ExecError> {
         self.0.field_name(name);
         value.serialize(&mut *self.0)
     }

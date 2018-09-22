@@ -29,8 +29,11 @@ pub trait StructValue: Sized + Clone + ForeignValue {
     ///
     /// An error should be returned if any fields are missing, superfluous,
     /// or the wrong type of value.
-    fn from_fields(scope: &Scope, def: &Rc<StructDef>,
-        fields: &mut [(Name, Value)]) -> Result<Self, Error>;
+    fn from_fields(
+        scope: &Scope,
+        def: &Rc<StructDef>,
+        fields: &mut [(Name, Value)],
+    ) -> Result<Self, Error>;
 
     /// Returns a list of field names.
     fn field_names() -> &'static [&'static str];
@@ -44,8 +47,12 @@ pub trait StructValue: Sized + Clone + ForeignValue {
     ///
     /// If any names are invalid or any values are of incorrect type,
     /// an error should be returned.
-    fn replace_fields(&mut self, scope: &Scope, def: &Rc<StructDef>,
-        fields: &mut [(Name, Value)]) -> Result<(), Error>;
+    fn replace_fields(
+        &mut self,
+        scope: &Scope,
+        def: &Rc<StructDef>,
+        fields: &mut [(Name, Value)],
+    ) -> Result<(), Error>;
 }
 
 /// Implements construction and field access for `Struct` and `struct`-like values.
@@ -58,14 +65,23 @@ pub trait StructDefinition: AnyValue {
     /// Creates a value of this `struct` type from the given list of fields.
     ///
     /// `def` is the `StructDef` instance for this definition.
-    fn from_fields(&self, scope: &Scope, def: &Rc<StructDef>,
-        fields: &mut [(Name, Value)]) -> Result<Value, Error>;
+    fn from_fields(
+        &self,
+        scope: &Scope,
+        def: &Rc<StructDef>,
+        fields: &mut [(Name, Value)],
+    ) -> Result<Value, Error>;
 
     /// Returns a field from a `struct` value.
     ///
     /// `def` is the `StructDef` instance for this definition.
-    fn get_field(&self, scope: &Scope, def: &Rc<StructDef>,
-        value: &Value, field: Name) -> Result<Value, Error>;
+    fn get_field(
+        &self,
+        scope: &Scope,
+        def: &Rc<StructDef>,
+        value: &Value,
+        field: Name,
+    ) -> Result<Value, Error>;
 
     /// Returns a list of field names.
     fn field_names(&self) -> Vec<Name>;
@@ -73,14 +89,21 @@ pub trait StructDefinition: AnyValue {
     /// Returns a new `struct` value with a set of fields replaced with given values.
     ///
     /// `def` is the `StructDef` instance for this definition.
-    fn replace_fields(&self, scope: &Scope, def: &Rc<StructDef>,
-        value: Value, fields: &mut [(Name, Value)]) -> Result<Value, Error>;
+    fn replace_fields(
+        &self,
+        scope: &Scope,
+        def: &Rc<StructDef>,
+        value: Value,
+        fields: &mut [(Name, Value)],
+    ) -> Result<Value, Error>;
 
     /// Returns an estimate of the memory held by this definition.
     ///
     /// The result will be used in applying memory restrictions to executing code.
     /// The result **MUST NOT** change for the lifetime of the value.
-    fn size(&self) -> usize { 2 }
+    fn size(&self) -> usize {
+        2
+    }
 }
 
 impl_any_cast!{ StructDefinition }
@@ -94,7 +117,7 @@ pub struct ForeignStructDef<T> {
 impl<T: StructValue> ForeignStructDef<T> {
     /// Creates a new `ForeignStructDef`.
     pub fn new(names: &mut NameStore) -> ForeignStructDef<T> {
-        ForeignStructDef{
+        ForeignStructDef {
             fields: T::field_names().iter().map(|s| names.add(s)).collect(),
             data: PhantomData,
         }
@@ -107,17 +130,15 @@ impl<T: StructValue> ForeignStructDef<T> {
                 fv.downcast_ref::<T>()
                     .expect("invalid foreign value for ForeignStructDef")
             }
-            _ => panic!("invalid value for ForeignStructDef")
+            _ => panic!("invalid value for ForeignStructDef"),
         }
     }
 
     fn get_rc(&self, value: Value) -> Rc<T> {
         match value {
-            Value::Foreign(fv) => {
-                ForeignValue::downcast_rc::<T>(fv)
-                    .expect("invalid foreign value for ForeignStructDef")
-            }
-            _ => panic!("invalid value for ForeignStructDef")
+            Value::Foreign(fv) => ForeignValue::downcast_rc::<T>(fv)
+                .expect("invalid foreign value for ForeignStructDef"),
+            _ => panic!("invalid value for ForeignStructDef"),
         }
     }
 }
@@ -126,16 +147,26 @@ impl<T: StructValue> StructDefinition for ForeignStructDef<T> {
     fn is_instance(&self, value: &Value, _def: &Rc<StructDef>) -> bool {
         match *value {
             Value::Foreign(ref fv) => fv.is::<T>(),
-            _ => false
+            _ => false,
         }
     }
 
-    fn from_fields(&self, scope: &Scope, def: &Rc<StructDef>,
-            fields: &mut [(Name, Value)]) -> Result<Value, Error> {
+    fn from_fields(
+        &self,
+        scope: &Scope,
+        def: &Rc<StructDef>,
+        fields: &mut [(Name, Value)],
+    ) -> Result<Value, Error> {
         T::from_fields(scope, def, fields).map(Value::new_foreign)
     }
 
-    fn get_field(&self, scope: &Scope, def: &Rc<StructDef>, value: &Value, field: Name) -> Result<Value, Error> {
+    fn get_field(
+        &self,
+        scope: &Scope,
+        def: &Rc<StructDef>,
+        value: &Value,
+        field: Name,
+    ) -> Result<Value, Error> {
         let v = self.get(value);
         v.get_field(scope, def, field)
     }
@@ -144,8 +175,13 @@ impl<T: StructValue> StructDefinition for ForeignStructDef<T> {
         self.fields.clone()
     }
 
-    fn replace_fields(&self, scope: &Scope, def: &Rc<StructDef>,
-            value: Value, fields: &mut [(Name, Value)]) -> Result<Value, Error> {
+    fn replace_fields(
+        &self,
+        scope: &Scope,
+        def: &Rc<StructDef>,
+        value: Value,
+        fields: &mut [(Name, Value)],
+    ) -> Result<Value, Error> {
         let mut v = self.get_rc(value);
         Rc::make_mut(&mut v).replace_fields(scope, def, fields)?;
         Ok(Value::Foreign(v))
@@ -160,7 +196,7 @@ pub struct StructValueDef {
 impl StructValueDef {
     /// Creates a new `StructValueDef` from a mapping of field name to type name.
     pub fn new(fields: NameMapSlice<Name>) -> StructValueDef {
-        StructValueDef{fields: fields}
+        StructValueDef { fields: fields }
     }
 
     /// Returns a borrowed reference to the contained fields.
@@ -169,10 +205,12 @@ impl StructValueDef {
     }
 
     fn get(&self, name: Name, def: &Rc<StructDef>) -> Result<(usize, Name), ExecError> {
-        self.fields.iter().enumerate()
+        self.fields
+            .iter()
+            .enumerate()
             .find(|&(_, &(n, _))| n == name)
             .map(|(i, &(_, ty))| (i, ty))
-            .ok_or_else(|| ExecError::FieldError{
+            .ok_or_else(|| ExecError::FieldError {
                 struct_name: def.name(),
                 field: name,
             })
@@ -183,18 +221,23 @@ impl StructDefinition for StructValueDef {
     fn is_instance(&self, value: &Value, def: &Rc<StructDef>) -> bool {
         match *value {
             Value::Struct(ref s) => s.def() == def,
-            _ => false
+            _ => false,
         }
     }
 
-    fn from_fields(&self, scope: &Scope, def: &Rc<StructDef>, fields: &mut [(Name, Value)]) -> Result<Value, Error> {
+    fn from_fields(
+        &self,
+        scope: &Scope,
+        def: &Rc<StructDef>,
+        fields: &mut [(Name, Value)],
+    ) -> Result<Value, Error> {
         let mut res = vec![Value::Unbound; self.fields.len()];
 
         for &mut (name, ref mut value) in fields {
             let (idx, ty) = self.get(name, def)?;
 
             if !value_is(scope, value, ty) {
-                return Err(ExecError::FieldTypeError{
+                return Err(ExecError::FieldTypeError {
                     struct_name: def.name(),
                     field: name,
                     expected: ty,
@@ -210,24 +253,32 @@ impl StructDefinition for StructValueDef {
             if let Value::Unbound = *field {
                 let name = self.fields.values()[i].0;
 
-                return Err(ExecError::MissingField{
+                return Err(ExecError::MissingField {
                     struct_name: def.name(),
                     field: name,
                 }.into());
             }
         }
 
-        Ok(Value::Struct(Rc::new(Struct::new(def.clone(), res.into_boxed_slice()))))
+        Ok(Value::Struct(Rc::new(Struct::new(
+            def.clone(),
+            res.into_boxed_slice(),
+        ))))
     }
 
-    fn get_field(&self, _scope: &Scope, def: &Rc<StructDef>,
-            value: &Value, field: Name) -> Result<Value, Error> {
+    fn get_field(
+        &self,
+        _scope: &Scope,
+        def: &Rc<StructDef>,
+        value: &Value,
+        field: Name,
+    ) -> Result<Value, Error> {
         match *value {
             Value::Struct(ref v) => {
                 let (idx, _) = self.get(field, def)?;
                 Ok(v.fields[idx].clone())
             }
-            ref v => Err(ExecError::expected("struct", v).into())
+            ref v => Err(ExecError::expected("struct", v).into()),
         }
     }
 
@@ -235,11 +286,16 @@ impl StructDefinition for StructValueDef {
         self.fields.iter().map(|&(name, _)| name).collect()
     }
 
-    fn replace_fields(&self, scope: &Scope, def: &Rc<StructDef>,
-            value: Value, fields: &mut [(Name, Value)]) -> Result<Value, Error> {
+    fn replace_fields(
+        &self,
+        scope: &Scope,
+        def: &Rc<StructDef>,
+        value: Value,
+        fields: &mut [(Name, Value)],
+    ) -> Result<Value, Error> {
         let mut struc = match value {
             Value::Struct(s) => s,
-            ref v => return Err(ExecError::expected("struct", v).into())
+            ref v => return Err(ExecError::expected("struct", v).into()),
         };
 
         {
@@ -250,7 +306,7 @@ impl StructDefinition for StructValueDef {
                 let (idx, ty) = self.get(name, def)?;
 
                 if !value_is(scope, value, ty) {
-                    return Err(ExecError::FieldTypeError{
+                    return Err(ExecError::FieldTypeError {
                         struct_name: def.name(),
                         field: name,
                         expected: ty,
@@ -283,7 +339,7 @@ pub struct Struct {
 impl Struct {
     /// Creates a new `Struct` value with the given `StructDef` and field values.
     pub fn new(def: Rc<StructDef>, fields: Box<[Value]>) -> Struct {
-        Struct{
+        Struct {
             def: def,
             fields: fields,
         }
@@ -339,7 +395,7 @@ fn ptr_eq<T>(a: *const T, b: *const T) -> bool {
 impl StructDef {
     /// Creates a new `StructDef` with the given name and fields.
     pub fn new(name: Name, def: Box<StructDefinition>) -> StructDef {
-        StructDef{
+        StructDef {
             name: name,
             def: def,
         }

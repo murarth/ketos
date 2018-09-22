@@ -25,7 +25,9 @@ fn run_bench(b: &mut Bencher, setup: &str, input: &str) {
 }
 
 fn factorial(b: &mut Bencher, n: u32) {
-    run_bench(b, r#"
+    run_bench(
+        b,
+        r#"
         (define (factorial n) (fac-recursive n 1))
 
         (define (fac-recursive n acc)
@@ -33,11 +35,14 @@ fn factorial(b: &mut Bencher, n: u32) {
             acc
             (fac-recursive (- n 1) (* n acc))))
         "#,
-        &format!("(factorial {})", n));
+        &format!("(factorial {})", n),
+    );
 }
 
 fn fib(b: &mut Bencher, n: u32) {
-    run_bench(b, r#"
+    run_bench(
+        b,
+        r#"
         (define (fib n) (fib-recursive n 0 1))
 
         (define (fib-recursive n a b)
@@ -45,7 +50,8 @@ fn fib(b: &mut Bencher, n: u32) {
             a
             (fib-recursive (- n 1) b (+ a b))))
         "#,
-        &format!("(fib {})", n));
+        &format!("(fib {})", n),
+    );
 }
 
 #[bench]
@@ -53,9 +59,13 @@ fn bench_compile_0(b: &mut Bencher) {
     b.iter(|| {
         let interp = Interpreter::new();
 
-        interp.compile_single_expr(r#"
+        interp
+            .compile_single_expr(
+                r#"
             (define (foo) ())
-            "#, None).unwrap();
+            "#,
+                None,
+            ).unwrap();
     });
 }
 
@@ -64,10 +74,14 @@ fn bench_compile_1(b: &mut Bencher) {
     b.iter(|| {
         let interp = Interpreter::new();
 
-        interp.compile_single_expr(r#"
+        interp
+            .compile_single_expr(
+                r#"
             (define (foo a b)
               (if (< a b) a b))
-            "#, None).unwrap();
+            "#,
+                None,
+            ).unwrap();
     });
 }
 
@@ -76,7 +90,9 @@ fn bench_compile_2(b: &mut Bencher) {
     b.iter(|| {
         let interp = Interpreter::new();
 
-        interp.compile_single_expr(r#"
+        interp
+            .compile_single_expr(
+                r#"
             (define (foo a b :optional (c 0) (d c))
               (if a
                 b
@@ -87,7 +103,9 @@ fn bench_compile_2(b: &mut Bencher) {
                                 ((= a 'a) 'alpha)
                                 ((<= b 9) 'beta)
                                 (else     'gamma))))))
-            "#, None).unwrap();
+            "#,
+                None,
+            ).unwrap();
     });
 }
 

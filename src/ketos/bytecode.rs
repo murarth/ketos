@@ -329,7 +329,9 @@ impl Instruction {
         use self::Instruction::*;
 
         macro_rules! operand {
-            () => { r.read_operand()? }
+            () => {
+                r.read_operand()?
+            };
         }
 
         let op = r.read_byte()?;
@@ -459,7 +461,7 @@ impl Instruction {
             SKIP_3 => Skip(3),
             SKIP_4 => Skip(4),
             RETURN => Return,
-            _ => return Err(ExecError::UnrecognizedOpCode(op))
+            _ => return Err(ExecError::UnrecognizedOpCode(op)),
         };
 
         Ok(instr)
@@ -629,7 +631,7 @@ impl Instruction {
 
         match *self {
             Unit | True | False | Const(_) | Return => true,
-            _ => false
+            _ => false,
         }
     }
 
@@ -639,22 +641,24 @@ impl Instruction {
         use self::Instruction::*;
 
         match *self {
-            Jump(label) |
-            JumpIf(label) |
-            JumpIfBound(label, _) |
-            JumpIfNot(label) |
-            JumpIfNull(label) |
-            JumpIfNotNull(label) |
-            JumpIfEq(label) |
-            JumpIfNotEq(label) |
-            JumpIfEqConst(label, _) |
-            JumpIfNotEqConst(label, _) => Some(label),
-            _ => None
+            Jump(label)
+            | JumpIf(label)
+            | JumpIfBound(label, _)
+            | JumpIfNot(label)
+            | JumpIfNull(label)
+            | JumpIfNotNull(label)
+            | JumpIfEq(label)
+            | JumpIfNotEq(label)
+            | JumpIfEqConst(label, _)
+            | JumpIfNotEqConst(label, _) => Some(label),
+            _ => None,
         }
     }
 
     /// Returns the maximum length, in bytes, of an encoded instruction.
-    pub fn max_len() -> usize { 5 }
+    pub fn max_len() -> usize {
+        5
+    }
 }
 
 /// Partial representation of jump `Instruction` variants before label values
@@ -699,16 +703,10 @@ impl JumpInstruction {
         let len = if short { 1 } else { 2 };
 
         match *self {
-            Jump |
-            JumpIf |
-            JumpIfNot |
-            JumpIfNull |
-            JumpIfNotNull |
-            JumpIfEq |
-            JumpIfNotEq => 1 + len,
-            JumpIfBound(n) |
-            JumpIfEqConst(n) |
-            JumpIfNotEqConst(n) => {
+            Jump | JumpIf | JumpIfNot | JumpIfNull | JumpIfNotNull | JumpIfEq | JumpIfNotEq => {
+                1 + len
+            }
+            JumpIfBound(n) | JumpIfEqConst(n) | JumpIfNotEqConst(n) => {
                 let op_len = if is_short_operand(n) { 1 } else { 2 };
                 1 + len + op_len
             }
@@ -779,7 +777,7 @@ impl Code {
         while r.offset() != end {
             match r.read_instruction() {
                 Ok(instr) if instr.is_trivial() => (),
-                _ => return false
+                _ => return false,
             }
         }
 
@@ -790,18 +788,18 @@ impl Code {
 /// Bit flag values for `Code::flags`
 pub mod code_flags {
     /// Whether the code object has an associated name
-    pub const HAS_NAME: u32         = 0x1;
+    pub const HAS_NAME: u32 = 0x1;
     /// Whether the code accepts one or more keyword parameters
-    pub const HAS_KW_PARAMS: u32    = 0x2;
+    pub const HAS_KW_PARAMS: u32 = 0x2;
     /// Whether the code accepts unbounded positional parameters
-    pub const HAS_REST_PARAMS: u32  = 0x4;
+    pub const HAS_REST_PARAMS: u32 = 0x4;
     /// Mask of mutually exclusive parameter flags
     pub const PARAM_FLAGS_MASK: u32 = 0x6;
     /// Whether the code object has an associated docstring
-    pub const HAS_DOC_STRING: u32   = 0x8;
+    pub const HAS_DOC_STRING: u32 = 0x8;
 
     /// Mask of all valid flags
-    pub const ALL_FLAGS: u32        = 0xf;
+    pub const ALL_FLAGS: u32 = 0xf;
 }
 
 /// Reads `Instruction` values from a stream of bytes.
@@ -814,7 +812,10 @@ impl<'a> CodeReader<'a> {
     /// Creates a new `CodeReader` wrapping a series of bytes.
     /// The first instruction will be read from `offset`.
     pub fn new(bytes: &[u8], offset: usize) -> CodeReader {
-        CodeReader{bytes: bytes, offset: offset}
+        CodeReader {
+            bytes: bytes,
+            offset: offset,
+        }
     }
 
     /// Returns the offset, in bytes, at which the next instruction will be read.
@@ -833,7 +834,7 @@ impl<'a> CodeReader<'a> {
                 self.offset += 1;
                 Ok(b)
             }
-            None => Err(ExecError::UnexpectedEnd)
+            None => Err(ExecError::UnexpectedEnd),
         }
     }
 
@@ -865,7 +866,7 @@ pub struct CodeBlock {
 impl CodeBlock {
     /// Creates an empty `CodeBlock` with a small reserved buffer.
     pub fn new() -> CodeBlock {
-        CodeBlock{
+        CodeBlock {
             bytes: Vec::with_capacity(16),
             instr_part: None,
             jump: None,
@@ -875,7 +876,7 @@ impl CodeBlock {
 
     /// Creates an empty `CodeBlock` without reserving data.
     pub fn empty() -> CodeBlock {
-        CodeBlock{
+        CodeBlock {
             bytes: Vec::new(),
             instr_part: None,
             jump: None,
@@ -920,7 +921,7 @@ impl CodeBlock {
 
         self.bytes.is_empty() && match self.instr_part {
             Some(Skip(_)) | Some(Return) | None => true,
-            _ => false
+            _ => false,
         }
     }
 
@@ -938,12 +939,15 @@ impl CodeBlock {
     pub fn jump_to(&mut self, instr: JumpInstruction, block: u32) {
         assert!(self.jump.is_none());
 
-        match self.instr_part.and_then(|i| merge_jump_instruction(i, instr)) {
+        match self
+            .instr_part
+            .and_then(|i| merge_jump_instruction(i, instr))
+        {
             Some(j) => {
                 self.instr_part = None;
                 self.jump = Some((j, block));
             }
-            None => self.jump = Some((instr, block))
+            None => self.jump = Some((instr, block)),
         }
     }
 
@@ -1045,7 +1049,7 @@ fn merge_jump_instruction(a: Instruction, b: JumpInstruction) -> Option<JumpInst
         (Instruction::EqConst(n), JumpIfNot) => JumpIfNotEqConst(n),
         (Instruction::NotEqConst(n), JumpIf) => JumpIfNotEqConst(n),
         (Instruction::NotEqConst(n), JumpIfNot) => JumpIfEqConst(n),
-        _ => return None
+        _ => return None,
     };
 
     Some(j)
@@ -1075,7 +1079,7 @@ fn merge_instructions(a: Instruction, b: Instruction) -> Option<Instruction> {
         (ApplySelf(n), Return) => TailApplySelf(n),
         (CallSelf(n), Return) => TailCallSelf(n),
         (Skip(_), Return) => Return,
-        _ => return None
+        _ => return None,
     };
 
     Some(new)

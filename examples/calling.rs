@@ -2,7 +2,7 @@
 
 extern crate ketos;
 
-use ketos::{Interpreter, FromValueRef};
+use ketos::{FromValueRef, Interpreter};
 
 fn main() {
     // First, create an interpreter.
@@ -10,13 +10,17 @@ fn main() {
 
     // Run some code that defines a function.
     // This will insert the newly defined function into the interpreter scope.
-    interp.run_code(r#"
+    interp
+        .run_code(
+            r#"
         (define (factorial n)
           (cond
             ((< n 0) (panic "factorial got negative integer"))
             ((<= n 1) 1)
             (else (* n (factorial (- n 1))))))
-        "#, None).unwrap();
+        "#,
+            None,
+        ).unwrap();
 
     // Call the function by name, converting Rust values using the Into trait.
     let v = interp.call("factorial", vec![5.into()]).unwrap();

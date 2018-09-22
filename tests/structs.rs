@@ -1,7 +1,9 @@
-#[macro_use] extern crate assert_matches;
+#[macro_use]
+extern crate assert_matches;
 
 extern crate ketos;
-#[macro_use] extern crate ketos_derive;
+#[macro_use]
+extern crate ketos_derive;
 
 use ketos::{Error, ExecError, FromValue, Interpreter, Value};
 
@@ -45,14 +47,22 @@ fn test_struct() {
     assert_eq!(conv::<String>(&interp, "(. foo :name)").unwrap(), "foo");
     assert_eq!(conv::<u32>(&interp, "(. foo :num)").unwrap(), 123);
 
-    assert_matches!(eval(&interp, "(. foo :lolwut)").unwrap_err(),
-        Error::ExecError(ExecError::FieldError{..}));
+    assert_matches!(
+        eval(&interp, "(. foo :lolwut)").unwrap_err(),
+        Error::ExecError(ExecError::FieldError { .. })
+    );
 
     eval(&interp, r#"(define bar (.= foo :name "bar"))"#).unwrap();
 
     assert_eq!(conv::<String>(&interp, "(. bar :name)").unwrap(), "bar");
     assert_eq!(conv::<u32>(&interp, "(. bar :num)").unwrap(), 123);
 
-    assert_eq!(conv::<bool>(&interp, "(is-instance Foo foo)").unwrap(), true);
-    assert_eq!(conv::<bool>(&interp, "(is-instance Bar foo)").unwrap(), false);
+    assert_eq!(
+        conv::<bool>(&interp, "(is-instance Foo foo)").unwrap(),
+        true
+    );
+    assert_eq!(
+        conv::<bool>(&interp, "(is-instance Bar foo)").unwrap(),
+        false
+    );
 }

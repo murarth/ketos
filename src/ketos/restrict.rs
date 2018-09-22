@@ -129,7 +129,7 @@ impl RestrictConfig {
     ///
     /// No restrictions are placed on executing code.
     pub fn permissive() -> RestrictConfig {
-        RestrictConfig{
+        RestrictConfig {
             execution_time: None,
             call_stack_size: PERMISSIVE_CALL_STACK_SIZE,
             value_stack_size: PERMISSIVE_VALUE_STACK_SIZE,
@@ -145,7 +145,7 @@ impl RestrictConfig {
     /// Small programs with short runtimes should not have a problem operating
     /// within these restrictions.
     pub fn strict() -> RestrictConfig {
-        RestrictConfig{
+        RestrictConfig {
             execution_time: Some(Duration::from_millis(100)),
             call_stack_size: STRICT_CALL_STACK_SIZE,
             value_stack_size: STRICT_VALUE_STACK_SIZE,

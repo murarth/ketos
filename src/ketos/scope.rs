@@ -1,16 +1,17 @@
 //! Contains values associated with names in a given execution context.
 
 use std::any::TypeId;
-use std::cell::{Ref, RefMut, RefCell};
+use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 
 use function::{Function, Lambda};
 use io::GlobalIo;
 use lexer::CodeMap;
 use module::{BuiltinModuleLoader, ModuleRegistry};
-use name::{get_standard_name, get_system_fn, is_system_operator,
-    is_standard_value, NUM_STANDARD_VALUES,
-    SYSTEM_OPERATORS_END, Name, NameMap, NameSetSlice, NameStore};
+use name::{
+    get_standard_name, get_system_fn, is_standard_value, is_system_operator, Name, NameMap,
+    NameSetSlice, NameStore, NUM_STANDARD_VALUES, SYSTEM_OPERATORS_END,
+};
 use structs::{ForeignStructDef, StructDef, StructDefMap, StructValue};
 use value::Value;
 
@@ -56,7 +57,7 @@ pub struct ImportSet {
 impl ImportSet {
     /// Convenience method to create an empty `ImportSet` for the named module.
     pub fn new(module_name: Name) -> ImportSet {
-        ImportSet{
+        ImportSet {
             module_name: module_name,
             names: Vec::new(),
         }
@@ -71,13 +72,15 @@ pub type WeakScope = Weak<GlobalScope>;
 
 impl GlobalScope {
     /// Creates a new global scope.
-    pub fn new(name: Name,
-            names: Rc<RefCell<NameStore>>,
-            codemap: Rc<RefCell<CodeMap>>,
-            registry: Rc<ModuleRegistry>,
-            io: Rc<GlobalIo>,
-            struct_defs: Rc<RefCell<StructDefMap>>) -> GlobalScope {
-        GlobalScope{
+    pub fn new(
+        name: Name,
+        names: Rc<RefCell<NameStore>>,
+        codemap: Rc<RefCell<CodeMap>>,
+        registry: Rc<ModuleRegistry>,
+        io: Rc<GlobalIo>,
+        struct_defs: Rc<RefCell<StructDefMap>>,
+    ) -> GlobalScope {
+        GlobalScope {
             name: name,
             namespace: RefCell::new(Namespace::new()),
             name_store: names,
@@ -110,7 +113,8 @@ impl GlobalScope {
             scope.codemap.clone(),
             scope.modules.clone(),
             scope.io.clone(),
-            scope.struct_defs.clone()))
+            scope.struct_defs.clone(),
+        ))
     }
 
     /// Creates a semi-"deep" clone of the `GlobalScope` object.
@@ -119,7 +123,7 @@ impl GlobalScope {
     ///
     /// Other data will be shared between this scope and the new scope.
     pub fn clone_scope(&self) -> Scope {
-        Rc::new(GlobalScope{
+        Rc::new(GlobalScope {
             name: self.name,
             namespace: self.namespace.clone(),
             name_store: self.name_store.clone(),
@@ -169,7 +173,9 @@ impl GlobalScope {
     /// Adds a value to the global scope. The `Name` value for the given
     /// string representation is passed to the given closure to create the value.
     pub fn add_value_with_name<F>(&self, name: &str, f: F)
-            where F: FnOnce(Name) -> Value {
+    where
+        F: FnOnce(Name) -> Value,
+    {
         let name = self.name_store.borrow_mut().add(name);
         self.add_value(name, f(name));
     }
@@ -235,8 +241,12 @@ impl GlobalScope {
     pub fn register_struct_value<T: StructValue>(&self) {
         let name = self.add_name(T::struct_name());
 
-        let def = Rc::new(StructDef::new(name,
-            Box::new(ForeignStructDef::<T>::new(&mut self.name_store.borrow_mut()))));
+        let def = Rc::new(StructDef::new(
+            name,
+            Box::new(ForeignStructDef::<T>::new(
+                &mut self.name_store.borrow_mut(),
+            )),
+        ));
 
         self.insert_struct_def(TypeId::of::<T>(), def.clone());
         self.add_value(name, Value::StructDef(def));
@@ -270,9 +280,9 @@ impl GlobalScope {
     pub fn contains_name(&self, name: Name) -> bool {
         let ns = self.namespace.borrow();
 
-        ns.constants.contains_key(name) ||
-            ns.macros.contains_key(name) ||
-            ns.values.contains_key(name)
+        ns.constants.contains_key(name)
+            || ns.macros.contains_key(name)
+            || ns.values.contains_key(name)
     }
 
     /// Returns whether the scope contains a constant for the given name.
@@ -314,13 +324,17 @@ impl GlobalScope {
 
     /// Clones all exported values from a scope into this scope.
     pub fn import_all(&self, other: &GlobalScope) -> Vec<Name> {
-        self.namespace.borrow_mut()
+        self.namespace
+            .borrow_mut()
             .import_all(&other.namespace.borrow())
     }
 
     /// Returns whether the given name has been exported in this scope.
     pub fn is_exported(&self, name: Name) -> bool {
-        self.namespace.borrow().exports.as_ref()
+        self.namespace
+            .borrow()
+            .exports
+            .as_ref()
             .map_or(false, |e| e.contains(name))
     }
 
@@ -342,77 +356,99 @@ impl GlobalScope {
     /// When a function is declared with a docstring, that docstring is stored
     /// in the compiled `Code` object rather than the `GlobalScope`.
     pub fn with_doc<F, R>(&self, name: Name, f: F) -> Option<R>
-            where F: FnOnce(&str) -> R {
+    where
+        F: FnOnce(&str) -> R,
+    {
         let ns = self.namespace.borrow();
         ns.docs.get(name).map(|s| f(s))
     }
 
     /// Calls a closure with a borrowed reference to the contained docstrings.
     pub fn with_docs<F, R>(&self, f: F) -> R
-            where F: FnOnce(&NameMap<String>) -> R {
+    where
+        F: FnOnce(&NameMap<String>) -> R,
+    {
         let ns = self.namespace.borrow();
         f(&ns.docs)
     }
 
     /// Calls a closure with a mutable reference to the contained docstrings.
     pub fn with_docs_mut<F, R>(&self, f: F) -> R
-            where F: FnOnce(&mut NameMap<String>) -> R {
+    where
+        F: FnOnce(&mut NameMap<String>) -> R,
+    {
         let mut ns = self.namespace.borrow_mut();
         f(&mut ns.docs)
     }
 
     /// Calls a closure with an optional reference to the module docstring.
     pub fn with_module_doc<F, R>(&self, f: F) -> Option<R>
-            where F: FnOnce(&str) -> R {
+    where
+        F: FnOnce(&str) -> R,
+    {
         let ns = self.namespace.borrow();
         ns.module_doc.as_ref().map(|d| f(d))
     }
 
     /// Calls a closure with a mutable reference to the module docstring.
     pub fn with_module_doc_mut<F, R>(&self, f: F) -> R
-            where F: FnOnce(&mut Option<String>) -> R {
+    where
+        F: FnOnce(&mut Option<String>) -> R,
+    {
         let mut ns = self.namespace.borrow_mut();
         f(&mut ns.module_doc)
     }
 
     /// Calls a closure with the borrowed string representation of a name.
     pub fn with_name<F, R>(&self, name: Name, f: F) -> R
-            where F: FnOnce(&str) -> R {
+    where
+        F: FnOnce(&str) -> R,
+    {
         let names = self.name_store.borrow();
         f(names.get(name))
     }
 
     /// Calls a closure with the set of exported names.
     pub fn with_exports<F, R>(&self, f: F) -> Option<R>
-            where F: FnOnce(&NameSetSlice) -> R {
+    where
+        F: FnOnce(&NameSetSlice) -> R,
+    {
         let ns = self.namespace.borrow();
         ns.exports.as_ref().map(f)
     }
 
     /// Calls a closure with the set of imported values.
     pub fn with_imports<F, R>(&self, f: F) -> R
-            where F: FnOnce(&[ImportSet]) -> R {
+    where
+        F: FnOnce(&[ImportSet]) -> R,
+    {
         let ns = self.namespace.borrow();
         f(&ns.imports)
     }
 
     /// Calls a closure with the set of defined constants.
     pub fn with_constants<F, R>(&self, f: F) -> R
-            where F: FnOnce(&NameMap<Value>) -> R {
+    where
+        F: FnOnce(&NameMap<Value>) -> R,
+    {
         let ns = self.namespace.borrow();
         f(&ns.constants)
     }
 
     /// Calls a closure with the set of defined macros.
     pub fn with_macros<F, R>(&self, f: F) -> R
-            where F: FnOnce(&NameMap<Lambda>) -> R {
+    where
+        F: FnOnce(&NameMap<Lambda>) -> R,
+    {
         let ns = self.namespace.borrow();
         f(&ns.macros)
     }
 
     /// Calls a closure with the set of defined values.
     pub fn with_values<F, R>(&self, f: F) -> R
-            where F: FnOnce(&NameMap<Value>) -> R {
+    where
+        F: FnOnce(&NameMap<Value>) -> R,
+    {
         let ns = self.namespace.borrow();
         f(&ns.values)
     }
@@ -420,7 +456,7 @@ impl GlobalScope {
 
 impl Namespace {
     fn new() -> Namespace {
-        Namespace{
+        Namespace {
             constants: NameMap::new(),
             macros: NameMap::new(),
             values: NameMap::new(),
@@ -469,8 +505,9 @@ impl Namespace {
     }
 
     fn is_imported(&self, name: Name) -> bool {
-        self.imports.iter().any(
-            |imp| imp.names.iter().any(|&(_, dest)| name == dest))
+        self.imports
+            .iter()
+            .any(|imp| imp.names.iter().any(|&(_, dest)| name == dest))
     }
 }
 
@@ -491,8 +528,7 @@ impl MasterScope {
 
     /// Returns a value corresponding to the given name in master scope.
     pub fn get(name: Name) -> Option<Value> {
-        MasterScope::get_function(name)
-            .or_else(|| MasterScope::get_bool(name).map(Value::Bool))
+        MasterScope::get_function(name).or_else(|| MasterScope::get_bool(name).map(Value::Bool))
     }
 
     /// Returns an iterator over all standard names.
@@ -506,20 +542,22 @@ impl MasterScope {
     }
 
     fn get_bool(name: Name) -> Option<bool> {
-        use name::standard_names::{TRUE, FALSE};
+        use name::standard_names::{FALSE, TRUE};
 
         match name {
             TRUE => Some(true),
             FALSE => Some(false),
-            _ => None
+            _ => None,
         }
     }
 
     fn get_function(name: Name) -> Option<Value> {
-        get_system_fn(name).map(|f| Value::Function(Function{
-            name: name,
-            sys_fn: f.clone(),
-        }))
+        get_system_fn(name).map(|f| {
+            Value::Function(Function {
+                name: name,
+                sys_fn: f.clone(),
+            })
+        })
     }
 }
 
@@ -531,7 +569,7 @@ pub struct MasterNames {
 
 impl MasterNames {
     fn new() -> MasterNames {
-        MasterNames{next: 0}
+        MasterNames { next: 0 }
     }
 }
 
@@ -542,8 +580,7 @@ impl Iterator for MasterNames {
         if self.next >= SYSTEM_OPERATORS_END {
             None
         } else {
-            let name = get_standard_name(self.next)
-                .expect("invalid standard name");
+            let name = get_standard_name(self.next).expect("invalid standard name");
             self.next += 1;
             Some(name)
         }
@@ -567,7 +604,7 @@ pub struct MasterValues {
 
 impl MasterValues {
     fn new() -> MasterValues {
-        MasterValues{next: 0}
+        MasterValues { next: 0 }
     }
 }
 
@@ -578,8 +615,7 @@ impl Iterator for MasterValues {
         if self.next >= NUM_STANDARD_VALUES {
             None
         } else {
-            let name = get_standard_name(self.next)
-                .expect("invalid standard name");
+            let name = get_standard_name(self.next).expect("invalid standard name");
             let v = MasterScope::get(name).expect("missing standard value");
 
             self.next += 1;

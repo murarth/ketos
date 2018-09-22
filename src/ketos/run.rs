@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use compile::compile;
 use error::Error;
-use exec::{Context, execute};
+use exec::{execute, Context};
 use lexer::Lexer;
 use parser::Parser;
 use value::Value;
@@ -19,7 +19,8 @@ pub fn run_code(ctx: &Context, input: &str) -> Result<Value, Error> {
         p.parse_exprs()?
     };
 
-    let code = exprs.iter()
+    let code = exprs
+        .iter()
         .map(|v| compile(ctx, v))
         .collect::<Result<Vec<_>, _>>()?;
 

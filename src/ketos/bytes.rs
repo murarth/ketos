@@ -70,13 +70,19 @@ impl fmt::Debug for Bytes {
 }
 
 impl Extend<u8> for Bytes {
-    fn extend<I>(&mut self, iterable: I) where I: IntoIterator<Item=u8> {
+    fn extend<I>(&mut self, iterable: I)
+    where
+        I: IntoIterator<Item = u8>,
+    {
         self.0.extend(iterable);
     }
 }
 
 impl<'a> Extend<&'a u8> for Bytes {
-    fn extend<I>(&mut self, iterable: I) where I: IntoIterator<Item=&'a u8> {
+    fn extend<I>(&mut self, iterable: I)
+    where
+        I: IntoIterator<Item = &'a u8>,
+    {
         self.0.extend(iterable);
     }
 }
@@ -93,10 +99,14 @@ impl<'a> IntoIterator for &'a Bytes {
 macro_rules! impl_eq_vec {
     ( $lhs:ty, $rhs:ty ) => {
         impl<'a> PartialEq<$rhs> for $lhs {
-            fn eq(&self, rhs: &$rhs) -> bool { self[..] == rhs[..] }
-            fn ne(&self, rhs: &$rhs) -> bool { self[..] != rhs[..] }
+            fn eq(&self, rhs: &$rhs) -> bool {
+                self[..] == rhs[..]
+            }
+            fn ne(&self, rhs: &$rhs) -> bool {
+                self[..] != rhs[..]
+            }
         }
-    }
+    };
 }
 
 macro_rules! impl_eq_array {
@@ -128,16 +138,28 @@ impl_eq_array!{
 impl Eq for Bytes {}
 
 impl PartialOrd for Bytes {
-    fn partial_cmp(&self, rhs: &Bytes) -> Option<Ordering> { self.0.partial_cmp(&rhs.0) }
+    fn partial_cmp(&self, rhs: &Bytes) -> Option<Ordering> {
+        self.0.partial_cmp(&rhs.0)
+    }
 
-    fn lt(&self, rhs: &Bytes) -> bool { self.0 < rhs.0 }
-    fn le(&self, rhs: &Bytes) -> bool { self.0 <= rhs.0 }
-    fn gt(&self, rhs: &Bytes) -> bool { self.0 > rhs.0 }
-    fn ge(&self, rhs: &Bytes) -> bool { self.0 >= rhs.0 }
+    fn lt(&self, rhs: &Bytes) -> bool {
+        self.0 < rhs.0
+    }
+    fn le(&self, rhs: &Bytes) -> bool {
+        self.0 <= rhs.0
+    }
+    fn gt(&self, rhs: &Bytes) -> bool {
+        self.0 > rhs.0
+    }
+    fn ge(&self, rhs: &Bytes) -> bool {
+        self.0 >= rhs.0
+    }
 }
 
 impl Ord for Bytes {
-    fn cmp(&self, rhs: &Bytes) -> Ordering { self.0.cmp(&rhs.0) }
+    fn cmp(&self, rhs: &Bytes) -> Ordering {
+        self.0.cmp(&rhs.0)
+    }
 }
 
 impl From<String> for Bytes {

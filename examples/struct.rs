@@ -1,9 +1,10 @@
 //! Defining a struct that can be constructed in Ketos
 
 extern crate ketos;
-#[macro_use] extern crate ketos_derive;
+#[macro_use]
+extern crate ketos_derive;
 
-use ketos::{Interpreter, FromValue};
+use ketos::{FromValue, Interpreter};
 
 // Define a struct with necessary conversion traits
 #[derive(Clone, Debug, ForeignValue, FromValueClone, StructValue)]
@@ -27,12 +28,16 @@ fn main() {
 
     // These structs are created just like Ketos-defined struct types,
     // using the `new` function.
-    let value = interp.run_code(r#"
+    let value = interp
+        .run_code(
+            r#"
         (new Thing
             :name "thing-1"
             :thing-count 9000
             :type "thing")
-        "#, None).unwrap();
+        "#,
+            None,
+        ).unwrap();
 
     // Extract the `Thing` from the Ketos value.
     let thing = Thing::from_value(value).unwrap();

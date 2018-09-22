@@ -1,11 +1,14 @@
-#[macro_use] extern crate assert_matches;
+#[macro_use]
+extern crate assert_matches;
 
-#[macro_use] extern crate ketos;
-#[macro_use] extern crate ketos_derive;
+#[macro_use]
+extern crate ketos;
+#[macro_use]
+extern crate ketos_derive;
 
 use std::cmp::Ordering;
 
-use ketos::{Context, ExecError, Error, ForeignValue, Interpreter, Value};
+use ketos::{Context, Error, ExecError, ForeignValue, Interpreter, Value};
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, FromValueRef, IntoValue)]
 pub struct MyType {
@@ -16,24 +19,26 @@ impl ketos::ForeignValue for MyType {
     fn compare_to(&self, rhs: &ForeignValue) -> Result<Ordering, ExecError> {
         match rhs.downcast_ref::<MyType>() {
             Some(rhs) => Ok(self.cmp(rhs)),
-            None => Err(ExecError::TypeMismatch{
+            None => Err(ExecError::TypeMismatch {
                 lhs: self.type_name(),
                 rhs: rhs.type_name(),
-            })
+            }),
         }
     }
 
     fn is_equal_to(&self, rhs: &ForeignValue) -> Result<bool, ExecError> {
         match rhs.downcast_ref::<MyType>() {
             Some(rhs) => Ok(*self == *rhs),
-            None => Err(ExecError::TypeMismatch{
+            None => Err(ExecError::TypeMismatch {
                 lhs: self.type_name(),
                 rhs: rhs.type_name(),
-            })
+            }),
         }
     }
 
-    fn type_name(&self) -> &'static str { "MyType" }
+    fn type_name(&self) -> &'static str {
+        "MyType"
+    }
 }
 
 fn eval(interp: &Interpreter, input: &str) -> Result<String, Error> {
@@ -45,7 +50,9 @@ fn eval(interp: &Interpreter, input: &str) -> Result<String, Error> {
 fn test_foreign_value() {
     let interp = Interpreter::new();
 
-    interp.scope().add_named_value("my-value", MyType{a: 123}.into());
+    interp
+        .scope()
+        .add_named_value("my-value", MyType { a: 123 }.into());
 
     assert_eq!(eval(&interp, "my-value").unwrap(), "MyType { a: 123 }");
     assert_eq!(eval(&interp, "(type-of my-value)").unwrap(), "MyType");
@@ -60,19 +67,21 @@ fn reflect_args(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 fn test_raw_foreign_fn() {
     let interp = Interpreter::new();
 
-    interp.scope().add_value_with_name("reflect-args",
-        |name| Value::new_foreign_fn(name, reflect_args));
+    interp.scope().add_value_with_name("reflect-args", |name| {
+        Value::new_foreign_fn(name, reflect_args)
+    });
 
     assert_eq!(eval(&interp, "(reflect-args 1 2 3)").unwrap(), "(1 2 3)");
 
-    interp.scope().add_value_with_name("closure-args",
-        |name| Value::new_foreign_fn(name, |_scope, args| Ok(args.into())));
+    interp.scope().add_value_with_name("closure-args", |name| {
+        Value::new_foreign_fn(name, |_scope, args| Ok(args.into()))
+    });
 
     assert_eq!(eval(&interp, "(closure-args 3 2 1)").unwrap(), "(3 2 1)");
 }
 
 fn new_my_type(a: i32) -> Result<MyType, Error> {
-    Ok(MyType{a: a})
+    Ok(MyType { a: a })
 }
 
 fn get_value(a: &MyType) -> Result<i32, Error> {
@@ -100,10 +109,15 @@ fn test_foreign_fn() {
     assert_eq!(eval(&interp, "(new-my-type 1)").unwrap(), "MyType { a: 1 }");
     assert_eq!(eval(&interp, "(get-value (new-my-type 2))").unwrap(), "2");
     assert_eq!(eval(&interp, "(add-pairs '(1 2) '(3 4))").unwrap(), "(4 6)");
-    assert_eq!(eval(&interp, r#"(hello "world")"#).unwrap(), r#""Hello, world!""#);
+    assert_eq!(
+        eval(&interp, r#"(hello "world")"#).unwrap(),
+        r#""Hello, world!""#
+    );
 
-    assert_matches!(eval(&interp, "(add-pairs '(1 2 0) '(3 4))").unwrap_err(),
-        Error::ExecError(ExecError::TypeError{..}));
+    assert_matches!(
+        eval(&interp, "(add-pairs '(1 2 0) '(3 4))").unwrap_err(),
+        Error::ExecError(ExecError::TypeError { .. })
+    );
 }
 
 #[test]
@@ -113,13 +127,37 @@ fn test_compare_foreign_value() {
 
     ketos_fn!{ scope => "new-my-type" => fn new_my_type(a: i32) -> MyType }
 
-    assert_eq!(eval(&interp, "(= (new-my-type 1) (new-my-type 1))").unwrap(), "true");
-    assert_eq!(eval(&interp, "(/= (new-my-type 1) (new-my-type 1))").unwrap(), "false");
-    assert_eq!(eval(&interp, "(= (new-my-type 1) (new-my-type 2))").unwrap(), "false");
-    assert_eq!(eval(&interp, "(/= (new-my-type 1) (new-my-type 2))").unwrap(), "true");
+    assert_eq!(
+        eval(&interp, "(= (new-my-type 1) (new-my-type 1))").unwrap(),
+        "true"
+    );
+    assert_eq!(
+        eval(&interp, "(/= (new-my-type 1) (new-my-type 1))").unwrap(),
+        "false"
+    );
+    assert_eq!(
+        eval(&interp, "(= (new-my-type 1) (new-my-type 2))").unwrap(),
+        "false"
+    );
+    assert_eq!(
+        eval(&interp, "(/= (new-my-type 1) (new-my-type 2))").unwrap(),
+        "true"
+    );
 
-    assert_eq!(eval(&interp, "(< (new-my-type 1) (new-my-type 2))").unwrap(), "true");
-    assert_eq!(eval(&interp, "(> (new-my-type 1) (new-my-type 2))").unwrap(), "false");
-    assert_eq!(eval(&interp, "(< (new-my-type 2) (new-my-type 1))").unwrap(), "false");
-    assert_eq!(eval(&interp, "(> (new-my-type 2) (new-my-type 1))").unwrap(), "true");
+    assert_eq!(
+        eval(&interp, "(< (new-my-type 1) (new-my-type 2))").unwrap(),
+        "true"
+    );
+    assert_eq!(
+        eval(&interp, "(> (new-my-type 1) (new-my-type 2))").unwrap(),
+        "false"
+    );
+    assert_eq!(
+        eval(&interp, "(< (new-my-type 2) (new-my-type 1))").unwrap(),
+        "false"
+    );
+    assert_eq!(
+        eval(&interp, "(> (new-my-type 2) (new-my-type 1))").unwrap(),
+        "true"
+    );
 }

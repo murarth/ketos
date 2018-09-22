@@ -2,14 +2,15 @@
 
 extern crate ketos;
 extern crate serde;
-#[macro_use] extern crate serde_derive;
+#[macro_use]
+extern crate serde_derive;
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use ketos::{
-    BuiltinModuleLoader, FileModuleLoader, ModuleLoader,
-    Error, Interpreter, decode_value, encode_value,
+    decode_value, encode_value, BuiltinModuleLoader, Error, FileModuleLoader, Interpreter,
+    ModuleLoader,
 };
 
 macro_rules! map {
@@ -21,24 +22,26 @@ macro_rules! map {
 }
 
 macro_rules! test {
-    ( $a:expr , $b:expr ) => { {
-        let interp = interp(&format!(r#"
+    ( $a:expr , $b:expr ) => {{
+        let interp = interp(&format!(
+            r#"
             (define (give v)
               (assert-eq v '{0}))
             (define (take) '{0})
-            "#, $b)).unwrap();
+            "#,
+            $b
+        )).unwrap();
 
         let v = $a;
 
-        interp.call("give", vec![
-            encode_value(interp.scope(), &v).unwrap(),
-        ]).unwrap();
+        interp
+            .call("give", vec![encode_value(interp.scope(), &v).unwrap()])
+            .unwrap();
 
-        let v2 = decode_value(interp.scope(),
-            &interp.call("take", vec![]).unwrap()).unwrap();
+        let v2 = decode_value(interp.scope(), &interp.call("take", vec![]).unwrap()).unwrap();
 
         assert_eq!(v, v2);
-    } }
+    }};
 }
 
 fn interp(code: &str) -> Result<Interpreter, Error> {
@@ -47,8 +50,7 @@ fn interp(code: &str) -> Result<Interpreter, Error> {
     loader.set_read_bytecode(false);
     loader.set_write_bytecode(false);
 
-    let interp = Interpreter::with_loader(
-        Box::new(BuiltinModuleLoader.chain(loader)));
+    let interp = Interpreter::with_loader(Box::new(BuiltinModuleLoader.chain(loader)));
 
     interp.run_code("(use test (assert-eq))", None)?;
     interp.run_code(code, None)?;
@@ -63,11 +65,10 @@ struct StructA {
     c: String,
 }
 
-const STRUCT_0: &'static str =
-    r#"(StructA (:a 123 :b #'x' :c "foo"))"#;
+const STRUCT_0: &'static str = r#"(StructA (:a 123 :b #'x' :c "foo"))"#;
 
 fn struct_0() -> StructA {
-    StructA{
+    StructA {
         a: 123,
         b: 'x',
         c: "foo".to_owned(),
@@ -80,21 +81,19 @@ struct StructB {
     b: BTreeMap<String, String>,
 }
 
-const STRUCT_1: &'static str =
-    r#"(StructB (:a () :b ()))"#;
+const STRUCT_1: &'static str = r#"(StructB (:a () :b ()))"#;
 
 fn struct_1() -> StructB {
-    StructB{
+    StructB {
         a: vec![],
         b: map!(),
     }
 }
 
-const STRUCT_2: &'static str =
-    r#"(StructB (:a (1 2 3) :b (("a" "b") ("c" "d"))))"#;
+const STRUCT_2: &'static str = r#"(StructB (:a (1 2 3) :b (("a" "b") ("c" "d"))))"#;
 
 fn struct_2() -> StructB {
-    StructB{
+    StructB {
         a: vec![1, 2, 3],
         b: map!("a".to_owned() => "b".to_owned(), "c".to_owned() => "d".to_owned()),
     }
@@ -103,8 +102,7 @@ fn struct_2() -> StructB {
 #[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
 struct StructC(u8, (u16, u32), [i32; 2]);
 
-const STRUCT_3: &'static str =
-    "(StructC (1 (2 3) (4 5)))";
+const STRUCT_3: &'static str = "(StructC (1 (2 3) (4 5)))";
 
 fn struct_3() -> StructC {
     StructC(1, (2, 3), [4, 5])
@@ -113,10 +111,11 @@ fn struct_3() -> StructC {
 #[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
 struct StructD;
 
-const STRUCT_4: &'static str =
-    "(StructD ())";
+const STRUCT_4: &'static str = "(StructD ())";
 
-fn struct_4() -> StructD { StructD }
+fn struct_4() -> StructD {
+    StructD
+}
 
 #[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
 struct StructE {
@@ -126,16 +125,22 @@ struct StructE {
     d: StructD,
 }
 
-const STRUCT_5: &'static str =
-    r#"(StructE (:a (StructA (:a -1 :b #'.' :c "lol"))
+const STRUCT_5: &'static str = r#"(StructE (:a (StructA (:a -1 :b #'.' :c "lol"))
                  :b (StructB (:a (0) :b (("a" "b"))))
                  :c (StructC (2 (1 0) (-1 -2)))
                  :d (StructD ())))"#;
 
 fn struct_5() -> StructE {
-    StructE{
-        a: StructA{a: -1, b: '.', c: "lol".to_owned()},
-        b: StructB{a: vec![0], b: map!("a".to_owned() => "b".to_owned())},
+    StructE {
+        a: StructA {
+            a: -1,
+            b: '.',
+            c: "lol".to_owned(),
+        },
+        b: StructB {
+            a: vec![0],
+            b: map!("a".to_owned() => "b".to_owned()),
+        },
         c: StructC(2, (1, 0), [-1, -2]),
         d: StructD,
     }
@@ -156,35 +161,34 @@ enum Enum {
     Alpha,
     Beta(i32),
     Gamma(char, ()),
-    Delta{a: String, b: u32},
+    Delta { a: String, b: u32 },
 }
 
-const ENUM_0: &'static str =
-    "(Enum Alpha ())";
+const ENUM_0: &'static str = "(Enum Alpha ())";
 
 fn enum_0() -> Enum {
     Enum::Alpha
 }
 
-const ENUM_1: &'static str =
-    "(Enum Beta (1))";
+const ENUM_1: &'static str = "(Enum Beta (1))";
 
 fn enum_1() -> Enum {
     Enum::Beta(1)
 }
 
-const ENUM_2: &'static str =
-    "(Enum Gamma (#'a' ()))";
+const ENUM_2: &'static str = "(Enum Gamma (#'a' ()))";
 
 fn enum_2() -> Enum {
     Enum::Gamma('a', ())
 }
 
-const ENUM_3: &'static str =
-    r#"(Enum Delta (:a "foo" :b 123))"#;
+const ENUM_3: &'static str = r#"(Enum Delta (:a "foo" :b 123))"#;
 
 fn enum_3() -> Enum {
-    Enum::Delta{a: "foo".to_owned(), b: 123}
+    Enum::Delta {
+        a: "foo".to_owned(),
+        b: 123,
+    }
 }
 
 #[test]
@@ -196,23 +200,29 @@ fn test_enum() {
 }
 
 macro_rules! de {
-    ( $ty:ty => $e:expr ) => { {
-        let interp = interp(&format!("
+    ( $ty:ty => $e:expr ) => {{
+        let interp = interp(&format!(
+            "
             (define (make) '{})
-            ", $e)).unwrap();
+            ",
+            $e
+        )).unwrap();
 
-        decode_value::<$ty>(interp.scope(),
-            &interp.call("make", vec![]).unwrap())
-    } }
+        decode_value::<$ty>(interp.scope(), &interp.call("make", vec![]).unwrap())
+    }};
 }
 
 #[test]
 fn test_primitive() {
-    assert_eq!(de!((u32, String) => r#"(1 "foo")"#).unwrap(),
-        (1, "foo".to_owned()));
+    assert_eq!(
+        de!((u32, String) => r#"(1 "foo")"#).unwrap(),
+        (1, "foo".to_owned())
+    );
     assert_eq!(de!(Vec<u32> => "(1 2 3)").unwrap(), [1, 2, 3]);
-    assert_eq!(de!(BTreeMap<u32, u32> => "((1 2) (3 4))").unwrap(),
-        map!(1 => 2, 3 => 4));
+    assert_eq!(
+        de!(BTreeMap<u32, u32> => "((1 2) (3 4))").unwrap(),
+        map!(1 => 2, 3 => 4)
+    );
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -225,10 +235,14 @@ fn test_option() {
     assert_eq!(de!(Option<i32> => "()").unwrap(), None);
     assert_eq!(de!(Option<i32> => "1").unwrap(), Some(1));
 
-    assert_eq!(de!(OptStruct => "(OptStruct (:a 1))").unwrap(),
-        OptStruct{a: Some(1)});
-    assert_eq!(de!(OptStruct => "(OptStruct (:a ()))").unwrap(),
-        OptStruct{a: None});
+    assert_eq!(
+        de!(OptStruct => "(OptStruct (:a 1))").unwrap(),
+        OptStruct { a: Some(1) }
+    );
+    assert_eq!(
+        de!(OptStruct => "(OptStruct (:a ()))").unwrap(),
+        OptStruct { a: None }
+    );
 }
 
 #[test]

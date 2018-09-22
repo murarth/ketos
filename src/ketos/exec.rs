@@ -33,15 +33,16 @@ use std::vec::Drain;
 
 use bytecode::{Code, CodeReader};
 use error::Error;
-use function::{Arity, Function, Lambda, SystemFn, first, last, init, tail};
+use function::{first, init, last, tail, Arity, Function, Lambda, SystemFn};
 use integer::{Integer, Ratio};
 use lexer::{highlight_span, Span};
+use name::{
+    debug_names, display_names, get_standard_name, get_system_fn, Name, NameDisplay, NameStore,
+};
 use restrict::{RestrictConfig, RestrictError};
 use scope::{MasterScope, Scope};
 use string_fmt::FormatError;
-use name::{debug_names, display_names, get_standard_name, get_system_fn,
-    Name, NameDisplay, NameStore};
-use trace::{Trace, TraceItem, set_traceback};
+use trace::{set_traceback, Trace, TraceItem};
 use value::{FromValueRef, Value};
 
 /// Interval, in instructions run, between checking time limit
@@ -68,7 +69,7 @@ pub struct Context {
 impl Context {
     /// Creates a new execution context.
     pub fn new(scope: Scope, restrict: RestrictConfig) -> Context {
-        Context{
+        Context {
             scope: scope,
             restrict: restrict,
             run_start: Cell::new(None),
@@ -78,7 +79,9 @@ impl Context {
     }
 
     /// Returns a reference to the contained scope.
-    pub fn scope(&self) -> &Scope { &self.scope }
+    pub fn scope(&self) -> &Scope {
+        &self.scope
+    }
 
     /// Creates a new execution context with the given scope.
     pub fn with_scope(&self, scope: Scope) -> Context {
@@ -86,7 +89,9 @@ impl Context {
     }
 
     /// Returns a reference to the contained restriction configuration.
-    pub fn restrict(&self) -> &RestrictConfig { &self.restrict }
+    pub fn restrict(&self) -> &RestrictConfig {
+        &self.restrict
+    }
 
     fn dec_run_level(&self) {
         let n = self.run_level.get() - 1;
@@ -109,7 +114,9 @@ impl Context {
     }
 
     fn set_memory<F>(&self, f: F) -> usize
-            where F: FnOnce(usize) -> usize {
+    where
+        F: FnOnce(usize) -> usize,
+    {
         let old = self.memory_held.get();
         let new = f(old);
         self.memory_held.set(new);
@@ -121,7 +128,7 @@ impl Context {
 #[derive(Debug)]
 pub enum ExecError {
     /// Error in arity to function call
-    ArityError{
+    ArityError {
         /// Name of function, if available
         name: Option<Name>,
         /// Expected count or range of arguments
@@ -144,14 +151,14 @@ pub enum ExecError {
     /// Duplicate struct definition
     DuplicateStructDef(Name),
     /// No such field name in struct
-    FieldError{
+    FieldError {
         /// Name of struct type
         struct_name: Name,
         /// Field name
         field: Name,
     },
     /// Type error assigning value to field
-    FieldTypeError{
+    FieldTypeError {
         /// Name of struct type
         struct_name: Name,
         /// Name of field
@@ -164,7 +171,7 @@ pub enum ExecError {
         value: Option<Value>,
     },
     /// Error in `format` call
-    FormatError{
+    FormatError {
         /// Supplied format string
         fmt: Box<str>,
         /// Span within format string
@@ -189,7 +196,7 @@ pub enum ExecError {
     /// `CallSys` instruction for system function which requires argument count
     MissingArgCount(Name),
     /// Attempt to construct a `Struct` without the given field
-    MissingField{
+    MissingField {
         /// Struct type name
         struct_name: Name,
         /// Field name
@@ -210,7 +217,7 @@ pub enum ExecError {
     /// Struct definition not found
     StructDefError(Name),
     /// Operation performed on unexpected type
-    TypeError{
+    TypeError {
         /// Name of the type expected
         expected: &'static str,
         /// Name of the type received
@@ -219,14 +226,14 @@ pub enum ExecError {
         value: Option<Value>,
     },
     /// Function received a value of incorrect type
-    StructMismatch{
+    StructMismatch {
         /// Type of left-hand side value
         lhs: Name,
         /// Type of right-hand side value
         rhs: Name,
     },
     /// Attempt to operate on two values of incompatible types
-    TypeMismatch{
+    TypeMismatch {
         /// Type of left-hand side value
         lhs: &'static str,
         /// Type of right-hand side value
@@ -241,14 +248,19 @@ pub enum ExecError {
 }
 
 impl StdError for ExecError {
-    fn description(&self) -> &str { "execution error" }
+    fn description(&self) -> &str {
+        "execution error"
+    }
 }
 
 /// Returns a `Panic` error with the given value.
 ///
 /// This is equivalent to `(panic value)`.
 pub fn panic<T, E>(value: T) -> E
-        where T: Into<Value>, E: From<ExecError> {
+where
+    T: Into<Value>,
+    E: From<ExecError>,
+{
     From::from(ExecError::Panic(Some(value.into())))
 }
 
@@ -256,7 +268,9 @@ pub fn panic<T, E>(value: T) -> E
 ///
 /// This is equivalent to `(panic)`.
 pub fn panic_none<E>() -> E
-        where E: From<ExecError> {
+where
+    E: From<ExecError>,
+{
     From::from(ExecError::Panic(None))
 }
 
@@ -264,7 +278,7 @@ impl ExecError {
     /// Convenience function to return a `TypeError` value when `expected`
     /// type is expected, but some other type of value is found.
     pub fn expected(expected: &'static str, v: &Value) -> ExecError {
-        ExecError::TypeError{
+        ExecError::TypeError {
             expected: expected,
             found: v.type_name(),
             value: Some(v.clone()),
@@ -273,9 +287,8 @@ impl ExecError {
 
     /// Convenience function to return a `FieldTypeError` value when a struct
     /// field of the incorrect type is received.
-    pub fn expected_field(struct_name: Name, field: Name,
-            expected: Name, v: &Value) -> ExecError {
-        ExecError::FieldTypeError{
+    pub fn expected_field(struct_name: Name, field: Name, expected: Name, v: &Value) -> ExecError {
+        ExecError::FieldTypeError {
             struct_name: struct_name,
             field: field,
             expected: expected,
@@ -290,20 +303,19 @@ impl fmt::Display for ExecError {
         use self::ExecError::*;
 
         match *self {
-            ArityError{expected, found, ..} =>
-                write!(f, "expected {}; found {}", expected, found),
+            ArityError {
+                expected, found, ..
+            } => write!(f, "expected {}; found {}", expected, found),
             CannotCompare(ty) => write!(f, "cannot compare values of type {}", ty),
-            CannotDefine(_) =>
-                f.write_str("cannot define name of standard value or operator"),
+            CannotDefine(_) => f.write_str("cannot define name of standard value or operator"),
             CompareNaN => f.write_str("attempt to compare NaN value"),
             DivideByZero => f.write_str("attempt to divide by zero"),
             DuplicateField(_) => f.write_str("duplicate field"),
             DuplicateKeyword(_) => f.write_str("duplicate keyword"),
             DuplicateStructDef(_) => f.write_str("duplicate struct definition"),
-            FieldError{..} => f.write_str("no such field in struct"),
-            FieldTypeError{..} => f.write_str("incorrect field type"),
-            FormatError{ref err, ..} =>
-                write!(f, "error in string formatting: {}", err),
+            FieldError { .. } => f.write_str("no such field in struct"),
+            FieldTypeError { .. } => f.write_str("incorrect field type"),
+            FormatError { ref err, .. } => write!(f, "error in string formatting: {}", err),
             InvalidClosureValue(n) => write!(f, "invalid closure value: {}", n),
             InvalidConst(n) => write!(f, "invalid const: {}", n),
             InvalidDepth => f.write_str("invalid depth operand"),
@@ -311,9 +323,8 @@ impl fmt::Display for ExecError {
             InvalidSlice(begin, end) => write!(f, "invalid slice {}..{}", begin, end),
             InvalidStack(n) => write!(f, "invalid stack index: {}", n),
             InvalidSystemFn(n) => write!(f, "invalid system function: {}", n),
-            MissingArgCount(_) =>
-                write!(f, "system function requires argument count"),
-            MissingField{..} => f.write_str("missing field in struct"),
+            MissingArgCount(_) => write!(f, "system function requires argument count"),
+            MissingField { .. } => f.write_str("missing field in struct"),
             NameError(_) => f.write_str("name not found in global scope"),
             StructDefError(_) => f.write_str("struct definition not found"),
             NotCharBoundary(n) => write!(f, "index not on char boundary: {}", n),
@@ -321,11 +332,11 @@ impl fmt::Display for ExecError {
             OutOfBounds(n) => write!(f, "index out of bounds: {}", n),
             Overflow => f.write_str("integer overflow"),
             Panic(_) => f.write_str("panic"),
-            TypeError{expected, found, ..} =>
-                write!(f, "type error: expected {}; found {}", expected, found),
-            StructMismatch{..} => f.write_str("incorrect struct type"),
-            TypeMismatch{lhs, rhs} =>
-                write!(f, "type mismatch; {} and {}", lhs, rhs),
+            TypeError {
+                expected, found, ..
+            } => write!(f, "type error: expected {}; found {}", expected, found),
+            StructMismatch { .. } => f.write_str("incorrect struct type"),
+            TypeMismatch { lhs, rhs } => write!(f, "type mismatch; {} and {}", lhs, rhs),
             UnexpectedEnd => f.write_str("unexpected end of bytecode"),
             UnrecognizedKeyword(_) => f.write_str("unrecognized keyword argument"),
             UnrecognizedOpCode(n) => write!(f, "unrecognized opcode {} ({:x})", n, n),
@@ -338,39 +349,57 @@ impl NameDisplay for ExecError {
         use self::ExecError::*;
 
         match *self {
-            ArityError{name: Some(name), ..} =>
-                write!(f, "`{}` {}", names.get(name), self),
-            CannotDefine(name) |
-            DuplicateField(name) |
-            DuplicateKeyword(name) |
-            DuplicateStructDef(name) |
-            NameError(name) |
-            StructDefError(name) |
-            UnrecognizedKeyword(name) =>
-                write!(f, "{}: {}", self, names.get(name)),
-            FieldError{struct_name, field} =>
-                write!(f, "no such field `{}` in struct `{}`",
-                    names.get(field),
-                    names.get(struct_name)),
-            FieldTypeError{struct_name, field, expected, found, ref value} => {
+            ArityError {
+                name: Some(name), ..
+            } => write!(f, "`{}` {}", names.get(name), self),
+            CannotDefine(name)
+            | DuplicateField(name)
+            | DuplicateKeyword(name)
+            | DuplicateStructDef(name)
+            | NameError(name)
+            | StructDefError(name)
+            | UnrecognizedKeyword(name) => write!(f, "{}: {}", self, names.get(name)),
+            FieldError { struct_name, field } => write!(
+                f,
+                "no such field `{}` in struct `{}`",
+                names.get(field),
+                names.get(struct_name)
+            ),
+            FieldTypeError {
+                struct_name,
+                field,
+                expected,
+                found,
+                ref value,
+            } => {
                 if let Some(ref value) = *value {
-                    write!(f, "type error for field `{}` of struct `{}`: \
-                            expected {}; found {}: {}",
+                    write!(
+                        f,
+                        "type error for field `{}` of struct `{}`: \
+                         expected {}; found {}: {}",
                         names.get(field),
                         names.get(struct_name),
                         names.get(expected),
                         found,
-                        debug_names(names, value))
+                        debug_names(names, value)
+                    )
                 } else {
-                    write!(f, "type error for field `{}` of struct `{}`: \
-                            expected {}; found {}",
+                    write!(
+                        f,
+                        "type error for field `{}` of struct `{}`: \
+                         expected {}; found {}",
                         names.get(field),
                         names.get(struct_name),
                         names.get(expected),
-                        found)
+                        found
+                    )
                 }
             }
-            FormatError{ref fmt, span, ref err} => {
+            FormatError {
+                ref fmt,
+                span,
+                ref err,
+            } => {
                 let hi = highlight_span(fmt, span);
 
                 f.write_str("error in string formatting:\n")?;
@@ -379,31 +408,45 @@ impl NameDisplay for ExecError {
                 writeln!(f, "    {}", hi.highlight)?;
                 Ok(())
             }
-            MissingArgCount(name) =>
-                write!(f, "system function `{}` requires argument count",
-                    names.get(name)),
-            MissingField{struct_name, field} =>
-                write!(f, "missing field `{}` in struct `{}`",
-                    names.get(field),
-                    names.get(struct_name)),
+            MissingArgCount(name) => write!(
+                f,
+                "system function `{}` requires argument count",
+                names.get(name)
+            ),
+            MissingField { struct_name, field } => write!(
+                f,
+                "missing field `{}` in struct `{}`",
+                names.get(field),
+                names.get(struct_name)
+            ),
             Panic(ref value) => match *value {
                 Some(ref v) => write!(f, "panic: {}", display_names(names, v)),
                 None => f.write_str("explicit panic"),
             },
-            StructMismatch{lhs, rhs} =>
-                write!(f, "struct type mismatch: `{}` and `{}`",
-                    names.get(lhs),
-                    names.get(rhs)),
-            TypeError{expected, found, ref value} => {
+            StructMismatch { lhs, rhs } => write!(
+                f,
+                "struct type mismatch: `{}` and `{}`",
+                names.get(lhs),
+                names.get(rhs)
+            ),
+            TypeError {
+                expected,
+                found,
+                ref value,
+            } => {
                 if let Some(ref value) = *value {
-                    write!(f, "type error: expected {}; found {}: {}",
-                        expected, found, debug_names(names, value))
+                    write!(
+                        f,
+                        "type error: expected {}; found {}: {}",
+                        expected,
+                        found,
+                        debug_names(names, value)
+                    )
                 } else {
-                    write!(f, "type error: expected {}; found {}",
-                        expected, found)
+                    write!(f, "type error: expected {}; found {}", expected, found)
                 }
             }
-            _ => fmt::Display::fmt(self, f)
+            _ => fmt::Display::fmt(self, f),
         }
     }
 }
@@ -412,28 +455,34 @@ impl NameDisplay for ExecError {
 pub fn execute(ctx: &Context, code: Rc<Code>) -> Result<Value, Error> {
     let mut mach = Machine::new(ctx);
 
-    mach.execute(ctx.scope(), code)
-        .map_err(|e| { set_traceback(mach.build_trace()); e })
+    mach.execute(ctx.scope(), code).map_err(|e| {
+        set_traceback(mach.build_trace());
+        e
+    })
 }
 
 /// Calls a function or lambda in the given scope with the given arguments.
 pub fn call_function(ctx: &Context, fun: Value, args: Vec<Value>) -> Result<Value, Error> {
     match fun {
-        Value::Function(fun) => execute_function(ctx, fun, args)
-            .map_err(|e| { set_traceback(
-                Trace::single(TraceItem::CallSys(fun.name), None)); e }),
+        Value::Function(fun) => execute_function(ctx, fun, args).map_err(|e| {
+            set_traceback(Trace::single(TraceItem::CallSys(fun.name), None));
+            e
+        }),
         Value::Lambda(l) => execute_lambda(ctx, l, args),
-        ref v => Err(From::from(ExecError::expected("function", v)))
+        ref v => Err(From::from(ExecError::expected("function", v))),
     }
 }
 
 /// Executes a `Function` in the given scope and returns the value.
-pub fn execute_function(ctx: &Context, fun: Function, mut args: Vec<Value>)
-        -> Result<Value, Error> {
+pub fn execute_function(
+    ctx: &Context,
+    fun: Function,
+    mut args: Vec<Value>,
+) -> Result<Value, Error> {
     let n_args = args.len() as u32;
 
     if !fun.sys_fn.arity.accepts(n_args) {
-        Err(From::from(ExecError::ArityError{
+        Err(From::from(ExecError::ArityError {
             name: Some(fun.name),
             expected: fun.sys_fn.arity,
             found: n_args,
@@ -447,8 +496,10 @@ pub fn execute_function(ctx: &Context, fun: Function, mut args: Vec<Value>)
 pub fn execute_lambda(ctx: &Context, lambda: Lambda, args: Vec<Value>) -> Result<Value, Error> {
     let mut mach = Machine::new(ctx);
 
-    mach.execute_lambda(lambda, args)
-        .map_err(|e| { set_traceback(mach.build_trace()); e })
+    mach.execute_lambda(lambda, args).map_err(|e| {
+        set_traceback(mach.build_trace());
+        e
+    })
 }
 
 struct StackFrame {
@@ -477,7 +528,7 @@ struct Machine {
 
 impl Machine {
     fn new(ctx: &Context) -> Machine {
-        Machine{
+        Machine {
             context: ctx.clone(),
             stack: Vec::with_capacity(ctx.restrict().value_stack_size),
             call_stack: Vec::with_capacity(ctx.restrict().call_stack_size),
@@ -511,14 +562,14 @@ impl Machine {
         let arity = code.arity();
 
         if arity != Arity::Exact(0) {
-            return Err(From::from(ExecError::ArityError{
+            return Err(From::from(ExecError::ArityError {
                 name: code.name,
                 expected: arity,
                 found: 0,
             }));
         }
 
-        self.start(StackFrame{
+        self.start(StackFrame {
             code: code,
             scope: scope.clone(),
             values: None,
@@ -528,9 +579,10 @@ impl Machine {
         })
     }
 
-    fn execute_lambda(&mut self, lambda: Lambda, args: Vec<Value>)
-            -> Result<Value, Error> {
-        let scope = lambda.scope.upgrade()
+    fn execute_lambda(&mut self, lambda: Lambda, args: Vec<Value>) -> Result<Value, Error> {
+        let scope = lambda
+            .scope
+            .upgrade()
             .expect("Lambda scope has been destroyed");
 
         self.push_iter(args)?;
@@ -539,7 +591,7 @@ impl Machine {
         let arity = lambda.code.arity();
 
         if !arity.accepts(n_args) {
-            return Err(From::from(ExecError::ArityError{
+            return Err(From::from(ExecError::ArityError {
                 name: lambda.code.name,
                 expected: arity,
                 found: n_args,
@@ -563,7 +615,7 @@ impl Machine {
             }
         }
 
-        self.start(StackFrame{
+        self.start(StackFrame {
             code: lambda.code,
             scope: scope,
             values: lambda.values,
@@ -632,8 +684,9 @@ impl Machine {
                 Quasiquote(n) => self.quasiquote_value(n)?,
                 Comma(n) => self.comma_value(n)?,
                 CommaAt(n) => self.comma_at_value(n)?,
-                BuildClosure(n_const, n_values) =>
-                    self.build_closure(&frame.code, n_const, n_values)?,
+                BuildClosure(n_const, n_values) => {
+                    self.build_closure(&frame.code, n_const, n_values)?
+                }
                 Jump(label) => self.jump(frame, label)?,
                 JumpIf(label) => self.jump_if(frame, label)?,
                 JumpIfBound(label, n) => {
@@ -645,10 +698,8 @@ impl Machine {
                 JumpIfNotEq(label) => self.jump_if_not_eq(frame, label)?,
                 JumpIfNull(label) => self.jump_if_null(frame, label)?,
                 JumpIfNotNull(label) => self.jump_if_not_null(frame, label)?,
-                JumpIfEqConst(label, n) =>
-                    self.jump_if_eq_const(frame, label, n)?,
-                JumpIfNotEqConst(label, n) =>
-                    self.jump_if_not_eq_const(frame, label, n)?,
+                JumpIfEqConst(label, n) => self.jump_if_eq_const(frame, label, n)?,
+                JumpIfNotEqConst(label, n) => self.jump_if_not_eq_const(frame, label, n)?,
                 Null => self.test_is_null(),
                 NotNull => self.test_is_not_null(),
                 Eq => self.equal()?,
@@ -668,10 +719,8 @@ impl Machine {
                 InitPush => self.init_push()?,
                 LastPush => self.last_push()?,
                 CallSys(n) => self.call_sys(frame, n)?,
-                CallSysArgs(n, n_args) =>
-                    self.call_sys_args(frame, n, n_args)?,
-                CallConst(n, n_args) =>
-                    self.call_const(frame, n, n_args)?,
+                CallSysArgs(n, n_args) => self.call_sys_args(frame, n, n_args)?,
+                CallConst(n, n_args) => self.call_const(frame, n, n_args)?,
                 Call(n) => self.call_function(frame, n)?,
                 Apply(n) => self.apply(frame, n)?,
                 ApplyConst(n, n_args) => self.apply_const(frame, n, n_args)?,
@@ -699,15 +748,16 @@ impl Machine {
         Ok(())
     }
 
-    fn build_closure(&mut self, code: &Code, n_const: u32, n_values: u32)
-            -> Result<(), ExecError> {
+    fn build_closure(&mut self, code: &Code, n_const: u32, n_values: u32) -> Result<(), ExecError> {
         let (code, scope) = match *get_const(code, n_const)? {
             Value::Lambda(ref l) => (l.code.clone(), l.scope.clone()),
-            ref v => return Err(ExecError::expected("lambda", v))
+            ref v => return Err(ExecError::expected("lambda", v)),
         };
 
-        let values = self.drain_stack_top(n_values)?
-            .collect::<Vec<_>>().into_boxed_slice();
+        let values = self
+            .drain_stack_top(n_values)?
+            .collect::<Vec<_>>()
+            .into_boxed_slice();
 
         self.value = Value::Lambda(Lambda::new_closure(code, scope, values));
         Ok(())
@@ -739,7 +789,8 @@ impl Machine {
     }
 
     fn get_sys_fn(&self, n: u32) -> Result<(Name, &'static SystemFn), ExecError> {
-        get_standard_name(n).and_then(|n| get_system_fn(n).map(|f| (n, f)))
+        get_standard_name(n)
+            .and_then(|n| get_system_fn(n).map(|f| (n, f)))
             .ok_or(ExecError::InvalidSystemFn(n))
     }
 
@@ -748,51 +799,58 @@ impl Machine {
 
         let n_args = match sys_fn.arity {
             Arity::Exact(n) => n,
-            _ => return Err(From::from(ExecError::MissingArgCount(name)))
+            _ => return Err(From::from(ExecError::MissingArgCount(name))),
         };
 
         self.call_sys_args(frame, n, n_args)
     }
 
-    fn call_sys_args(&mut self, frame: &mut StackFrame, sys_fn: u32, n_args: u32)
-            -> Result<(), Error> {
+    fn call_sys_args(
+        &mut self,
+        frame: &mut StackFrame,
+        sys_fn: u32,
+        n_args: u32,
+    ) -> Result<(), Error> {
         let (name, sys_fn) = self.get_sys_fn(sys_fn)?;
         self.call_sys_fn(frame, name, sys_fn, n_args, false)
     }
 
-    fn call_sys_fn(&mut self, frame: &mut StackFrame, name: Name,
-            sys_fn: &SystemFn, n_args: u32, fn_on_stack: bool)
-            -> Result<(), Error> {
+    fn call_sys_fn(
+        &mut self,
+        frame: &mut StackFrame,
+        name: Name,
+        sys_fn: &SystemFn,
+        n_args: u32,
+        fn_on_stack: bool,
+    ) -> Result<(), Error> {
         if !sys_fn.arity.accepts(n_args) {
-            Err(From::from(ExecError::ArityError{
+            Err(From::from(ExecError::ArityError {
                 name: Some(name),
                 expected: sys_fn.arity,
                 found: n_args,
             }))
         } else {
-                let mut args = self.drain_stack_top(n_args)?
-                    .collect::<Vec<_>>();
+            let mut args = self.drain_stack_top(n_args)?.collect::<Vec<_>>();
 
-                if fn_on_stack {
-                    self.pop()?;
-                }
+            if fn_on_stack {
+                self.pop()?;
+            }
 
-                // Store the name for traceback if an error is generated
-                self.sys_fn_call = Some(name);
+            // Store the name for traceback if an error is generated
+            self.sys_fn_call = Some(name);
 
-                let ctx = self.context.with_scope(frame.scope.clone());
+            let ctx = self.context.with_scope(frame.scope.clone());
 
-                let v = (sys_fn.callback)(&ctx, &mut args)?;
-                self.value = v;
+            let v = (sys_fn.callback)(&ctx, &mut args)?;
+            self.value = v;
 
-                self.sys_fn_call = None;
+            self.sys_fn_call = None;
 
-                Ok(())
+            Ok(())
         }
     }
 
-    fn call_const(&mut self, frame: &mut StackFrame,
-            n: u32, n_args: u32) -> Result<(), Error> {
+    fn call_const(&mut self, frame: &mut StackFrame, n: u32, n_args: u32) -> Result<(), Error> {
         let name = get_const_name(&frame.code, n)?;
         let v = self.get_value(frame, name)?;
 
@@ -802,22 +860,25 @@ impl Machine {
 
     /// Calls a function on the stack with `n_args` arguments.
     /// The callable value must be on the stack before the given arguments.
-    fn call_function(&mut self, frame: &mut StackFrame, n_args: u32)
-            -> Result<(), Error> {
+    fn call_function(&mut self, frame: &mut StackFrame, n_args: u32) -> Result<(), Error> {
         let v = self.get_stack_top(n_args)?.clone();
         self.call_value(frame, v, n_args, true)
     }
 
-    fn call_value(&mut self, frame: &mut StackFrame, value: Value,
-            n_args: u32, fn_on_stack: bool) -> Result<(), Error> {
+    fn call_value(
+        &mut self,
+        frame: &mut StackFrame,
+        value: Value,
+        n_args: u32,
+        fn_on_stack: bool,
+    ) -> Result<(), Error> {
         match value {
-            Value::Function(fun) =>
-                self.call_sys_fn(frame, fun.name, &fun.sys_fn, n_args, fn_on_stack),
-            Value::Lambda(fun) =>
-                self.call_lambda(frame, fun, n_args, fn_on_stack),
+            Value::Function(fun) => {
+                self.call_sys_fn(frame, fun.name, &fun.sys_fn, n_args, fn_on_stack)
+            }
+            Value::Lambda(fun) => self.call_lambda(frame, fun, n_args, fn_on_stack),
             Value::Foreign(ref fv) => {
-                let mut args = self.drain_stack_top(n_args)?
-                    .collect::<Vec<_>>();
+                let mut args = self.drain_stack_top(n_args)?.collect::<Vec<_>>();
 
                 if fn_on_stack {
                     self.pop()?;
@@ -829,13 +890,20 @@ impl Machine {
 
                 Ok(())
             }
-            ref v => Err(From::from(ExecError::expected("function", v)))
+            ref v => Err(From::from(ExecError::expected("function", v))),
         }
     }
 
-    fn call_lambda(&mut self, frame: &mut StackFrame, lambda: Lambda,
-            n_args: u32, fn_on_stack: bool) -> Result<(), Error> {
-        let scope = lambda.scope.upgrade()
+    fn call_lambda(
+        &mut self,
+        frame: &mut StackFrame,
+        lambda: Lambda,
+        n_args: u32,
+        fn_on_stack: bool,
+    ) -> Result<(), Error> {
+        let scope = lambda
+            .scope
+            .upgrade()
             .expect("Lambda scope has been destroyed");
 
         if self.stack.len() < n_args as usize {
@@ -844,14 +912,17 @@ impl Machine {
 
         let n_args = self.setup_call(&lambda.code, n_args)?;
 
-        let old_frame = replace(frame, StackFrame{
-            code: lambda.code,
-            scope: scope,
-            values: lambda.values,
-            iptr: 0,
-            sptr: self.stack.len() as u32 - n_args,
-            fn_on_stack: fn_on_stack,
-        });
+        let old_frame = replace(
+            frame,
+            StackFrame {
+                code: lambda.code,
+                scope: scope,
+                values: lambda.values,
+                iptr: 0,
+                sptr: self.stack.len() as u32 - n_args,
+                fn_on_stack: fn_on_stack,
+            },
+        );
 
         self.save_frame(old_frame)?;
         Ok(())
@@ -865,7 +936,7 @@ impl Machine {
     /// Returns the final count of stack argument values.
     fn setup_call(&mut self, code: &Code, mut n_args: u32) -> Result<u32, Error> {
         if n_args < code.req_params {
-            return Err(From::from(ExecError::ArityError{
+            return Err(From::from(ExecError::ArityError {
                 name: code.name,
                 expected: code.arity(),
                 found: n_args,
@@ -897,7 +968,7 @@ impl Machine {
                     let kw = get_keyword(&kw)?;
                     let v = match iter.next() {
                         Some(v) => v,
-                        None => return Err(From::from(ExecError::OddKeywordParams))
+                        None => return Err(From::from(ExecError::OddKeywordParams)),
                     };
 
                     match code.kw_params.iter().position(|&n| n == kw) {
@@ -908,7 +979,7 @@ impl Machine {
                                 return Err(From::from(ExecError::DuplicateKeyword(kw)));
                             }
                         }
-                        None => return Err(From::from(ExecError::UnrecognizedKeyword(kw)))
+                        None => return Err(From::from(ExecError::UnrecognizedKeyword(kw))),
                     }
                 }
             }
@@ -918,7 +989,7 @@ impl Machine {
                 self.push(v)?;
             }
         } else if n_args != code.n_params {
-            return Err(From::from(ExecError::ArityError{
+            return Err(From::from(ExecError::ArityError {
                 name: code.name,
                 expected: code.arity(),
                 found: n_args,
@@ -941,7 +1012,7 @@ impl Machine {
                 self.push_iter(li.to_vec())?;
                 Ok(n)
             }
-            ref v => return Err(From::from(ExecError::expected("list", v)))
+            ref v => return Err(From::from(ExecError::expected("list", v))),
         }
     }
 
@@ -970,7 +1041,7 @@ impl Machine {
     }
 
     fn call_self(&mut self, frame: &mut StackFrame, n: u32) -> Result<(), Error> {
-        let lambda = Lambda{
+        let lambda = Lambda {
             code: frame.code.clone(),
             scope: Rc::downgrade(&frame.scope),
             values: frame.values.clone(),
@@ -989,8 +1060,10 @@ impl Machine {
         let start = frame.sptr as usize;
         let end = len - n_args as usize;
 
-        let n = self.stack[start..end].iter()
-            .map(|v| v.size()).fold(0, |a, b| a + b);
+        let n = self.stack[start..end]
+            .iter()
+            .map(|v| v.size())
+            .fold(0, |a, b| a + b);
         self.context.set_memory(|m| m.saturating_sub(n));
 
         let _ = self.stack.drain(start..end);
@@ -1004,8 +1077,10 @@ impl Machine {
     /// Cleans the stack when returning from a function.
     /// All values `stack[pos..]` are removed.
     fn clean_stack(&mut self, pos: usize) {
-        let n = self.stack[pos..].iter()
-            .map(|v| v.size()).fold(0, |a, b| a + b);
+        let n = self.stack[pos..]
+            .iter()
+            .map(|v| v.size())
+            .fold(0, |a, b| a + b);
         self.context.set_memory(|m| m.saturating_sub(n));
 
         let _ = self.stack.drain(pos..);
@@ -1158,7 +1233,10 @@ impl Machine {
     /// If `ExactSizeIterator::len` misrepresents the number of items in the
     /// iterator, the stack's capacity may be exceeded without causing an error.
     fn push_iter<I>(&mut self, iter: I) -> Result<(), Error>
-            where I: IntoIterator<Item=Value>, I::IntoIter: ExactSizeIterator {
+    where
+        I: IntoIterator<Item = Value>,
+        I::IntoIter: ExactSizeIterator,
+    {
         let iter = iter.into_iter();
 
         if self.stack.len() + iter.len() > self.stack.capacity() {
@@ -1167,8 +1245,7 @@ impl Machine {
 
         let mut size = 0;
 
-        self.stack.extend(iter
-            .inspect(|v| size += v.size()));
+        self.stack.extend(iter.inspect(|v| size += v.size()));
 
         let total = self.context.set_memory(|m| m.saturating_add(size));
 
@@ -1217,8 +1294,10 @@ impl Machine {
         if n as usize <= len {
             let start = len - n as usize;
 
-            let n = self.stack[start..].iter()
-                .map(|v| v.size()).fold(0, |a, b| a + b);
+            let n = self.stack[start..]
+                .iter()
+                .map(|v| v.size())
+                .fold(0, |a, b| a + b);
             self.context.set_memory(|m| m.saturating_sub(n));
 
             Ok(self.stack.drain(start..))
@@ -1232,14 +1311,18 @@ impl Machine {
     }
 
     /// Returns a reference to an enclosed value.
-    fn get_closure_value<'f>(&self, frame: &'f StackFrame, n: u32)
-            -> Result<&'f Value, ExecError> {
-        frame.values.as_ref().and_then(|v| v.get(n as usize))
+    fn get_closure_value<'f>(&self, frame: &'f StackFrame, n: u32) -> Result<&'f Value, ExecError> {
+        frame
+            .values
+            .as_ref()
+            .and_then(|v| v.get(n as usize))
             .ok_or(ExecError::InvalidClosureValue(n))
     }
 
     fn get_stack_mut(&mut self, n: u32) -> Result<&mut Value, ExecError> {
-        self.stack.get_mut(n as usize).ok_or(ExecError::InvalidStack(n))
+        self.stack
+            .get_mut(n as usize)
+            .ok_or(ExecError::InvalidStack(n))
     }
 
     /// Returns a value from the stack `n` values from the top.
@@ -1248,7 +1331,8 @@ impl Machine {
         let len = self.stack.len();
 
         if n as usize <= len {
-            self.stack.get(len - 1 - n as usize)
+            self.stack
+                .get(len - 1 - n as usize)
                 .ok_or(ExecError::InvalidStack(len as u32))
         } else {
             Err(ExecError::InvalidStack(n))
@@ -1282,24 +1366,29 @@ impl Machine {
         }
     }
 
-    fn jump_if_bound(&mut self, frame: &mut StackFrame, label: u32, n: u32) -> Result<(), ExecError> {
+    fn jump_if_bound(
+        &mut self,
+        frame: &mut StackFrame,
+        label: u32,
+        n: u32,
+    ) -> Result<(), ExecError> {
         match *self.get_stack(n)? {
             Value::Unbound => Ok(()),
-            _ => self.jump(frame, label)
+            _ => self.jump(frame, label),
         }
     }
 
     fn jump_if_null(&mut self, frame: &mut StackFrame, label: u32) -> Result<(), ExecError> {
         match self.value {
             Value::Unit => self.jump(frame, label),
-            _ => Ok(())
+            _ => Ok(()),
         }
     }
 
     fn jump_if_not_null(&mut self, frame: &mut StackFrame, label: u32) -> Result<(), ExecError> {
         match self.value {
             Value::Unit => Ok(()),
-            _ => self.jump(frame, label)
+            _ => self.jump(frame, label),
         }
     }
 
@@ -1329,7 +1418,12 @@ impl Machine {
         }
     }
 
-    fn jump_if_eq_const(&mut self, frame: &mut StackFrame, label: u32, n: u32) -> Result<(), ExecError> {
+    fn jump_if_eq_const(
+        &mut self,
+        frame: &mut StackFrame,
+        label: u32,
+        n: u32,
+    ) -> Result<(), ExecError> {
         let eq = get_const(&frame.code, n).and_then(|v| self.value.is_equal(v))?;
 
         if eq {
@@ -1339,9 +1433,13 @@ impl Machine {
         }
     }
 
-    fn jump_if_not_eq_const(&mut self, frame: &mut StackFrame, label: u32, n: u32) -> Result<(), ExecError> {
-        let eq = get_const(&frame.code, n)
-            .and_then(|v| self.value.is_equal(v))?;
+    fn jump_if_not_eq_const(
+        &mut self,
+        frame: &mut StackFrame,
+        label: u32,
+        n: u32,
+    ) -> Result<(), ExecError> {
+        let eq = get_const(&frame.code, n).and_then(|v| self.value.is_equal(v))?;
 
         if !eq {
             self.jump(frame, label)
@@ -1353,7 +1451,7 @@ impl Machine {
     fn test_is_null(&mut self) {
         let null = match self.value {
             Value::Unit => true,
-            _ => false
+            _ => false,
         };
 
         self.value = null.into();
@@ -1362,7 +1460,7 @@ impl Machine {
     fn test_is_not_null(&mut self) {
         let null = match self.value {
             Value::Unit => true,
-            _ => false
+            _ => false,
         };
 
         self.value = (!null).into();
@@ -1399,7 +1497,7 @@ impl Machine {
     fn negate(&mut self) -> Result<(), ExecError> {
         match self.value {
             Value::Bool(ref mut v) => *v = !*v,
-            ref v => return Err(ExecError::expected("bool", v))
+            ref v => return Err(ExecError::expected("bool", v)),
         }
         Ok(())
     }
@@ -1409,7 +1507,7 @@ impl Machine {
             Value::Float(ref mut f) => *f += 1.0,
             Value::Integer(ref mut i) => *i = i.clone() + Integer::one(),
             Value::Ratio(ref mut r) => *r = r.clone() + Ratio::one(),
-            ref v => return Err(ExecError::expected("number", v))
+            ref v => return Err(ExecError::expected("number", v)),
         }
         Ok(())
     }
@@ -1419,7 +1517,7 @@ impl Machine {
             Value::Float(ref mut f) => *f -= 1.0,
             Value::Integer(ref mut i) => *i = i.clone() - Integer::one(),
             Value::Ratio(ref mut r) => *r = r.clone() - Ratio::one(),
-            ref v => return Err(ExecError::expected("number", v))
+            ref v => return Err(ExecError::expected("number", v)),
         }
         Ok(())
     }
@@ -1431,7 +1529,7 @@ impl Machine {
         match li {
             Value::Unit => li = vec![v].into(),
             Value::List(ref mut li) => li.push(v),
-            ref v => return Err(ExecError::expected("list", v))
+            ref v => return Err(ExecError::expected("list", v)),
         }
 
         self.value = li;
@@ -1492,26 +1590,28 @@ fn get_bool(v: &Value) -> Result<bool, ExecError> {
 }
 
 fn get_const(code: &Code, n: u32) -> Result<&Value, ExecError> {
-    code.consts.get(n as usize).ok_or(ExecError::InvalidConst(n))
+    code.consts
+        .get(n as usize)
+        .ok_or(ExecError::InvalidConst(n))
 }
 
 fn get_keyword(v: &Value) -> Result<Name, ExecError> {
     match *v {
         Value::Keyword(name) => Ok(name),
-        ref v => Err(ExecError::expected("keyword", v))
+        ref v => Err(ExecError::expected("keyword", v)),
     }
 }
 
 fn get_const_name(code: &Code, n: u32) -> Result<Name, ExecError> {
     match *get_const(code, n)? {
         Value::Name(name) => Ok(name),
-        ref v => Err(ExecError::expected("name", v))
+        ref v => Err(ExecError::expected("name", v)),
     }
 }
 
 #[cfg(test)]
 mod test {
-    use super::{ExecError, panic, panic_none};
+    use super::{panic, panic_none, ExecError};
     use error::Error;
     use value::Value;
 

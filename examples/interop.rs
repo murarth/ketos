@@ -1,7 +1,9 @@
 //! Demonstrates interoperation -- calling methods on Rust values from Ketos
 
-#[macro_use] extern crate ketos;
-#[macro_use] extern crate ketos_derive;
+#[macro_use]
+extern crate ketos;
+#[macro_use]
+extern crate ketos_derive;
 
 use std::cell::Cell;
 use std::rc::Rc;
@@ -17,7 +19,7 @@ pub struct Hello {
 impl Hello {
     /// Creates a new `Hello` to say "Hello" to `who`.
     pub fn new(who: String) -> Hello {
-        Hello{who: who}
+        Hello { who: who }
     }
 
     /// Returns a string saying "Hello" to someone.
@@ -38,7 +40,9 @@ pub struct Counter {
 impl Counter {
     /// Creates a new `Counter` with counter value `0`.
     pub fn new() -> Counter {
-        Counter{count: Cell::new(0)}
+        Counter {
+            count: Cell::new(0),
+        }
     }
 
     /// Increments the internal counter and returns the previous value.
@@ -71,22 +75,30 @@ fn main() {
 
     // Inserts wrapper functions into the global scope.
     ketos_fn!{ interp.scope() => "count" =>
-        fn count(counter: &Counter) -> u32 }
+    fn count(counter: &Counter) -> u32 }
     ketos_fn!{ interp.scope() => "say-hello" =>
-        fn say_hello(hello: &Hello) -> String }
+    fn say_hello(hello: &Hello) -> String }
 
     // Defines a `main` function within the global scope to accept our values.
-    interp.run_code(r#"
+    interp
+        .run_code(
+            r#"
         (define (main hello counter)
           (do
             (println "Hello from Ketos: ~a" (say-hello hello))
             (println "Count from Ketos: ~a" (count counter))))
-        "#, None).unwrap();
+        "#,
+            None,
+        ).unwrap();
 
-    interp.call("main", vec![
-        Value::Foreign(hello.clone()),
-        Value::Foreign(counter.clone()),
-    ]).unwrap();
+    interp
+        .call(
+            "main",
+            vec![
+                Value::Foreign(hello.clone()),
+                Value::Foreign(counter.clone()),
+            ],
+        ).unwrap();
 
     println!("Hello from Rust: {}", hello.say_hello());
     println!("Count from Rust: {}", counter.count());

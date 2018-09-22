@@ -17,7 +17,7 @@ use name::{debug_names, display_names, NameStore};
 use parser::{ParseError, Parser};
 use restrict::RestrictConfig;
 use scope::{GlobalScope, Scope};
-use structs::{StructDefMap};
+use structs::StructDefMap;
 use trace::{get_traceback, take_traceback, Trace};
 use value::Value;
 
@@ -53,16 +53,23 @@ pub struct Builder {
 
 macro_rules! exclude {
     ( $field:expr , $this:expr , $that:expr ) => {
-        assert!($field.is_none(),
-            concat!("`Builder::", $this, "` and `Builder::", $that,
-                "` are mutually exclusive"))
-    }
+        assert!(
+            $field.is_none(),
+            concat!(
+                "`Builder::",
+                $this,
+                "` and `Builder::",
+                $that,
+                "` are mutually exclusive"
+            )
+        )
+    };
 }
 
 impl Builder {
     /// Creates a new `Builder`.
     pub fn new() -> Builder {
-        Builder{
+        Builder {
             name: None,
             context: None,
             scope: None,
@@ -161,12 +168,19 @@ impl Builder {
 
     fn build_context(mut self) -> Context {
         match self {
-            Builder{context: Some(ctx), ..} => ctx,
-            Builder{scope: Some(scope), ..} =>
-                Context::new(scope,
-                    self.restrict.unwrap_or_else(RestrictConfig::permissive)),
-            _ => Context::new(self.build_scope(),
-                self.restrict.unwrap_or_else(RestrictConfig::permissive))
+            Builder {
+                context: Some(ctx), ..
+            } => ctx,
+            Builder {
+                scope: Some(scope), ..
+            } => Context::new(
+                scope,
+                self.restrict.unwrap_or_else(RestrictConfig::permissive),
+            ),
+            _ => Context::new(
+                self.build_scope(),
+                self.restrict.unwrap_or_else(RestrictConfig::permissive),
+            ),
         }
     }
 
@@ -179,9 +193,14 @@ impl Builder {
         let names = Rc::new(RefCell::new(names));
         let codemap = Rc::new(RefCell::new(CodeMap::new()));
         let modules = Rc::new(ModuleRegistry::new(loader));
-        let io = self.io.take().unwrap_or_else(|| Rc::new(GlobalIo::default()));
-        let defs = self.struct_defs.take().unwrap_or_else(
-            || Rc::new(RefCell::new(StructDefMap::new())));
+        let io = self
+            .io
+            .take()
+            .unwrap_or_else(|| Rc::new(GlobalIo::default()));
+        let defs = self
+            .struct_defs
+            .take()
+            .unwrap_or_else(|| Rc::new(RefCell::new(StructDefMap::new())));
 
         Rc::new(GlobalScope::new(name, names, codemap, modules, io, defs))
     }
@@ -189,10 +208,10 @@ impl Builder {
     fn build_loader(&mut self) -> Box<ModuleLoader> {
         match (self.module_loader.take(), self.search_paths.take()) {
             (Some(loader), _) => loader,
-            (None, Some(paths)) =>
-                Box::new(BuiltinModuleLoader.chain(
-                    FileModuleLoader::with_search_paths(paths))),
-            (None, None) => Box::new(BuiltinModuleLoader)
+            (None, Some(paths)) => {
+                Box::new(BuiltinModuleLoader.chain(FileModuleLoader::with_search_paths(paths)))
+            }
+            (None, None) => Box::new(BuiltinModuleLoader),
         }
     }
 }
@@ -227,34 +246,32 @@ impl Interpreter {
         let io = Rc::new(GlobalIo::default());
         let defs = Rc::new(RefCell::new(StructDefMap::new()));
 
-        Interpreter::with_scope(
-            Rc::new(GlobalScope::new(
-                name,
-                names.clone(),
-                codemap.clone(),
-                modules,
-                io,
-                defs)))
+        Interpreter::with_scope(Rc::new(GlobalScope::new(
+            name,
+            names.clone(),
+            codemap.clone(),
+            modules,
+            io,
+            defs,
+        )))
     }
 
     /// Creates a new `Interpreter` using the given `Context` instance.
     pub fn with_context(context: Context) -> Interpreter {
-        Interpreter{
-            context: context,
-        }
+        Interpreter { context: context }
     }
 
     /// Creates a new `Interpreter` using the given `Scope` instance.
     pub fn with_scope(scope: Scope) -> Interpreter {
-        Interpreter::with_context(Context::new(
-            scope, RestrictConfig::permissive()))
+        Interpreter::with_context(Context::new(scope, RestrictConfig::permissive()))
     }
 
     /// Creates a new `Interpreter` that searches for module files in a given
     /// series of directories.
     pub fn with_search_paths(paths: Vec<PathBuf>) -> Interpreter {
         Interpreter::with_loader(Box::new(
-            BuiltinModuleLoader.chain(FileModuleLoader::with_search_paths(paths))))
+            BuiltinModuleLoader.chain(FileModuleLoader::with_search_paths(paths)),
+        ))
     }
 
     /// Clears cached source from the contained `CodeMap`.
@@ -274,8 +291,11 @@ impl Interpreter {
 
     /// Prints traceback information to `stderr`.
     pub fn display_trace(&self, trace: &Trace) {
-        let _ = writeln!(stderr(), "Traceback:\n\n{}",
-            display_names(&self.scope().borrow_names(), trace));
+        let _ = writeln!(
+            stderr(),
+            "Traceback:\n\n{}",
+            display_names(&self.scope().borrow_names(), trace)
+        );
     }
 
     fn format_parse_error(&self, e: &ParseError) -> String {
@@ -286,10 +306,16 @@ impl Interpreter {
 
         let mut res = String::with_capacity(32);
 
-        let _ = writeln!(res, "{}:{}:{}:parse error: {}",
-            hi.filename.unwrap_or("<input>"), hi.line, hi.col, e.kind);
+        let _ = writeln!(
+            res,
+            "{}:{}:{}:parse error: {}",
+            hi.filename.unwrap_or("<input>"),
+            hi.line,
+            hi.col,
+            e.kind
+        );
         let _ = writeln!(res, "    {}", hi.source);
-        let _ = write!  (res, "    {}", hi.highlight);
+        let _ = write!(res, "    {}", hi.highlight);
 
         res
     }
@@ -303,8 +329,11 @@ impl Interpreter {
     pub fn format_error(&self, e: &Error) -> String {
         match *e {
             Error::ParseError(ref e) => self.format_parse_error(e),
-            ref e => format!("{}: {}", e.description(),
-                display_names(&self.scope().borrow_names(), e))
+            ref e => format!(
+                "{}: {}",
+                e.description(),
+                display_names(&self.scope().borrow_names(), e)
+            ),
         }
     }
 
@@ -359,7 +388,10 @@ impl Interpreter {
     pub fn call(&self, name: &str, args: Vec<Value>) -> Result<Value, Error> {
         let name = self.scope().borrow_names_mut().add(name);
 
-        let v = self.scope().get_value(name).ok_or(ExecError::NameError(name))?;
+        let v = self
+            .scope()
+            .get_value(name)
+            .ok_or(ExecError::NameError(name))?;
         self.call_value(v, args)
     }
 
@@ -393,7 +425,8 @@ impl Interpreter {
 
     /// Sets the value of `argv` within the execution scope.
     pub fn set_args<T: AsRef<str>>(&self, args: &[T]) {
-        let args = args.iter()
+        let args = args
+            .iter()
             .map(|s| s.as_ref().into())
             .collect::<Vec<Value>>();
 
@@ -402,8 +435,7 @@ impl Interpreter {
 
     /// Compiles and executes the contents of a file.
     pub fn run_file(&self, path: &Path) -> Result<(), Error> {
-        let mut f = File::open(path)
-            .map_err(|e| IoError::new(IoMode::Open, path, e))?;
+        let mut f = File::open(path).map_err(|e| IoError::new(IoMode::Open, path, e))?;
 
         let mut buf = String::new();
 
@@ -482,7 +514,8 @@ impl Interpreter {
 
     fn run_main(&self, input: &str, path: String) -> Result<(), Error> {
         let exprs = self.parse_file(input, Some(path))?;
-        let code = exprs.iter()
+        let code = exprs
+            .iter()
             .map(|v| compile(&self.context, v))
             .collect::<Result<Vec<_>, _>>()?;
         self.execute_program(code)?;
