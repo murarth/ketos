@@ -1,5 +1,6 @@
 extern crate dirs;
-#[macro_use] extern crate gumdrop;
+#[macro_use]
+extern crate gumdrop;
 extern crate ketos;
 extern crate linefeed;
 
@@ -14,12 +15,11 @@ use std::time::Duration;
 
 use gumdrop::{Options, ParsingStyle};
 use ketos::{
-    Builder, Interpreter, complete_name,
-    Context, Error, RestrictConfig, ParseError, ParseErrorKind,
+    complete_name, Builder, Context, Error, Interpreter, ParseError, ParseErrorKind, RestrictConfig,
 };
 use linefeed::{
-    Interface, Prompter, Command, Completer,
-    Completion, Function, ReadResult, Signal, Suffix, Terminal,
+    Command, Completer, Completion, Function, Interface, Prompter, ReadResult, Signal, Suffix,
+    Terminal,
 };
 
 fn main() {
@@ -37,15 +37,25 @@ struct KetosOpts {
     #[options(short = "V", help = "Print version and exit")]
     version: bool,
 
-    #[options(no_long, help = "Evaluate one expression and exit", meta = "EXPR")]
+    #[options(
+        no_long,
+        help = "Evaluate one expression and exit",
+        meta = "EXPR"
+    )]
     expr: Option<String>,
     #[options(help = "Run interactively even with a file")]
     interactive: bool,
-    #[options(no_long, help = "Add DIR to list of module search paths", meta = "DIR")]
+    #[options(
+        no_long,
+        help = "Add DIR to list of module search paths",
+        meta = "DIR"
+    )]
     include: Vec<String>,
-    #[options(short = "R",
+    #[options(
+        short = "R",
         help = "Configure execution restrictions; see `-R help` for more details",
-        meta = "SPEC")]
+        meta = "SPEC"
+    )]
     restrict: Option<String>,
     #[options(no_short, help = "Do not run ~/.ketosrc.ket on startup")]
     no_rc: bool,
@@ -81,8 +91,7 @@ fn run() -> i32 {
 
     paths.extend(opts.include.into_iter().map(PathBuf::from));
 
-    let mut builder = Builder::new()
-        .search_paths(paths);
+    let mut builder = Builder::new().search_paths(paths);
 
     if let Some(ref res) = opts.restrict {
         if res == "help" {
@@ -101,8 +110,7 @@ fn run() -> i32 {
 
     let interp = builder.finish();
 
-    let interactive = opts.interactive ||
-        (opts.free.is_empty() && opts.expr.is_none());
+    let interactive = opts.interactive || (opts.free.is_empty() && opts.expr.is_none());
 
     if let Some(ref expr) = opts.expr {
         if !run_expr(&interp, &expr) && !interactive {
@@ -145,26 +153,20 @@ fn parse_restrict(params: &str) -> Result<RestrictConfig, String> {
             _ => {
                 let (name, value) = match param.find('=') {
                     Some(pos) => (&param[..pos], &param[pos + 1..]),
-                    None => return Err(format!("unrecognized restrict option: {}", param))
+                    None => return Err(format!("unrecognized restrict option: {}", param)),
                 };
 
                 match name {
-                    "execution_time" =>
-                        res.execution_time = Some(Duration::from_millis(
-                            parse_param(name, value)?)),
-                    "call_stack_size" =>
-                        res.call_stack_size = parse_param(name, value)?,
-                    "value_stack_size" =>
-                        res.value_stack_size = parse_param(name, value)?,
-                    "namespace_size" =>
-                        res.namespace_size = parse_param(name, value)?,
-                    "memory_limit" =>
-                        res.memory_limit = parse_param(name, value)?,
-                    "max_integer_size" =>
-                        res.max_integer_size = parse_param(name, value)?,
-                    "max_syntax_nesting" =>
-                        res.max_syntax_nesting = parse_param(name, value)?,
-                    _ => return Err(format!("unrecognized parameter: {}", name))
+                    "execution_time" => {
+                        res.execution_time = Some(Duration::from_millis(parse_param(name, value)?))
+                    }
+                    "call_stack_size" => res.call_stack_size = parse_param(name, value)?,
+                    "value_stack_size" => res.value_stack_size = parse_param(name, value)?,
+                    "namespace_size" => res.namespace_size = parse_param(name, value)?,
+                    "memory_limit" => res.memory_limit = parse_param(name, value)?,
+                    "max_integer_size" => res.max_integer_size = parse_param(name, value)?,
+                    "max_syntax_nesting" => res.max_syntax_nesting = parse_param(name, value)?,
+                    _ => return Err(format!("unrecognized parameter: {}", name)),
                 }
             }
         }
@@ -174,7 +176,9 @@ fn parse_restrict(params: &str) -> Result<RestrictConfig, String> {
 }
 
 fn parse_param<T: FromStr>(name: &str, value: &str) -> Result<T, String> {
-    value.parse().map_err(|_| format!("invalid `{}` value: {}", name, value))
+    value
+        .parse()
+        .map_err(|_| format!("invalid `{}` value: {}", name, value))
 }
 
 fn display_error(interp: &Interpreter, e: &Error) {
@@ -246,7 +250,7 @@ fn run_repl(interp: &Interpreter) -> io::Result<()> {
                         if !code.is_empty() {
                             match interp.execute_program(code) {
                                 Ok(v) => interp.display_value(&v),
-                                Err(e) => display_error(&interp, &e)
+                                Err(e) => display_error(&interp, &e),
                             }
                         }
                     }
@@ -287,32 +291,41 @@ fn set_thread_context(ctx: Context) {
 
 fn thread_context() -> Context {
     CONTEXT.with(|key| {
-        key.borrow().clone().unwrap_or_else(
-            || panic!("no thread-local Context object set"))
+        key.borrow()
+            .clone()
+            .unwrap_or_else(|| panic!("no thread-local Context object set"))
     })
 }
 
 impl<Term: Terminal> Completer<Term> for KetosCompleter {
-    fn complete(&self, word: &str, prompter: &Prompter<Term>,
-            start: usize, end: usize) -> Option<Vec<Completion>> {
-        let line_start = prompter.buffer()[..start].rfind('\n')
-            .map(|pos| pos + 1).unwrap_or(0);
+    fn complete(
+        &self,
+        word: &str,
+        prompter: &Prompter<Term>,
+        start: usize,
+        end: usize,
+    ) -> Option<Vec<Completion>> {
+        let line_start = prompter.buffer()[..start]
+            .rfind('\n')
+            .map(|pos| pos + 1)
+            .unwrap_or(0);
         let is_whitespace = prompter.buffer()[line_start..start]
-            .chars().all(|ch| ch.is_whitespace());
+            .chars()
+            .all(|ch| ch.is_whitespace());
 
         if is_whitespace && start == end {
             // Indent when there's no word to complete
             let n = 2 - (start - line_start) % 2;
 
-            Some(vec![Completion{
+            Some(vec![Completion {
                 completion: repeat(' ').take(n).collect(),
                 display: None,
                 suffix: Suffix::None,
             }])
         } else {
             let ctx = thread_context();
-            complete_name(word, ctx.scope()).map(
-                |words| words.into_iter().map(Completion::simple).collect())
+            complete_name(word, ctx.scope())
+                .map(|words| words.into_iter().map(Completion::simple).collect())
         }
     }
 }
@@ -327,10 +340,22 @@ impl<Term: Terminal> Function<Term> for KetosAccept {
         interp.clear_codemap();
 
         match r {
-            Err(Error::ParseError(ParseError{kind: ParseErrorKind::MissingCloseParen, ..})) |
-            Err(Error::ParseError(ParseError{kind: ParseErrorKind::UnterminatedComment, ..})) |
-            Err(Error::ParseError(ParseError{kind: ParseErrorKind::UnterminatedString, ..})) |
-            Err(Error::ParseError(ParseError{kind: ParseErrorKind::DocCommentEof, ..})) => {
+            Err(Error::ParseError(ParseError {
+                kind: ParseErrorKind::MissingCloseParen,
+                ..
+            }))
+            | Err(Error::ParseError(ParseError {
+                kind: ParseErrorKind::UnterminatedComment,
+                ..
+            }))
+            | Err(Error::ParseError(ParseError {
+                kind: ParseErrorKind::UnterminatedString,
+                ..
+            }))
+            | Err(Error::ParseError(ParseError {
+                kind: ParseErrorKind::DocCommentEof,
+                ..
+            })) => {
                 if count > 0 {
                     prompter.insert(count as usize, '\n')
                 } else {
@@ -358,7 +383,7 @@ fn print_usage(arg0: &str) {
 
 fn print_restrict_usage() {
     print!(
-r#"The `-R` / `--restrict` option accepts a comma-separated list of parameters:
+        r#"The `-R` / `--restrict` option accepts a comma-separated list of parameters:
 
   permissive
     Applies "permissive" restrictions (default)
@@ -377,5 +402,6 @@ r#"The `-R` / `--restrict` option accepts a comma-separated list of parameters:
       memory_limit            Maximum total held memory, in abstract units
       max_integer_size        Maximum integer size, in bits
       max_syntax_nesting      Maximum nested syntax elements
-"#);
+"#
+    );
 }

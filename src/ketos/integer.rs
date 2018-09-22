@@ -8,7 +8,7 @@ use std::str::FromStr;
 pub use num::bigint::Sign;
 
 use num::{self, BigInt, BigRational};
-use num::{FromPrimitive, ToPrimitive, Integer as NumInteger, Signed, Num, Zero, One};
+use num::{FromPrimitive, Integer as NumInteger, Num, One, Signed, ToPrimitive, Zero};
 
 /// Arbitrary precision signed integer
 #[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
@@ -142,7 +142,8 @@ impl Integer {
     #[inline]
     pub fn from_str_radix(s: &str, radix: u32) -> Result<Integer, FromStrRadixError> {
         BigInt::from_str_radix(s, radix)
-            .map(Integer).map_err(FromStrRadixError)
+            .map(Integer)
+            .map_err(FromStrRadixError)
     }
 
     /// Returns integer sign and a series of big-endian bytes.
@@ -324,15 +325,17 @@ impl Ratio {
     /// Returns the `Ratio` as an `f32` value.
     #[inline]
     pub fn to_f32(&self) -> Option<f32> {
-        self.numer().to_f32().and_then(
-            |n| self.denom().to_f32().map(|d| n / d))
+        self.numer()
+            .to_f32()
+            .and_then(|n| self.denom().to_f32().map(|d| n / d))
     }
 
     /// Returns the `Ratio` as an `f64` value.
     #[inline]
     pub fn to_f64(&self) -> Option<f64> {
-        self.numer().to_f64().and_then(
-            |n| self.denom().to_f64().map(|d| n / d))
+        self.numer()
+            .to_f64()
+            .and_then(|n| self.denom().to_f64().map(|d| n / d))
     }
 
     /// Truncates a `Ratio` and returns the whole portion as an `Integer`.
@@ -443,8 +446,12 @@ impl PartialEq<Integer> for Ratio {
 }
 
 impl PartialEq<Ratio> for Integer {
-    fn eq(&self, rhs: &Ratio) -> bool { rhs == self }
-    fn ne(&self, rhs: &Ratio) -> bool { rhs != self }
+    fn eq(&self, rhs: &Ratio) -> bool {
+        rhs == self
+    }
+    fn ne(&self, rhs: &Ratio) -> bool {
+        rhs != self
+    }
 }
 
 impl fmt::Display for Integer {
@@ -770,11 +777,15 @@ macro_rules! impl_ops {
 
         impl ::num::Zero for $ty {
             #[inline]
-            fn is_zero(&self) -> bool { self.0.is_zero() }
+            fn is_zero(&self) -> bool {
+                self.0.is_zero()
+            }
             #[inline]
-            fn zero() -> $ty { $ty(Zero::zero()) }
+            fn zero() -> $ty {
+                $ty(Zero::zero())
+            }
         }
-    }
+    };
 }
 
 impl_ops!{Integer}

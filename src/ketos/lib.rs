@@ -29,21 +29,23 @@
 extern crate byteorder;
 extern crate num;
 extern crate rand;
-#[cfg(feature = "serde")] extern crate serde;
+#[cfg(feature = "serde")]
+extern crate serde;
 
 #[cfg(test)]
-#[macro_use] extern crate assert_matches;
+#[macro_use]
+extern crate assert_matches;
 
 pub use bytecode::Code;
 pub use bytes::Bytes;
-pub use completion::complete_name;
 pub use compile::CompileError;
+pub use completion::complete_name;
 pub use encode::{DecodeError, EncodeError};
 pub use error::Error;
-pub use exec::{Context, ExecError, panic, panic_none};
+pub use exec::{panic, panic_none, Context, ExecError};
 pub use function::Arity;
-pub use interpreter::{Builder, Interpreter};
 pub use integer::{Integer, Ratio};
+pub use interpreter::{Builder, Interpreter};
 pub use io::{File, GlobalIo, IoError, SharedWrite};
 pub use module::{BuiltinModuleLoader, FileModuleLoader, Module, ModuleBuilder, ModuleLoader};
 pub use name::{Name, NameStore};
@@ -54,15 +56,18 @@ pub use scope::{GlobalScope, Scope};
 pub use structs::{StructDef, StructValue};
 pub use trace::{clear_traceback, get_traceback, set_traceback, take_traceback, Trace};
 pub use value::{ForeignValue, FromValue, FromValueRef, Value};
-#[cfg(feature = "serde")] pub use value_decode::decode_value;
-#[cfg(feature = "serde")] pub use value_encode::encode_value;
+#[cfg(feature = "serde")]
+pub use value_decode::decode_value;
+#[cfg(feature = "serde")]
+pub use value_encode::encode_value;
 
-#[macro_use] pub mod any;
+#[macro_use]
+pub mod any;
 pub mod args;
 pub mod bytecode;
 pub mod bytes;
-pub mod completion;
 pub mod compile;
+pub mod completion;
 mod const_fold;
 pub mod encode;
 pub mod error;
@@ -76,8 +81,8 @@ pub mod module;
 pub mod name;
 pub mod parser;
 pub mod pretty;
-pub mod restrict;
 pub mod rc_vec;
+pub mod restrict;
 pub mod run;
 pub mod scope;
 mod string;
@@ -85,8 +90,10 @@ pub mod string_fmt;
 pub mod structs;
 pub mod trace;
 pub mod value;
-#[cfg(feature = "serde")] pub mod value_decode;
-#[cfg(feature = "serde")] pub mod value_encode;
+#[cfg(feature = "serde")]
+pub mod value_decode;
+#[cfg(feature = "serde")]
+pub mod value_encode;
 
 mod mod_code;
 mod mod_math;

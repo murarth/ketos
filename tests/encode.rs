@@ -1,15 +1,16 @@
-#[macro_use] extern crate assert_matches;
+#[macro_use]
+extern crate assert_matches;
 extern crate ketos;
 
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use ketos::{
-    BuiltinModuleLoader, FileModuleLoader, ModuleLoader,
-    Context, Error, Interpreter, Value, run_code,
-};
 use ketos::encode::{read_bytecode, write_bytecode};
 use ketos::module::ModuleCode;
+use ketos::{
+    run_code, BuiltinModuleLoader, Context, Error, FileModuleLoader, Interpreter, ModuleLoader,
+    Value,
+};
 
 fn new_interpreter() -> Interpreter {
     let mut loader = FileModuleLoader::with_search_paths(vec![PathBuf::from("lib")]);
@@ -23,11 +24,16 @@ fn new_interpreter() -> Interpreter {
 // Runs `F` twice; first, after compiling and executing input;
 // then, after encoding and decoding and loading the resulting ModuleCode.
 fn run<F>(input: &str, mut f: F) -> Result<(), Error>
-        where F: FnMut(&Context) {
+where
+    F: FnMut(&Context),
+{
     let interp = new_interpreter();
 
-    let code: Vec<_> = interp.compile_exprs(input)?
-        .into_iter().map(Rc::new).collect();
+    let code: Vec<_> = interp
+        .compile_exprs(input)?
+        .into_iter()
+        .map(Rc::new)
+        .collect();
 
     for code in &code {
         interp.execute_code(code.clone())?;
@@ -57,13 +63,15 @@ fn run<F>(input: &str, mut f: F) -> Result<(), Error>
 
 #[test]
 fn test_encode() {
-    run(r#"
+    run(
+        r#"
         (const foo 1)
         (define bar 2)
 
         (const b #b"y halo")
         (const p #p"thar")
-        "#, |ctx| {
+        "#,
+        |ctx| {
             assert_matches!(ctx.scope().get_named_constant("foo"),
                 Some(Value::Integer(ref i)) if i.to_u32() == Some(1));
             assert_matches!(ctx.scope().get_named_value("bar"),
@@ -72,12 +80,14 @@ fn test_encode() {
                 Some(Value::Bytes(ref b)) if b == b"y halo");
             assert_matches!(ctx.scope().get_named_constant("p"),
                 Some(Value::Path(ref p)) if p == Path::new("thar"));
-        }).unwrap();
+        },
+    ).unwrap();
 }
 
 #[test]
 fn test_docs() {
-    run(r#"
+    run(
+        r#"
         (const foo
             "foo doc"
             1)
@@ -93,8 +103,10 @@ fn test_docs() {
         (struct struc
             "struc doc"
             ())
-        "#, |ctx| {
-            run_code(ctx,
+        "#,
+        |ctx| {
+            run_code(
+                ctx,
                 r#"
                 (use code (documentation))
                 (use test (assert-eq))
@@ -104,6 +116,8 @@ fn test_docs() {
                 (assert-eq (documentation 'baz) "baz doc")
                 (assert-eq (documentation 'mac) "mac doc")
                 (assert-eq (documentation 'struc) "struc doc")
-                "#).unwrap();
-        }).unwrap();
+                "#,
+            ).unwrap();
+        },
+    ).unwrap();
 }

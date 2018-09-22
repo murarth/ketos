@@ -33,8 +33,9 @@ macro_rules! impl_any_cast {
             }
 
             /// Attempts to downcast a `Box<Trait>` to a concrete type.
-            pub fn downcast<T: $ty>(bx: ::std::boxed::Box<Self>)
-                    -> Result<::std::boxed::Box<T>, ::std::boxed::Box<Self>> {
+            pub fn downcast<T: $ty>(
+                bx: ::std::boxed::Box<Self>,
+            ) -> Result<::std::boxed::Box<T>, ::std::boxed::Box<Self>> {
                 if bx.is::<T>() {
                     unsafe {
                         let raw = ::std::boxed::Box::into_raw(bx);
@@ -47,8 +48,9 @@ macro_rules! impl_any_cast {
 
             /// Returns an owned `Rc` reference to the contained value,
             /// if it is of the given type.
-            pub fn downcast_rc<T: $ty>(rc: ::std::rc::Rc<Self>)
-                    -> Result<::std::rc::Rc<T>, ::std::rc::Rc<Self>> {
+            pub fn downcast_rc<T: $ty>(
+                rc: ::std::rc::Rc<Self>,
+            ) -> Result<::std::rc::Rc<T>, ::std::rc::Rc<Self>> {
                 if rc.is::<T>() {
                     unsafe {
                         let obj: $crate::any::TraitObject = ::std::mem::transmute(rc);
@@ -84,7 +86,7 @@ macro_rules! impl_any_cast {
                 }
             }
         }
-    }
+    };
 }
 
 #[cfg(test)]
@@ -106,13 +108,13 @@ mod test {
     #[derive(Debug)]
     struct Dumber;
 
-    impl SomeTrait for Dummy { }
+    impl SomeTrait for Dummy {}
 
-    impl SomeTrait for Dumber { }
+    impl SomeTrait for Dumber {}
 
     #[test]
     fn test_downcast() {
-        let a: Box<SomeTrait> = Box::new(Dummy{a: 0});
+        let a: Box<SomeTrait> = Box::new(Dummy { a: 0 });
 
         let b = SomeTrait::downcast::<Dumber>(a).unwrap_err();
         let c = SomeTrait::downcast::<Dummy>(b).unwrap();
@@ -122,7 +124,7 @@ mod test {
 
     #[test]
     fn test_downcast_rc() {
-        let a: Rc<SomeTrait> = Rc::new(Dummy{a: 0});
+        let a: Rc<SomeTrait> = Rc::new(Dummy { a: 0 });
 
         let b = SomeTrait::downcast_rc::<Dumber>(a).unwrap_err();
         let c = SomeTrait::downcast_rc::<Dummy>(b).unwrap();
@@ -132,7 +134,7 @@ mod test {
 
     #[test]
     fn test_downcast_ref() {
-        let mut a: Box<SomeTrait> = Box::new(Dummy{a: 0});
+        let mut a: Box<SomeTrait> = Box::new(Dummy { a: 0 });
 
         {
             let r = a.downcast_mut::<Dummy>().unwrap();

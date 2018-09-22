@@ -112,7 +112,9 @@ mod test {
     }
 
     impl StdError for E {
-        fn description(&self) -> &str { "error" }
+        fn description(&self) -> &str {
+            "error"
+        }
     }
 
     #[test]

@@ -24,7 +24,7 @@ pub struct Trace {
 impl Trace {
     /// Creates a new `Trace` from a series of items.
     pub fn new(items: Vec<TraceItem>, expr: Option<Value>) -> Trace {
-        Trace{
+        Trace {
             items: items,
             expr: expr,
         }
@@ -111,30 +111,24 @@ impl NameDisplay for Trace {
 
         for item in &self.items {
             match *item {
-                CallCode(m, n) => writeln!(f,
-                    "  In {}, function {}", names.get(m), names.get(n))?,
-                CallExpr(m) => writeln!(f,
-                    "  In {}, call expression", names.get(m))?,
-                CallLambda(m) => writeln!(f,
-                    "  In {}, lambda", names.get(m))?,
-                CallMacro(m, n) => writeln!(f,
-                    "  In {}, macro expansion {}", names.get(m), names.get(n))?,
-                CallOperator(m, n) => writeln!(f,
-                    "  In {}, operator {}", names.get(m), names.get(n))?,
-                CallSys(n) => writeln!(f,
-                    "  In system function {}", names.get(n))?,
-                Define(m, n) => writeln!(f,
-                    "  In {}, define {}", names.get(m), names.get(n))?,
-                DefineConst(m, n) => writeln!(f,
-                    "  In {}, const {}", names.get(m), names.get(n))?,
-                DefineLambda(m) => writeln!(f,
-                    "  In {}, lambda", names.get(m))?,
-                DefineMacro(m, n) => writeln!(f,
-                    "  In {}, macro {}", names.get(m), names.get(n))?,
-                DefineStruct(m, n) => writeln!(f,
-                    "  In {}, struct {}", names.get(m), names.get(n))?,
-                UseModule(m, n) => writeln!(f,
-                    "  In {}, use {}", names.get(m), names.get(n))?,
+                CallCode(m, n) => writeln!(f, "  In {}, function {}", names.get(m), names.get(n))?,
+                CallExpr(m) => writeln!(f, "  In {}, call expression", names.get(m))?,
+                CallLambda(m) => writeln!(f, "  In {}, lambda", names.get(m))?,
+                CallMacro(m, n) => {
+                    writeln!(f, "  In {}, macro expansion {}", names.get(m), names.get(n))?
+                }
+                CallOperator(m, n) => {
+                    writeln!(f, "  In {}, operator {}", names.get(m), names.get(n))?
+                }
+                CallSys(n) => writeln!(f, "  In system function {}", names.get(n))?,
+                Define(m, n) => writeln!(f, "  In {}, define {}", names.get(m), names.get(n))?,
+                DefineConst(m, n) => writeln!(f, "  In {}, const {}", names.get(m), names.get(n))?,
+                DefineLambda(m) => writeln!(f, "  In {}, lambda", names.get(m))?,
+                DefineMacro(m, n) => writeln!(f, "  In {}, macro {}", names.get(m), names.get(n))?,
+                DefineStruct(m, n) => {
+                    writeln!(f, "  In {}, struct {}", names.get(m), names.get(n))?
+                }
+                UseModule(m, n) => writeln!(f, "  In {}, use {}", names.get(m), names.get(n))?,
             }
         }
 

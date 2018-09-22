@@ -37,7 +37,7 @@ pub struct ParseError {
 impl ParseError {
     /// Creates a new `ParseError`.
     pub fn new(span: Span, kind: ParseErrorKind) -> ParseError {
-        ParseError{
+        ParseError {
             span: span,
             kind: kind,
         }
@@ -84,7 +84,7 @@ pub enum ParseErrorKind {
     /// Unexpected end-of-file
     UnexpectedEof,
     /// Unexpected token
-    UnexpectedToken{
+    UnexpectedToken {
         /// Token or category of token expected
         expected: &'static str,
         /// Token found
@@ -105,27 +105,28 @@ pub enum ParseErrorKind {
 impl fmt::Display for ParseErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            ParseErrorKind::CannotDocumentItem =>
-                f.write_str("doc comment precedes item that cannot be documented"),
+            ParseErrorKind::CannotDocumentItem => {
+                f.write_str("doc comment precedes item that cannot be documented")
+            }
             ParseErrorKind::DocCommentEof => f.write_str("doc comment at end-of-file"),
             ParseErrorKind::InvalidLiteral => f.write_str("invalid numeric literal"),
             ParseErrorKind::InvalidToken => f.write_str("invalid token"),
-            ParseErrorKind::InvalidByte(ch) =>
-                write!(f, "byte literal must be ASCII: {:?}", ch),
-            ParseErrorKind::InvalidByteEscape(ch) =>
-                write!(f, "invalid escape sequence in byte literal: {:?}", ch),
-            ParseErrorKind::InvalidChar(ch) =>
-                write!(f, "invalid character: {:?}", ch),
-            ParseErrorKind::InvalidNumericEscape(ch) =>
-                write!(f, "invalid character in escape sequence: {:?}", ch),
+            ParseErrorKind::InvalidByte(ch) => write!(f, "byte literal must be ASCII: {:?}", ch),
+            ParseErrorKind::InvalidByteEscape(ch) => {
+                write!(f, "invalid escape sequence in byte literal: {:?}", ch)
+            }
+            ParseErrorKind::InvalidChar(ch) => write!(f, "invalid character: {:?}", ch),
+            ParseErrorKind::InvalidNumericEscape(ch) => {
+                write!(f, "invalid character in escape sequence: {:?}", ch)
+            }
             ParseErrorKind::LiteralParseError => f.write_str("literal parse error"),
             ParseErrorKind::MissingCloseParen => f.write_str("missing close paren"),
             ParseErrorKind::UnbalancedComma => f.write_str("unbalanced ` and ,"),
             ParseErrorKind::UnexpectedEof => f.write_str("unexpected end-of-file"),
-            ParseErrorKind::UnexpectedToken{expected, found} =>
-                write!(f, "expected {}; found {}", expected, found),
-            ParseErrorKind::UnknownCharEscape(ch) =>
-                write!(f, "unknown char escape: {:?}", ch),
+            ParseErrorKind::UnexpectedToken { expected, found } => {
+                write!(f, "expected {}; found {}", expected, found)
+            }
+            ParseErrorKind::UnknownCharEscape(ch) => write!(f, "unknown char escape: {:?}", ch),
             ParseErrorKind::UnmatchedParen => f.write_str("unmatched `)`"),
             ParseErrorKind::UnterminatedChar => f.write_str("unterminated char constant"),
             ParseErrorKind::UnterminatedComment => f.write_str("unterminated block comment"),
@@ -150,7 +151,7 @@ impl<'a, 'lex> Parser<'a, 'lex> {
     /// Creates a new `Parser` using the given `Lexer`.
     /// Identifiers received from the lexer will be inserted into the given context.
     pub fn new(ctx: &'a Context, lexer: Lexer<'lex>) -> Parser<'a, 'lex> {
-        Parser{
+        Parser {
             lexer: lexer,
             ctx: ctx,
             name_cache: HashMap::new(),
@@ -178,20 +179,26 @@ impl<'a, 'lex> Parser<'a, 'lex> {
             let (sp, tok) = self.next()?;
 
             let r = match tok {
-                Token::DocComment(_) =>
+                Token::DocComment(_) => {
                     return Err(From::from(ParseError::new(
-                        doc.unwrap().0, ParseErrorKind::CannotDocumentItem))),
+                        doc.unwrap().0,
+                        ParseErrorKind::CannotDocumentItem,
+                    )))
+                }
                 Token::LeftParen => {
                     if let Some((doc_sp, _)) = doc {
                         match self.peek()? {
-                            (_, Token::Name("const")) |
-                            (_, Token::Name("define")) |
-                            (_, Token::Name("lambda")) |
-                            (_, Token::Name("macro")) |
-                            (_, Token::Name("struct"))
-                                => (),
-                            _ => return Err(From::from(ParseError::new(
-                                doc_sp, ParseErrorKind::CannotDocumentItem)))
+                            (_, Token::Name("const"))
+                            | (_, Token::Name("define"))
+                            | (_, Token::Name("lambda"))
+                            | (_, Token::Name("macro"))
+                            | (_, Token::Name("struct")) => (),
+                            _ => {
+                                return Err(From::from(ParseError::new(
+                                    doc_sp,
+                                    ParseErrorKind::CannotDocumentItem,
+                                )))
+                            }
                         }
                     }
 
@@ -199,37 +206,33 @@ impl<'a, 'lex> Parser<'a, 'lex> {
                     continue;
                 }
                 Token::RightParen => {
-                    let group = stack.pop().ok_or_else(
-                        || ParseError::new(sp, ParseErrorKind::UnmatchedParen))?;
+                    let group = stack
+                        .pop()
+                        .ok_or_else(|| ParseError::new(sp, ParseErrorKind::UnmatchedParen))?;
 
                     match group {
-                        Group::Parens(values, doc) =>
-                            insert_doc_comment(values, doc)
-                                .map_err(From::from),
-                        _ => Err(From::from(ParseError::new(sp,
-                            ParseErrorKind::UnexpectedToken{
+                        Group::Parens(values, doc) => {
+                            insert_doc_comment(values, doc).map_err(From::from)
+                        }
+                        _ => Err(From::from(ParseError::new(
+                            sp,
+                            ParseErrorKind::UnexpectedToken {
                                 expected: "expression",
                                 found: ")",
-                            })))
+                            },
+                        ))),
                     }
                 }
                 Token::Float(f) => parse_float(f)
                     .map(Value::Float)
                     .map_err(|kind| From::from(ParseError::new(sp, kind))),
-                Token::Integer(i, base) => parse_integer(self.ctx, i, base, sp)
-                    .map(Value::Integer),
-                Token::Ratio(r) => parse_ratio(self.ctx, r, sp)
-                    .map(Value::Ratio),
-                Token::Char(ch) => parse_char(ch)
-                    .map(Value::Char).map_err(From::from),
-                Token::String(s) => parse_string(s)
-                    .map(|s| s.into()).map_err(From::from),
-                Token::Byte(b) => parse_byte(b)
-                    .map(|v| v.into()).map_err(From::from),
-                Token::Bytes(b) => parse_bytes(b)
-                    .map(Value::Bytes).map_err(From::from),
-                Token::Path(p) => parse_path(p)
-                    .map(|p| p.into()).map_err(From::from),
+                Token::Integer(i, base) => parse_integer(self.ctx, i, base, sp).map(Value::Integer),
+                Token::Ratio(r) => parse_ratio(self.ctx, r, sp).map(Value::Ratio),
+                Token::Char(ch) => parse_char(ch).map(Value::Char).map_err(From::from),
+                Token::String(s) => parse_string(s).map(|s| s.into()).map_err(From::from),
+                Token::Byte(b) => parse_byte(b).map(|v| v.into()).map_err(From::from),
+                Token::Bytes(b) => parse_bytes(b).map(Value::Bytes).map_err(From::from),
+                Token::Path(p) => parse_path(p).map(|p| p.into()).map_err(From::from),
                 Token::Name(name) => Ok(self.name_value(name)),
                 Token::Keyword(name) => Ok(Value::Keyword(self.add_name(name))),
                 Token::BackQuote => {
@@ -243,7 +246,10 @@ impl<'a, 'lex> Parser<'a, 'lex> {
                 }
                 Token::Comma => {
                     if total_backticks <= 0 {
-                        return Err(From::from(ParseError::new(sp, ParseErrorKind::UnbalancedComma)));
+                        return Err(From::from(ParseError::new(
+                            sp,
+                            ParseErrorKind::UnbalancedComma,
+                        )));
                     }
                     total_backticks -= 1;
                     if let Some(&mut Group::Backticks(ref mut n)) = stack.last_mut() {
@@ -255,7 +261,10 @@ impl<'a, 'lex> Parser<'a, 'lex> {
                 }
                 Token::CommaAt => {
                     if total_backticks <= 0 {
-                        return Err(From::from(ParseError::new(sp, ParseErrorKind::UnbalancedComma)));
+                        return Err(From::from(ParseError::new(
+                            sp,
+                            ParseErrorKind::UnbalancedComma,
+                        )));
                     }
                     total_backticks -= 1;
                     stack.push(Group::CommaAt);
@@ -271,30 +280,36 @@ impl<'a, 'lex> Parser<'a, 'lex> {
                 }
                 Token::End => {
                     if let Some((doc_sp, _)) = doc {
-                        return Err(From::from(ParseError::new(doc_sp,
-                            ParseErrorKind::DocCommentEof)));
+                        return Err(From::from(ParseError::new(
+                            doc_sp,
+                            ParseErrorKind::DocCommentEof,
+                        )));
                     }
 
-                    let any_paren = stack.iter().any(|group| {
-                        match *group {
-                            Group::Parens(_, _) => true,
-                            _ => false
-                        }
+                    let any_paren = stack.iter().any(|group| match *group {
+                        Group::Parens(_, _) => true,
+                        _ => false,
                     });
 
                     if any_paren {
-                        Err(From::from(ParseError::new(sp,
-                            ParseErrorKind::MissingCloseParen)))
+                        Err(From::from(ParseError::new(
+                            sp,
+                            ParseErrorKind::MissingCloseParen,
+                        )))
                     } else {
-                        Err(From::from(ParseError::new(sp,
-                            ParseErrorKind::UnexpectedEof)))
+                        Err(From::from(ParseError::new(
+                            sp,
+                            ParseErrorKind::UnexpectedEof,
+                        )))
                     }
                 }
             };
 
             if let Some((doc_sp, _)) = doc {
-                return Err(From::from(ParseError::new(doc_sp,
-                    ParseErrorKind::CannotDocumentItem)));
+                return Err(From::from(ParseError::new(
+                    doc_sp,
+                    ParseErrorKind::CannotDocumentItem,
+                )));
             }
 
             let mut v = r?;
@@ -306,7 +321,7 @@ impl<'a, 'lex> Parser<'a, 'lex> {
                         values.push(v);
                         break;
                     }
-                    _ => ()
+                    _ => (),
                 }
 
                 let group = stack.pop().unwrap();
@@ -327,7 +342,7 @@ impl<'a, 'lex> Parser<'a, 'lex> {
                         v = v.comma_at(1);
                     }
                     Group::Quotes(n) => v = v.quote(n),
-                    _ => ()
+                    _ => (),
                 }
             }
         }
@@ -340,10 +355,13 @@ impl<'a, 'lex> Parser<'a, 'lex> {
 
         match self.next()? {
             (_, Token::End) => Ok(expr),
-            (sp, tok) => Err(From::from(ParseError::new(sp, ParseErrorKind::UnexpectedToken{
-                expected: "eof",
-                found: tok.name(),
-            })))
+            (sp, tok) => Err(From::from(ParseError::new(
+                sp,
+                ParseErrorKind::UnexpectedToken {
+                    expected: "eof",
+                    found: tok.name(),
+                },
+            ))),
         }
     }
 
@@ -352,16 +370,18 @@ impl<'a, 'lex> Parser<'a, 'lex> {
         let mut res = Vec::new();
 
         if let Some((_, doc)) = self.read_module_doc_comment()? {
-            res.push(vec![
-                Value::Name(standard_names::SET_MODULE_DOC),
-                format_doc_comment(doc).into(),
-            ].into());
+            res.push(
+                vec![
+                    Value::Name(standard_names::SET_MODULE_DOC),
+                    format_doc_comment(doc).into(),
+                ].into(),
+            );
         }
 
         loop {
             match self.peek()? {
                 (_sp, Token::End) => break,
-                _ => res.push(self.parse_expr()?)
+                _ => res.push(self.parse_expr()?),
             }
         }
 
@@ -375,34 +395,34 @@ impl<'a, 'lex> Parser<'a, 'lex> {
 
     /// Returns the the next token if it is a doc comment.
     /// Otherwise, `None` is returned and no token is consumed.
-    fn read_doc_comment(&mut self)
-            -> Result<Option<(Span, &'lex str)>, ParseError> {
+    fn read_doc_comment(&mut self) -> Result<Option<(Span, &'lex str)>, ParseError> {
         match self.peek()? {
             (sp, Token::DocComment(doc)) => {
                 self.cur_token.take();
                 Ok(Some((sp, doc)))
             }
-            _ => Ok(None)
+            _ => Ok(None),
         }
     }
 
     /// Returns the content of the next token if it is a module-level doc
     /// comment, one beginning with at least three semicolon characters.
-    fn read_module_doc_comment(&mut self)
-            -> Result<Option<(Span, &'lex str)>, ParseError> {
+    fn read_module_doc_comment(&mut self) -> Result<Option<(Span, &'lex str)>, ParseError> {
         match self.peek()? {
             (sp, Token::DocComment(doc)) if doc.starts_with(MODULE_DOC_COMMENT) => {
                 self.cur_token.take();
                 Ok(Some((sp, doc)))
             }
-            _ => Ok(None)
+            _ => Ok(None),
         }
     }
 
     fn add_name(&mut self, name: &'lex str) -> Name {
         let mut names = self.ctx.scope().borrow_names_mut();
-        *self.name_cache.entry(name).or_insert_with(
-            || get_standard_name_for(name).unwrap_or_else(|| names.add(name)))
+        *self
+            .name_cache
+            .entry(name)
+            .or_insert_with(|| get_standard_name_for(name).unwrap_or_else(|| names.add(name)))
     }
 
     fn name_value(&mut self, name: &'lex str) -> Value {
@@ -442,7 +462,9 @@ fn format_doc_comment(doc: &str) -> String {
         // so we strip leading whitespace, semicolons, then one whitespace char.
         buf.push_str(trim_first(
             line.trim_left_matches(char::is_whitespace)
-                .trim_left_matches(';'), char::is_whitespace));
+                .trim_left_matches(';'),
+            char::is_whitespace,
+        ));
         buf.push('\n');
     }
 
@@ -454,12 +476,14 @@ fn trim_first<F: FnOnce(char) -> bool>(s: &str, f: F) -> &str {
 
     match chars.next() {
         Some(ch) if f(ch) => chars.as_str(),
-        _ => s
+        _ => s,
     }
 }
 
-fn insert_doc_comment(mut items: Vec<Value>, doc: Option<(Span, &str)>)
-        -> Result<Value, ParseError> {
+fn insert_doc_comment(
+    mut items: Vec<Value>,
+    doc: Option<(Span, &str)>,
+) -> Result<Value, ParseError> {
     if let Some((sp, doc)) = doc {
         if items.len() == 3 {
             items.insert(2, format_doc_comment(doc).into());
@@ -509,15 +533,15 @@ fn parse_string(s: &str) -> Result<String, ParseError> {
 }
 
 fn parse_float(s: &str) -> Result<f64, ParseErrorKind> {
-    strip_underscores(s).parse()
+    strip_underscores(s)
+        .parse()
         .map_err(|_| ParseErrorKind::LiteralParseError)
 }
 
-fn parse_integer(ctx: &Context, s: &str, base: u32, sp: Span)
-        -> Result<Integer, Error> {
+fn parse_integer(ctx: &Context, s: &str, base: u32, sp: Span) -> Result<Integer, Error> {
     let s = match base {
         10 => s,
-        _ => &s[2..]
+        _ => &s[2..],
     };
 
     let s = strip_underscores(s);
@@ -525,8 +549,7 @@ fn parse_integer(ctx: &Context, s: &str, base: u32, sp: Span)
     check_integer(ctx, &s, base)?;
 
     Integer::from_str_radix(&s, base)
-        .map_err(|_| From::from(ParseError::new(sp,
-            ParseErrorKind::LiteralParseError)))
+        .map_err(|_| From::from(ParseError::new(sp, ParseErrorKind::LiteralParseError)))
 }
 
 fn parse_ratio(ctx: &Context, s: &str, sp: Span) -> Result<Ratio, Error> {
@@ -534,8 +557,8 @@ fn parse_ratio(ctx: &Context, s: &str, sp: Span) -> Result<Ratio, Error> {
 
     check_integer(ctx, &s, 10)?;
 
-    s.parse().map_err(|_| From::from(ParseError::new(sp,
-        ParseErrorKind::LiteralParseError)))
+    s.parse()
+        .map_err(|_| From::from(ParseError::new(sp, ParseErrorKind::LiteralParseError)))
 }
 
 fn check_integer(ctx: &Context, mut s: &str, base: u32) -> Result<(), RestrictError> {
@@ -574,47 +597,74 @@ mod test {
     use super::{ParseError, ParseErrorKind, Parser};
     use error::Error;
     use interpreter::Interpreter;
-    use lexer::{Span, Lexer};
+    use lexer::{Lexer, Span};
     use value::Value;
 
     fn parse(s: &str) -> Result<Value, ParseError> {
         let interp = Interpreter::new();
 
         let mut p = Parser::new(interp.context(), Lexer::new(s, 0));
-        p.parse_single_expr().map_err(|e| {
-            match e {
-                Error::ParseError(e) => e,
-                _ => panic!("parse returned error: {:?}", e)
-            }
+        p.parse_single_expr().map_err(|e| match e {
+            Error::ParseError(e) => e,
+            _ => panic!("parse returned error: {:?}", e),
         })
     }
 
     #[test]
     fn test_doc_errors() {
-        assert_eq!(parse(";; foo\n(const)").unwrap_err(), ParseError{
-            span: Span{lo: 0, hi: 7}, kind: ParseErrorKind::CannotDocumentItem});
-        assert_eq!(parse(";; foo\n(const foo)").unwrap_err(), ParseError{
-            span: Span{lo: 0, hi: 7}, kind: ParseErrorKind::CannotDocumentItem});
-        assert_eq!(parse(";; foo\n(const foo bar baz)").unwrap_err(), ParseError{
-            span: Span{lo: 0, hi: 7}, kind: ParseErrorKind::CannotDocumentItem});
+        assert_eq!(
+            parse(";; foo\n(const)").unwrap_err(),
+            ParseError {
+                span: Span { lo: 0, hi: 7 },
+                kind: ParseErrorKind::CannotDocumentItem
+            }
+        );
+        assert_eq!(
+            parse(";; foo\n(const foo)").unwrap_err(),
+            ParseError {
+                span: Span { lo: 0, hi: 7 },
+                kind: ParseErrorKind::CannotDocumentItem
+            }
+        );
+        assert_eq!(
+            parse(";; foo\n(const foo bar baz)").unwrap_err(),
+            ParseError {
+                span: Span { lo: 0, hi: 7 },
+                kind: ParseErrorKind::CannotDocumentItem
+            }
+        );
     }
 
     #[test]
     fn test_errors() {
-        assert_eq!(parse("(foo").unwrap_err(), ParseError{
-            span: Span{lo: 4, hi: 4}, kind: ParseErrorKind::MissingCloseParen});
-        assert_eq!(parse("(foo ,bar)").unwrap_err(), ParseError{
-            span: Span{lo: 5, hi: 6}, kind: ParseErrorKind::UnbalancedComma});
-        assert_eq!(parse("`(foo ,,bar)").unwrap_err(), ParseError{
-            span: Span{lo: 7, hi: 8}, kind: ParseErrorKind::UnbalancedComma});
+        assert_eq!(
+            parse("(foo").unwrap_err(),
+            ParseError {
+                span: Span { lo: 4, hi: 4 },
+                kind: ParseErrorKind::MissingCloseParen
+            }
+        );
+        assert_eq!(
+            parse("(foo ,bar)").unwrap_err(),
+            ParseError {
+                span: Span { lo: 5, hi: 6 },
+                kind: ParseErrorKind::UnbalancedComma
+            }
+        );
+        assert_eq!(
+            parse("`(foo ,,bar)").unwrap_err(),
+            ParseError {
+                span: Span { lo: 7, hi: 8 },
+                kind: ParseErrorKind::UnbalancedComma
+            }
+        );
     }
 
     #[test]
     fn test_lexer_position() {
         let interp = Interpreter::new();
 
-        let mut p = Parser::new(interp.context(),
-            Lexer::new("(foo 1 2 3) bar", 0));
+        let mut p = Parser::new(interp.context(), Lexer::new("(foo 1 2 3) bar", 0));
 
         p.parse_expr().unwrap();
 

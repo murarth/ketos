@@ -10,7 +10,7 @@ use std::str::from_utf8;
 
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
 
-use bytecode::{BYTECODE_VERSION, Code};
+use bytecode::{Code, BYTECODE_VERSION};
 use bytes::Bytes;
 use error::Error;
 use exec::Context;
@@ -18,8 +18,9 @@ use function::Lambda;
 use integer::{Integer, Ratio, Sign};
 use io::{IoError, IoMode};
 use module::ModuleCode;
-use name::{Name, NameDisplay, NameMap, NameSet, NameStore,
-    NameInputConversion, NameOutputConversion};
+use name::{
+    Name, NameDisplay, NameInputConversion, NameMap, NameOutputConversion, NameSet, NameStore,
+};
 use scope::ImportSet;
 use structs::{StructDef, StructValueDef};
 use value::Value;
@@ -63,15 +64,18 @@ impl fmt::Display for DecodeError {
         match *self {
             DivisionByZero => f.write_str("zero denominator"),
             EmptyList => f.write_str("empty list"),
-            IncorrectMagicNumber(n) => write!(f,
+            IncorrectMagicNumber(n) => write!(
+                f,
                 "incorrect magic number: expected {:?}; found {:?}",
-                MAGIC_NUMBER, n),
-            IncorrectVersion(n) => write!(f,
+                MAGIC_NUMBER, n
+            ),
+            IncorrectVersion(n) => write!(
+                f,
                 "incorrect version number: expected {:08x}; found {:08x}",
-                BYTECODE_VERSION, n),
+                BYTECODE_VERSION, n
+            ),
             InvalidChar(n) => write!(f, "\\u{{{:x}}} is not a valid char", n),
-            InvalidCodeFlags(flags) =>
-                write!(f, "invalid code object flags: {:#x}", flags),
+            InvalidCodeFlags(flags) => write!(f, "invalid code object flags: {:#x}", flags),
             InvalidName(n) => write!(f, "invalid name: {}", n),
             InvalidParamCount => f.write_str("invalid parameter count"),
             InvalidType(ty) => write!(f, "invalid type {:#x}", ty),
@@ -122,14 +126,12 @@ impl NameDisplay for EncodeError {
 
 /// Read compiled bytecode from a file
 pub fn read_bytecode_file(path: &Path, ctx: &Context) -> Result<ModuleCode, Error> {
-    let mut f = File::open(path)
-        .map_err(|e| IoError::new(IoMode::Open, path, e))?;
+    let mut f = File::open(path).map_err(|e| IoError::new(IoMode::Open, path, e))?;
     read_bytecode(&mut f, path, ctx)
 }
 
 /// Read compiled bytecode
-pub fn read_bytecode<R: Read>(r: &mut R, path: &Path, ctx: &Context)
-        -> Result<ModuleCode, Error> {
+pub fn read_bytecode<R: Read>(r: &mut R, path: &Path, ctx: &Context) -> Result<ModuleCode, Error> {
     let mut buf = [0; 4];
 
     r.read_exact(&mut buf)
@@ -236,7 +238,7 @@ pub fn read_bytecode<R: Read>(r: &mut R, path: &Path, ctx: &Context)
         exprs.push(Rc::new(dec.read_code(&names)?));
     }
 
-    Ok(ModuleCode{
+    Ok(ModuleCode {
         code: exprs,
         constants: consts,
         macros: macros,
@@ -249,16 +251,22 @@ pub fn read_bytecode<R: Read>(r: &mut R, path: &Path, ctx: &Context)
 }
 
 /// Write compiled bytecode to a file
-pub fn write_bytecode_file(path: &Path, module: &ModuleCode,
-        name_store: &NameStore) -> Result<(), Error> {
-    let mut f = File::create(path)
-        .map_err(|e| IoError::new(IoMode::Create, path, e))?;
+pub fn write_bytecode_file(
+    path: &Path,
+    module: &ModuleCode,
+    name_store: &NameStore,
+) -> Result<(), Error> {
+    let mut f = File::create(path).map_err(|e| IoError::new(IoMode::Create, path, e))?;
     write_bytecode(&mut f, path, module, name_store)
 }
 
 /// Write compiled bytecode
-pub fn write_bytecode<W: Write>(w: &mut W, path: &Path, module: &ModuleCode,
-        name_store: &NameStore) -> Result<(), Error> {
+pub fn write_bytecode<W: Write>(
+    w: &mut W,
+    path: &Path,
+    module: &ModuleCode,
+    name_store: &NameStore,
+) -> Result<(), Error> {
     let mut names = NameOutputConversion::new(name_store);
     let mut body_enc = ValueEncoder::new();
 
@@ -369,7 +377,7 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
     /// `ctx` is the execution context whose module-level scope
     /// will be passed to newly created `Lambda` objects.
     fn new(ctx: &'a Context, data: &'data [u8]) -> ValueDecoder<'a, 'data> {
-        ValueDecoder{
+        ValueDecoder {
             data: Cursor::new(data),
             ctx: ctx,
         }
@@ -403,11 +411,7 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
             }
             INTEGER_ZERO => Ok(Value::Integer(Integer::zero())),
             RATIO | RATIO_NEG => {
-                let sign = if ty == RATIO {
-                    Sign::Plus
-                } else {
-                    Sign::Minus
-                };
+                let sign = if ty == RATIO { Sign::Plus } else { Sign::Minus };
 
                 let numer = self.read_integer(sign)?;
                 // Denominator is always positive
@@ -447,7 +451,10 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
 
                 let def = StructValueDef::new(fields.into_slice());
 
-                Ok(Value::StructDef(Rc::new(StructDef::new(name, Box::new(def)))))
+                Ok(Value::StructDef(Rc::new(StructDef::new(
+                    name,
+                    Box::new(def),
+                ))))
             }
             QUASI_QUOTE => {
                 let n = self.read_u8()? as u32;
@@ -488,7 +495,7 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
                 let code = self.read_code(names)?;
                 Ok(Value::Lambda(Lambda::new(Rc::new(code), self.ctx.scope())))
             }
-            _ => Err(DecodeError::InvalidType(ty))
+            _ => Err(DecodeError::InvalidType(ty)),
         }
     }
 
@@ -553,10 +560,10 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
                     kw_params.push(self.read_name(names)?);
                 }
             }
-            _ => return Err(DecodeError::InvalidCodeFlags(flags))
+            _ => return Err(DecodeError::InvalidCodeFlags(flags)),
         }
 
-        Ok(Code{
+        Ok(Code {
             name: name,
             consts: consts.into_boxed_slice(),
             code: code.into_boxed_slice(),
@@ -594,12 +601,16 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
     }
 
     fn read_u8(&mut self) -> Result<u8, DecodeError> {
-        Ok(self.data.read_u8()
+        Ok(self
+            .data
+            .read_u8()
             .map_err(|_| DecodeError::UnexpectedEof)?)
     }
 
     fn read_u32(&mut self) -> Result<u32, DecodeError> {
-        Ok(self.data.read_u32::<BigEndian>()
+        Ok(self
+            .data
+            .read_u32::<BigEndian>()
             .map_err(|_| DecodeError::UnexpectedEof)?)
     }
 
@@ -620,7 +631,9 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
     }
 
     fn read_f64(&mut self) -> Result<f64, DecodeError> {
-        Ok(self.data.read_f64::<BigEndian>()
+        Ok(self
+            .data
+            .read_f64::<BigEndian>()
             .map_err(|_| DecodeError::UnexpectedEof)?)
     }
 }
@@ -638,7 +651,7 @@ fn validate_value_inner(v: &Value, quasi: u32) -> Result<(), DecodeError> {
             validate_value_inner(v, quasi - n)
         },
         Value::Quote(ref v, _) => validate_value_inner(v, quasi),
-        _ => Ok(())
+        _ => Ok(()),
     }
 }
 
@@ -650,7 +663,7 @@ struct ValueEncoder {
 impl ValueEncoder {
     /// Creates a new `ValueEncoder`.
     fn new() -> ValueEncoder {
-        ValueEncoder{
+        ValueEncoder {
             data: Vec::with_capacity(32),
         }
     }
@@ -661,7 +674,11 @@ impl ValueEncoder {
     }
 
     /// Writes a `Value` to the byte stream.
-    fn write_value(&mut self, value: &Value, names: &mut NameOutputConversion) -> Result<(), EncodeError> {
+    fn write_value(
+        &mut self,
+        value: &Value,
+        names: &mut NameOutputConversion,
+    ) -> Result<(), EncodeError> {
         use self::types::*;
 
         match *value {
@@ -802,15 +819,13 @@ impl ValueEncoder {
             }
             Value::Lambda(ref l) => {
                 if l.values.is_some() {
-                    return Err(EncodeError::UnencodableValue(
-                        "lambda with enclosed values"));
+                    return Err(EncodeError::UnencodableValue("lambda with enclosed values"));
                 }
                 self.write_u8(LAMBDA);
                 self.write_code(&l.code, names)?;
             }
-            Value::Foreign(_) =>
-                return Err(EncodeError::UnencodableType("foreign value")),
-            ref v => return Err(EncodeError::UnencodableType(v.type_name()))
+            Value::Foreign(_) => return Err(EncodeError::UnencodableType("foreign value")),
+            ref v => return Err(EncodeError::UnencodableType(v.type_name())),
         }
 
         Ok(())
@@ -820,7 +835,11 @@ impl ValueEncoder {
         self.data.extend(b);
     }
 
-    fn write_code(&mut self, code: &Code, names: &mut NameOutputConversion) -> Result<(), EncodeError> {
+    fn write_code(
+        &mut self,
+        code: &Code,
+        names: &mut NameOutputConversion,
+    ) -> Result<(), EncodeError> {
         use bytecode::code_flags::*;
 
         self.write_u8(code.flags as u8);
@@ -848,8 +867,10 @@ impl ValueEncoder {
         self.write_uint(code.n_params)?;
         self.write_uint(code.req_params)?;
 
-        assert_eq!(code.flags & PARAM_FLAGS_MASK == HAS_KW_PARAMS,
-            !code.kw_params.is_empty());
+        assert_eq!(
+            code.flags & PARAM_FLAGS_MASK == HAS_KW_PARAMS,
+            !code.kw_params.is_empty()
+        );
 
         if !code.kw_params.is_empty() {
             self.write_len(code.kw_params.len())?;
@@ -870,7 +891,11 @@ impl ValueEncoder {
         Ok(())
     }
 
-    fn write_name(&mut self, name: Name, names: &mut NameOutputConversion) -> Result<(), EncodeError> {
+    fn write_name(
+        &mut self,
+        name: Name,
+        names: &mut NameOutputConversion,
+    ) -> Result<(), EncodeError> {
         let n = names.add(name);
         self.write_uint(n)
     }
@@ -890,7 +915,7 @@ impl ValueEncoder {
     fn write_path(&mut self, p: &Path) -> Result<(), EncodeError> {
         match p.to_str() {
             Some(s) => self.write_string(s),
-            None => Err(EncodeError::InvalidUtf8)
+            None => Err(EncodeError::InvalidUtf8),
         }
     }
 

@@ -136,7 +136,7 @@ mod test {
             let (a,) = ketos_args!(&args, (i32));
             assert_eq!(a, 1);
 
-            let (a,) = ketos_args!(&args, [ i32 ]);
+            let (a,) = ketos_args!(&args, [i32]);
             assert_eq!(a, Some(1));
 
             Ok(())
@@ -157,7 +157,7 @@ mod test {
             assert_eq!(c, Some(3));
             assert_eq!(d, None);
 
-            let (a, b, c, d) = ketos_args!(&args, [ i32, i32, i32, i32 ]);
+            let (a, b, c, d) = ketos_args!(&args, [i32, i32, i32, i32]);
 
             assert_eq!(a, Some(1));
             assert_eq!(b, Some(2));

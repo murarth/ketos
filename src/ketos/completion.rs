@@ -5,8 +5,7 @@ use scope::{GlobalScope, MasterScope};
 /// Returns a sorted list of possible name completions for the given prefix.
 ///
 /// Returns `None` if no possible completions exist.
-pub fn complete_name(word: &str, scope: &GlobalScope)
-        -> Option<Vec<String>> {
+pub fn complete_name(word: &str, scope: &GlobalScope) -> Option<Vec<String>> {
     let mut results = Vec::new();
 
     for name in MasterScope::names() {

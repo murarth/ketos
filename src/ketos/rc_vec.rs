@@ -13,21 +13,33 @@ use std::slice::Iter;
 /// Argument for functions accepting a range
 pub trait RangeArgument<T> {
     /// Returns start value
-    fn start(&self) -> Option<&T> { None }
+    fn start(&self) -> Option<&T> {
+        None
+    }
     /// Returns end value
-    fn end(&self) -> Option<&T> { None }
+    fn end(&self) -> Option<&T> {
+        None
+    }
 }
 
 impl<T> RangeArgument<T> for ops::RangeFull {}
 impl<T> RangeArgument<T> for ops::Range<T> {
-    fn start(&self) -> Option<&T> { Some(&self.start) }
-    fn end(&self) -> Option<&T> { Some(&self.end) }
+    fn start(&self) -> Option<&T> {
+        Some(&self.start)
+    }
+    fn end(&self) -> Option<&T> {
+        Some(&self.end)
+    }
 }
 impl<T> RangeArgument<T> for ops::RangeFrom<T> {
-    fn start(&self) -> Option<&T> { Some(&self.start) }
+    fn start(&self) -> Option<&T> {
+        Some(&self.start)
+    }
 }
 impl<T> RangeArgument<T> for ops::RangeTo<T> {
-    fn end(&self) -> Option<&T> { Some(&self.end) }
+    fn end(&self) -> Option<&T> {
+        Some(&self.end)
+    }
 }
 
 /// Represents a reference-counted view into a `String`.
@@ -44,7 +56,7 @@ impl RcString {
     pub fn new(data: String) -> RcString {
         let n = data.len();
 
-        RcString{
+        RcString {
             data: Rc::new(data),
             start: 0,
             end: n,
@@ -70,21 +82,32 @@ impl RcString {
         let b = self.start + end;
 
         if a > self.end {
-            panic!("RcString slice out of bounds; start is {} but length is {}",
-                start, self.len());
+            panic!(
+                "RcString slice out of bounds; start is {} but length is {}",
+                start,
+                self.len()
+            );
         }
 
         if b > self.end {
-            panic!("RcString slice out of bounds; end is {} but length is {}",
-                end, self.len());
+            panic!(
+                "RcString slice out of bounds; end is {} but length is {}",
+                end,
+                self.len()
+            );
         }
 
         if !self.data.is_char_boundary(a) || !self.data.is_char_boundary(b) {
-            panic!("index {} and/or {} in RcString `{}` do not lie on \
-                character boundary", a, b, &self[..]);
+            panic!(
+                "index {} and/or {} in RcString `{}` do not lie on \
+                 character boundary",
+                a,
+                b,
+                &self[..]
+            );
         }
 
-        RcString{
+        RcString {
             data: self.data.clone(),
             start: a,
             end: b,
@@ -99,7 +122,7 @@ impl RcString {
                 let _ = s.drain(..self.start);
                 s
             }
-            Err(data) => data[self.start..self.end].to_owned()
+            Err(data) => data[self.start..self.end].to_owned(),
         }
     }
 
@@ -182,10 +205,14 @@ impl fmt::Display for RcString {
 macro_rules! impl_eq_str {
     ( $lhs:ty, $rhs:ty ) => {
         impl<'a> PartialEq<$rhs> for $lhs {
-            fn eq(&self, rhs: &$rhs) -> bool { self[..] == rhs[..] }
-            fn ne(&self, rhs: &$rhs) -> bool { self[..] != rhs[..] }
+            fn eq(&self, rhs: &$rhs) -> bool {
+                self[..] == rhs[..]
+            }
+            fn ne(&self, rhs: &$rhs) -> bool {
+                self[..] != rhs[..]
+            }
         }
-    }
+    };
 }
 
 impl_eq_str!{ RcString, RcString }
@@ -197,16 +224,28 @@ impl_eq_str!{ RcString, Cow<'a, str> }
 impl Eq for RcString {}
 
 impl PartialOrd for RcString {
-    fn partial_cmp(&self, rhs: &RcString) -> Option<Ordering> { self[..].partial_cmp(&rhs[..]) }
+    fn partial_cmp(&self, rhs: &RcString) -> Option<Ordering> {
+        self[..].partial_cmp(&rhs[..])
+    }
 
-    fn lt(&self, rhs: &RcString) -> bool { self[..] < rhs[..] }
-    fn le(&self, rhs: &RcString) -> bool { self[..] <= rhs[..] }
-    fn gt(&self, rhs: &RcString) -> bool { self[..] > rhs[..] }
-    fn ge(&self, rhs: &RcString) -> bool { self[..] >= rhs[..] }
+    fn lt(&self, rhs: &RcString) -> bool {
+        self[..] < rhs[..]
+    }
+    fn le(&self, rhs: &RcString) -> bool {
+        self[..] <= rhs[..]
+    }
+    fn gt(&self, rhs: &RcString) -> bool {
+        self[..] > rhs[..]
+    }
+    fn ge(&self, rhs: &RcString) -> bool {
+        self[..] >= rhs[..]
+    }
 }
 
 impl Ord for RcString {
-    fn cmp(&self, rhs: &RcString) -> Ordering { self[..].cmp(&rhs[..]) }
+    fn cmp(&self, rhs: &RcString) -> Ordering {
+        self[..].cmp(&rhs[..])
+    }
 }
 
 impl<'a> From<&'a str> for RcString {
@@ -235,7 +274,7 @@ impl<T> RcVec<T> {
     pub fn new(data: Vec<T>) -> RcVec<T> {
         let n = data.len();
 
-        RcVec{
+        RcVec {
             data: Rc::new(data),
             start: 0,
             end: n,
@@ -262,16 +301,22 @@ impl<T> RcVec<T> {
         let b = self.start + end;
 
         if a > self.end {
-            panic!("RcVec slice out of bounds; start is {} but length is {}",
-                start, self.len());
+            panic!(
+                "RcVec slice out of bounds; start is {} but length is {}",
+                start,
+                self.len()
+            );
         }
 
         if b > self.end {
-            panic!("RcVec slice out of bounds; end is {} but length is {}",
-                end, self.len());
+            panic!(
+                "RcVec slice out of bounds; end is {} but length is {}",
+                end,
+                self.len()
+            );
         }
 
-        RcVec{
+        RcVec {
             data: self.data.clone(),
             start: a,
             end: b,
@@ -289,7 +334,7 @@ impl<T: Clone> RcVec<T> {
                 let _ = v.drain(..self.start);
                 v
             }
-            Err(data) => data[self.start..self.end].to_vec()
+            Err(data) => data[self.start..self.end].to_vec(),
         }
     }
 
@@ -347,14 +392,23 @@ impl<T: fmt::Debug> fmt::Debug for RcVec<T> {
 }
 
 impl<T: Clone> Extend<T> for RcVec<T> {
-    fn extend<I>(&mut self, iterable: I) where I: IntoIterator<Item=T> {
+    fn extend<I>(&mut self, iterable: I)
+    where
+        I: IntoIterator<Item = T>,
+    {
         self.make_mut().extend(iterable);
         self.end = self.data.len();
     }
 }
 
-impl<'a, T: Clone> Extend<&'a T> for RcVec<T> where T: Copy + 'a {
-    fn extend<I>(&mut self, iterable: I) where I: IntoIterator<Item=&'a T> {
+impl<'a, T: Clone> Extend<&'a T> for RcVec<T>
+where
+    T: Copy + 'a,
+{
+    fn extend<I>(&mut self, iterable: I)
+    where
+        I: IntoIterator<Item = &'a T>,
+    {
         self.make_mut().extend(iterable);
         self.end = self.data.len();
     }
@@ -371,11 +425,18 @@ impl<'a, T> IntoIterator for &'a RcVec<T> {
 
 macro_rules! impl_eq_vec {
     ( $lhs:ty, $rhs:ty ) => {
-        impl<'a, A, B> PartialEq<$rhs> for $lhs where A: PartialEq<B> {
-            fn eq(&self, rhs: &$rhs) -> bool { self[..] == rhs[..] }
-            fn ne(&self, rhs: &$rhs) -> bool { self[..] != rhs[..] }
+        impl<'a, A, B> PartialEq<$rhs> for $lhs
+        where
+            A: PartialEq<B>,
+        {
+            fn eq(&self, rhs: &$rhs) -> bool {
+                self[..] == rhs[..]
+            }
+            fn ne(&self, rhs: &$rhs) -> bool {
+                self[..] != rhs[..]
+            }
         }
-    }
+    };
 }
 
 macro_rules! impl_eq_array {
@@ -407,16 +468,28 @@ impl_eq_array!{
 impl<T: Eq> Eq for RcVec<T> {}
 
 impl<T: PartialOrd> PartialOrd for RcVec<T> {
-    fn partial_cmp(&self, rhs: &RcVec<T>) -> Option<Ordering> { self[..].partial_cmp(&rhs[..]) }
+    fn partial_cmp(&self, rhs: &RcVec<T>) -> Option<Ordering> {
+        self[..].partial_cmp(&rhs[..])
+    }
 
-    fn lt(&self, rhs: &RcVec<T>) -> bool { self[..] < rhs[..] }
-    fn le(&self, rhs: &RcVec<T>) -> bool { self[..] <= rhs[..] }
-    fn gt(&self, rhs: &RcVec<T>) -> bool { self[..] > rhs[..] }
-    fn ge(&self, rhs: &RcVec<T>) -> bool { self[..] >= rhs[..] }
+    fn lt(&self, rhs: &RcVec<T>) -> bool {
+        self[..] < rhs[..]
+    }
+    fn le(&self, rhs: &RcVec<T>) -> bool {
+        self[..] <= rhs[..]
+    }
+    fn gt(&self, rhs: &RcVec<T>) -> bool {
+        self[..] > rhs[..]
+    }
+    fn ge(&self, rhs: &RcVec<T>) -> bool {
+        self[..] >= rhs[..]
+    }
 }
 
 impl<T: Ord> Ord for RcVec<T> {
-    fn cmp(&self, rhs: &RcVec<T>) -> Ordering { self[..].cmp(&rhs[..]) }
+    fn cmp(&self, rhs: &RcVec<T>) -> Ordering {
+        self[..].cmp(&rhs[..])
+    }
 }
 
 impl<T> From<Vec<T>> for RcVec<T> {
