@@ -27,7 +27,7 @@ of the value.
 
 ## Bitwise Functions
 
-Bitwise functions `<<` and `>>` are supported.
+Bitwise functions `<<`, `>>`, `bit&`, `bit|`, `bit^`, and `bit!` are supported.
 
 ## Comparison Functions
 
