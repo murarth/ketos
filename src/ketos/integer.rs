@@ -498,275 +498,92 @@ impl<'a> ops::Shr<usize> for &'a Integer {
     }
 }
 
+macro_rules! impl_un_op {
+    ( $ty:ident , $trait:ident , $meth:ident ) => {
+        impl ::std::ops::$trait for $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn $meth(self) -> $ty {
+                $ty(self.0 .$meth())
+            }
+        }
+    }
+}
+
+macro_rules! impl_bin_op {
+    ( $ty:ident , $trait:ident , $meth:ident ) => {
+        impl ::std::ops::$trait<$ty> for $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn $meth(self, rhs: $ty) -> $ty {
+                $ty(self.0 .$meth(rhs.0))
+            }
+        }
+
+        impl<'a> ::std::ops::$trait<&'a $ty> for $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn $meth(self, rhs: &$ty) -> $ty {
+                $ty(self.0 .$meth(&rhs.0))
+            }
+        }
+
+        impl<'a> ::std::ops::$trait<$ty> for &'a $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn $meth(self, rhs: $ty) -> $ty {
+                $ty((&self.0).$meth(rhs.0))
+            }
+        }
+
+        impl<'a, 'b> ::std::ops::$trait<&'b $ty> for &'a $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn $meth(self, rhs: &$ty) -> $ty {
+                $ty((&self.0).$meth(&rhs.0))
+            }
+        }
+    }
+}
+
+macro_rules! impl_assign_op {
+    ( $ty:ident , $trait:ident , $meth:ident ) => {
+        impl ::std::ops::$trait<$ty> for $ty {
+            #[inline]
+            fn $meth(&mut self, rhs: $ty) {
+                (self.0).$meth(rhs.0);
+            }
+        }
+
+        impl<'a> ::std::ops::$trait<&'a $ty> for $ty {
+            #[inline]
+            fn $meth(&mut self, rhs: &$ty) {
+                (self.0).$meth(&rhs.0);
+            }
+        }
+    }
+}
+
 macro_rules! impl_ops {
     ( $ty:ident ) => {
-        impl ::std::ops::Add<$ty> for $ty {
-            type Output = $ty;
+        impl_bin_op!{ $ty, Add, add }
+        impl_bin_op!{ $ty, Sub, sub }
+        impl_bin_op!{ $ty, Mul, mul }
+        impl_bin_op!{ $ty, Div, div }
+        impl_bin_op!{ $ty, Rem, rem }
 
-            #[inline]
-            fn add(self, rhs: $ty) -> $ty {
-                $ty(self.0.add(rhs.0))
-            }
-        }
+        impl_assign_op!{ $ty, AddAssign, add_assign }
+        impl_assign_op!{ $ty, SubAssign, sub_assign }
+        impl_assign_op!{ $ty, MulAssign, mul_assign }
+        impl_assign_op!{ $ty, DivAssign, div_assign }
+        impl_assign_op!{ $ty, RemAssign, rem_assign }
 
-        impl<'a> ::std::ops::Add<&'a $ty> for $ty {
-            type Output = $ty;
-
-            #[inline]
-            fn add(self, rhs: &$ty) -> $ty {
-                $ty(self.0.add(rhs.0.clone()))
-            }
-        }
-
-        impl<'a> ::std::ops::Add<$ty> for &'a $ty {
-            type Output = $ty;
-
-            #[inline]
-            fn add(self, rhs: $ty) -> $ty {
-                $ty(self.0.clone().add(rhs.0))
-            }
-        }
-
-        impl<'a, 'b> ::std::ops::Add<&'a $ty> for &'b $ty {
-            type Output = $ty;
-
-            #[inline]
-            fn add(self, rhs: &$ty) -> $ty {
-                $ty(self.0.clone().add(rhs.0.clone()))
-            }
-        }
-
-        impl ::std::ops::AddAssign<$ty> for $ty {
-            #[inline]
-            fn add_assign(&mut self, rhs: $ty) {
-                self.0 += rhs.0;
-            }
-        }
-
-        impl<'a> ::std::ops::AddAssign<&'a $ty> for $ty {
-            #[inline]
-            fn add_assign(&mut self, rhs: &$ty) {
-                self.0 += &rhs.0;
-            }
-        }
-
-        impl ::std::ops::Sub<$ty> for $ty {
-            type Output = $ty;
-
-            #[inline]
-            fn sub(self, rhs: $ty) -> $ty {
-                $ty(self.0.sub(rhs.0))
-            }
-        }
-
-        impl<'a> ::std::ops::Sub<&'a $ty> for $ty {
-            type Output = $ty;
-
-            #[inline]
-            fn sub(self, rhs: &$ty) -> $ty {
-                $ty(self.0.sub(rhs.0.clone()))
-            }
-        }
-
-        impl<'a> ::std::ops::Sub<$ty> for &'a $ty {
-            type Output = $ty;
-
-            #[inline]
-            fn sub(self, rhs: $ty) -> $ty {
-                $ty(self.0.clone().sub(rhs.0))
-            }
-        }
-
-        impl<'a, 'b> ::std::ops::Sub<&'a $ty> for &'b $ty {
-            type Output = $ty;
-
-            #[inline]
-            fn sub(self, rhs: &$ty) -> $ty {
-                $ty(self.0.clone().sub(rhs.0.clone()))
-            }
-        }
-
-        impl ::std::ops::SubAssign<$ty> for $ty {
-            #[inline]
-            fn sub_assign(&mut self, rhs: $ty) {
-                self.0 -= rhs.0;
-            }
-        }
-
-        impl<'a> ::std::ops::SubAssign<&'a $ty> for $ty {
-            #[inline]
-            fn sub_assign(&mut self, rhs: &$ty) {
-                self.0 -= &rhs.0;
-            }
-        }
-
-        impl ::std::ops::Mul<$ty> for $ty {
-            type Output = $ty;
-
-            #[inline]
-            fn mul(self, rhs: $ty) -> $ty {
-                $ty(self.0.mul(rhs.0))
-            }
-        }
-
-        impl<'a> ::std::ops::Mul<&'a $ty> for $ty {
-            type Output = $ty;
-
-            #[inline]
-            fn mul(self, rhs: &$ty) -> $ty {
-                $ty(self.0.mul(rhs.0.clone()))
-            }
-        }
-
-        impl<'a> ::std::ops::Mul<$ty> for &'a $ty {
-            type Output = $ty;
-
-            #[inline]
-            fn mul(self, rhs: $ty) -> $ty {
-                $ty(self.0.clone().mul(rhs.0))
-            }
-        }
-
-        impl<'a, 'b> ::std::ops::Mul<&'a $ty> for &'b $ty {
-            type Output = $ty;
-
-            #[inline]
-            fn mul(self, rhs: &$ty) -> $ty {
-                $ty(self.0.clone().mul(rhs.0.clone()))
-            }
-        }
-
-        impl ::std::ops::MulAssign<$ty> for $ty {
-            #[inline]
-            fn mul_assign(&mut self, rhs: $ty) {
-                self.0 *= rhs.0;
-            }
-        }
-
-        impl<'a> ::std::ops::MulAssign<&'a $ty> for $ty {
-            #[inline]
-            fn mul_assign(&mut self, rhs: &$ty) {
-                self.0 *= &rhs.0;
-            }
-        }
-
-        impl ::std::ops::Div<$ty> for $ty {
-            type Output = $ty;
-
-            #[inline]
-            fn div(self, rhs: $ty) -> $ty {
-                $ty(self.0.div(rhs.0))
-            }
-        }
-
-        impl<'a> ::std::ops::Div<&'a $ty> for $ty {
-            type Output = $ty;
-
-            #[inline]
-            fn div(self, rhs: &$ty) -> $ty {
-                $ty(self.0.div(rhs.0.clone()))
-            }
-        }
-
-        impl<'a> ::std::ops::Div<$ty> for &'a $ty {
-            type Output = $ty;
-
-            #[inline]
-            fn div(self, rhs: $ty) -> $ty {
-                $ty(self.0.clone().div(rhs.0))
-            }
-        }
-
-        impl<'a, 'b> ::std::ops::Div<&'a $ty> for &'b $ty {
-            type Output = $ty;
-
-            #[inline]
-            fn div(self, rhs: &$ty) -> $ty {
-                $ty(self.0.clone().div(rhs.0.clone()))
-            }
-        }
-
-        impl ::std::ops::DivAssign<$ty> for $ty {
-            #[inline]
-            fn div_assign(&mut self, rhs: $ty) {
-                self.0 /= rhs.0;
-            }
-        }
-
-        impl<'a> ::std::ops::DivAssign<&'a $ty> for $ty {
-            #[inline]
-            fn div_assign(&mut self, rhs: &$ty) {
-                self.0 /= &rhs.0;
-            }
-        }
-
-        impl ::std::ops::Rem<$ty> for $ty {
-            type Output = $ty;
-
-            #[inline]
-            fn rem(self, rhs: $ty) -> $ty {
-                $ty(self.0.rem(rhs.0))
-            }
-        }
-
-        impl<'a> ::std::ops::Rem<&'a $ty> for $ty {
-            type Output = $ty;
-
-            #[inline]
-            fn rem(self, rhs: &$ty) -> $ty {
-                $ty(self.0.rem(rhs.0.clone()))
-            }
-        }
-
-        impl<'a> ::std::ops::Rem<$ty> for &'a $ty {
-            type Output = $ty;
-
-            #[inline]
-            fn rem(self, rhs: $ty) -> $ty {
-                $ty(self.0.clone().rem(rhs.0))
-            }
-        }
-
-        impl<'a, 'b> ::std::ops::Rem<&'a $ty> for &'b $ty {
-            type Output = $ty;
-
-            #[inline]
-            fn rem(self, rhs: &$ty) -> $ty {
-                $ty(self.0.clone().rem(rhs.0.clone()))
-            }
-        }
-
-        impl ::std::ops::RemAssign<$ty> for $ty {
-            #[inline]
-            fn rem_assign(&mut self, rhs: $ty) {
-                self.0 %= rhs.0;
-            }
-        }
-
-        impl<'a> ::std::ops::RemAssign<&'a $ty> for $ty {
-            #[inline]
-            fn rem_assign(&mut self, rhs: &$ty) {
-                self.0 %= &rhs.0;
-            }
-        }
-
-        impl ::std::ops::Neg for $ty {
-            type Output = $ty;
-
-            #[inline]
-            fn neg(self) -> $ty {
-                $ty(self.0.neg())
-            }
-        }
-
-        impl<'a> ::std::ops::Neg for &'a $ty {
-            type Output = $ty;
-
-            #[inline]
-            fn neg(self) -> $ty {
-                $ty(self.0.clone().neg())
-            }
-        }
+        impl_un_op!{ $ty, Neg, neg }
 
         impl ::num::Zero for $ty {
             #[inline]
@@ -777,7 +594,19 @@ macro_rules! impl_ops {
     }
 }
 
-impl_ops!{Integer}
+macro_rules! impl_integer_ops {
+    ( $ty:ident ) => {
+        impl_ops!{ $ty }
+
+        impl_bin_op!{ $ty, BitAnd, bitand }
+        impl_bin_op!{ $ty, BitOr,  bitor }
+        impl_bin_op!{ $ty, BitXor, bitxor }
+
+        impl_un_op!{ $ty, Not, not }
+    }
+}
+
+impl_integer_ops!{Integer}
 impl_ops!{Ratio}
 
 impl fmt::Display for Ratio {
