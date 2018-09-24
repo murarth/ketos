@@ -407,9 +407,9 @@ fn get_struct_def(v: &Value) -> Result<&Rc<StructDef>, ExecError> {
     }
 }
 
-fn expect_integer(v: &Value) -> Result<(), ExecError> {
+fn expect_integer(v: &Value) -> Result<&Integer, ExecError> {
     match *v {
-        Value::Integer(_) => Ok(()),
+        Value::Integer(ref i) => Ok(i),
         _ => Err(ExecError::expected("integer", v))
     }
 }
@@ -890,20 +890,15 @@ fn fn_shl(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 fn shl_integer(ctx: &Context, lhs: &Value, rhs: &Value) -> Result<Value, Error> {
-    expect_integer(lhs)?;
-    expect_integer(rhs)?;
+    let lhs = expect_integer(lhs)?;
+    let rhs = expect_integer(rhs)?;
 
-    match (lhs, rhs) {
-        (&Value::Integer(ref a), &Value::Integer(ref b)) => {
-            match b.to_u32() {
-                Some(n) => {
-                    check_bits(ctx, a.bits() + n as usize)?;
-                    Ok((a << (n as usize)).into())
-                }
-                None => Err(From::from(ExecError::Overflow)),
-            }
+    match rhs.to_u32() {
+        Some(n) => {
+            check_bits(ctx, lhs.bits() + n as usize)?;
+            Ok((lhs << (n as usize)).into())
         }
-        _ => unreachable!()
+        None => Err(From::from(ExecError::Overflow)),
     }
 }
 
@@ -916,17 +911,12 @@ fn fn_shr(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 fn shr_integer(lhs: &Value, rhs: &Value) -> Result<Value, Error> {
-    expect_integer(lhs)?;
-    expect_integer(rhs)?;
+    let lhs = expect_integer(lhs)?;
+    let rhs = expect_integer(rhs)?;
 
-    match (lhs, rhs) {
-        (&Value::Integer(ref a), &Value::Integer(ref b)) => {
-            match b.to_u32() {
-                Some(n) => Ok((a >> (n as usize)).into()),
-                None => Err(From::from(ExecError::Overflow)),
-            }
-        }
-        _ => unreachable!()
+    match rhs.to_u32() {
+        Some(n) => Ok((lhs >> (n as usize)).into()),
+        None => Err(From::from(ExecError::Overflow)),
     }
 }
 
