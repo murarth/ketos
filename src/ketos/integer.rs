@@ -1,7 +1,6 @@
 //! Arbitrary precision integer and ratio types.
 
 use std::fmt;
-use std::mem::transmute;
 use std::ops;
 use std::str::FromStr;
 
@@ -288,6 +287,10 @@ impl Integer {
     pub fn one() -> Integer {
         Integer(BigInt::one())
     }
+
+    fn from_bigint_ref(i: &BigInt) -> &Integer {
+        unsafe { &*(i as *const _ as *const Integer) }
+    }
 }
 
 impl Ratio {
@@ -397,13 +400,13 @@ impl Ratio {
     /// Returns the `Ratio`'s numerator.
     #[inline]
     pub fn numer(&self) -> &Integer {
-        unsafe { transmute(self.0.numer()) }
+        Integer::from_bigint_ref(self.0.numer())
     }
 
     /// Returns the `Ratio`'s denominator.
     #[inline]
     pub fn denom(&self) -> &Integer {
-        unsafe { transmute(self.0.denom()) }
+        Integer::from_bigint_ref(self.0.denom())
     }
 
     /// Returns whether the `Ratio` is equal to zero.

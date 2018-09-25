@@ -4,7 +4,7 @@ use std::cmp::Ordering;
 use std::f64::{INFINITY, NEG_INFINITY};
 use std::ffi::{OsStr, OsString};
 use std::fmt;
-use std::mem::{replace, transmute};
+use std::mem::replace;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
@@ -786,10 +786,7 @@ fn eq_value_slice(a: &[Value], b: &[Value]) -> Result<bool, ExecError> {
 }
 
 fn float_is_identical(a: f64, b: f64) -> bool {
-    let a: u64 = unsafe { transmute(a) };
-    let b: u64 = unsafe { transmute(b) };
-
-    a == b
+    a.to_bits() == b.to_bits()
 }
 
 fn list_is_identical(a: &[Value], b: &[Value]) -> bool {
