@@ -81,6 +81,14 @@ rounded toward negative infinity."),
 "Returns an integer, bit shifted left by a given number."),
     sys_fn!(fn_shr,         Exact(2),
 "Returns an integer, bit shifted right by a given number."),
+    sys_fn!(fn_bit_and,     Min(2),
+"Returns an integer, the result of a bitwise AND operation."),
+    sys_fn!(fn_bit_or,      Min(2),
+"Returns an integer, the result of a bitwise OR operation."),
+    sys_fn!(fn_bit_xor,     Min(2),
+"Returns an integer, the result of a bitwise XOR operation."),
+    sys_fn!(fn_bit_not,     Exact(1),
+"Returns an integer, the result of a bitwise NOT operation."),
     sys_fn!(fn_eq,          Min(2),
 "Returns whether the given arguments compare equal to one another.
 
@@ -917,6 +925,92 @@ fn shr_integer(lhs: &Value, rhs: &Value) -> Result<Value, Error> {
     match rhs.to_u32() {
         Some(n) => Ok((lhs >> (n as usize)).into()),
         None => Err(From::from(ExecError::Overflow)),
+    }
+}
+
+/// `bit-and` The bitwise AND operator.
+fn fn_bit_and(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
+    let mut v = args[0].take();
+
+    expect_integer(&v)?;
+
+    for arg in &args[1..] {
+        expect_integer(arg)?;
+        v = bit_and_integer(v, arg)?;
+    }
+
+    Ok(v)
+}
+
+fn bit_and_integer(lhs: Value, rhs: &Value) -> Result<Value, Error> {
+    match (lhs, rhs) {
+        (Value::Integer(ref a), &Value::Integer(ref b)) => {
+            Ok((a & b).into())
+        },
+        (a, b) => Err(From::from(ExecError::TypeMismatch{
+            lhs: a.type_name(),
+            rhs: b.type_name(),
+        }))
+    }
+}
+
+/// `bit-or` The bitwise OR operator.
+fn fn_bit_or(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
+    let mut v = args[0].take();
+
+    expect_integer(&v)?;
+
+    for arg in &args[1..] {
+        expect_integer(arg)?;
+        v = bit_or_integer(v, arg)?;
+    }
+
+    Ok(v)
+}
+
+fn bit_or_integer(lhs: Value, rhs: &Value) -> Result<Value, Error> {
+    match (lhs, rhs) {
+        (Value::Integer(ref a), &Value::Integer(ref b)) => {
+            Ok((a | b).into())
+        },
+        (a, b) => Err(From::from(ExecError::TypeMismatch{
+            lhs: a.type_name(),
+            rhs: b.type_name(),
+        }))
+    }
+}
+
+/// `bit-xor` The bitwise XOR operator.
+fn fn_bit_xor(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
+    let mut v = args[0].take();
+
+    expect_integer(&v)?;
+
+    for arg in &args[1..] {
+        expect_integer(arg)?;
+        v = bit_xor_integer(v, arg)?;
+    }
+
+    Ok(v)
+}
+
+fn bit_xor_integer(lhs: Value, rhs: &Value) -> Result<Value, Error> {
+    match (lhs, rhs) {
+        (Value::Integer(ref a), &Value::Integer(ref b)) => {
+            Ok((a ^ b).into())
+        },
+        (a, b) => Err(From::from(ExecError::TypeMismatch{
+            lhs: a.type_name(),
+            rhs: b.type_name(),
+        }))
+    }
+}
+
+/// `bit_not` The bitwise NOT operator.
+fn fn_bit_not(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
+    match args[0] {
+        Value::Integer(ref i) => Ok((!i.clone()).into()),
+        ref v => Err(From::from(ExecError::expected("integer", v))),
     }
 }
 
