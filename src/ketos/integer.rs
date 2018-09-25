@@ -505,7 +505,16 @@ macro_rules! impl_un_op {
 
             #[inline]
             fn $meth(self) -> $ty {
-                $ty(self.0 .$meth())
+                $ty((self.0).$meth())
+            }
+        }
+
+        impl<'a> ::std::ops::$trait for &'a $ty {
+            type Output = $ty;
+
+            #[inline]
+            fn $meth(self) -> $ty {
+                $ty((&self.0).$meth())
             }
         }
     }
@@ -518,7 +527,7 @@ macro_rules! impl_bin_op {
 
             #[inline]
             fn $meth(self, rhs: $ty) -> $ty {
-                $ty(self.0 .$meth(rhs.0))
+                $ty((self.0).$meth(rhs.0))
             }
         }
 
@@ -527,7 +536,7 @@ macro_rules! impl_bin_op {
 
             #[inline]
             fn $meth(self, rhs: &$ty) -> $ty {
-                $ty(self.0 .$meth(&rhs.0))
+                $ty((self.0).$meth(&rhs.0))
             }
         }
 
@@ -601,6 +610,10 @@ macro_rules! impl_integer_ops {
         impl_bin_op!{ $ty, BitAnd, bitand }
         impl_bin_op!{ $ty, BitOr,  bitor }
         impl_bin_op!{ $ty, BitXor, bitxor }
+
+        impl_assign_op!{ $ty, BitAndAssign, bitand_assign }
+        impl_assign_op!{ $ty, BitOrAssign,  bitor_assign }
+        impl_assign_op!{ $ty, BitXorAssign, bitxor_assign }
 
         impl_un_op!{ $ty, Not, not }
     }
