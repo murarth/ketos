@@ -81,12 +81,18 @@ rounded toward negative infinity."),
 "Returns an integer, bit shifted left by a given number."),
     sys_fn!(fn_shr,         Exact(2),
 "Returns an integer, bit shifted right by a given number."),
-    sys_fn!(fn_bit_and,     Min(2),
-"Returns an integer, the result of a bitwise AND operation."),
-    sys_fn!(fn_bit_or,      Min(2),
-"Returns an integer, the result of a bitwise OR operation."),
-    sys_fn!(fn_bit_xor,     Min(2),
-"Returns an integer, the result of a bitwise XOR operation."),
+    sys_fn!(fn_bit_and,     Min(0),
+"Returns the cumulative bitwise AND of all arguments.
+
+Given no arguments, returns the bitwise AND identity, `-1`."),
+    sys_fn!(fn_bit_or,      Min(0),
+"Returns the cumulative bitwise OR of all arguments.
+
+Given no arguments, returns the bitwise OR identity, `0`."),
+    sys_fn!(fn_bit_xor,     Min(0),
+"Returns the cumulative bitwise XOR of all arguments.
+
+Given no arguments, returns the bitwise XOR identity, `0`."),
     sys_fn!(fn_bit_not,     Exact(1),
 "Returns an integer, the result of a bitwise NOT operation."),
     sys_fn!(fn_eq,          Min(2),
@@ -419,6 +425,13 @@ fn expect_integer(v: &Value) -> Result<&Integer, ExecError> {
     match *v {
         Value::Integer(ref i) => Ok(i),
         _ => Err(ExecError::expected("integer", v))
+    }
+}
+
+fn expect_integer_owned(v: Value) -> Result<Integer, ExecError> {
+    match v {
+        Value::Integer(i) => Ok(i),
+        ref v => Err(ExecError::expected("integer", v))
     }
 }
 
@@ -930,86 +943,77 @@ fn shr_integer(lhs: &Value, rhs: &Value) -> Result<Value, Error> {
 
 /// `bit-and` The bitwise AND operator.
 fn fn_bit_and(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let mut v = args[0].take();
+    if args.is_empty() {
+        return Ok((-Integer::one()).into());
+    }
 
-    expect_integer(&v)?;
+    let mut v = expect_integer_owned(args[0].take())?;
 
     for arg in &args[1..] {
-        expect_integer(arg)?;
-        v = bit_and_integer(v, arg)?;
+        v &= expect_integer(arg)?;
     }
 
-    Ok(v)
+    Ok(v.into())
 }
 
-fn bit_and_integer(lhs: Value, rhs: &Value) -> Result<Value, Error> {
-    match (lhs, rhs) {
-        (Value::Integer(ref a), &Value::Integer(ref b)) => {
-            Ok((a & b).into())
-        },
-        (a, b) => Err(From::from(ExecError::TypeMismatch{
-            lhs: a.type_name(),
-            rhs: b.type_name(),
-        }))
-    }
+/// Returns the bitwise AND of two integer values.
+pub fn bit_and_integer(lhs: Value, rhs: &Value) -> Result<Value, Error> {
+    let lhs = expect_integer_owned(lhs)?;
+    let rhs = expect_integer(rhs)?;
+
+    Ok((lhs & rhs).into())
 }
 
 /// `bit-or` The bitwise OR operator.
 fn fn_bit_or(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let mut v = args[0].take();
+    if args.is_empty() {
+        return Ok(Integer::zero().into());
+    }
 
-    expect_integer(&v)?;
+    let mut v = expect_integer_owned(args[0].take())?;
 
     for arg in &args[1..] {
-        expect_integer(arg)?;
-        v = bit_or_integer(v, arg)?;
+        v |= expect_integer(arg)?;
     }
 
-    Ok(v)
+    Ok(v.into())
 }
 
-fn bit_or_integer(lhs: Value, rhs: &Value) -> Result<Value, Error> {
-    match (lhs, rhs) {
-        (Value::Integer(ref a), &Value::Integer(ref b)) => {
-            Ok((a | b).into())
-        },
-        (a, b) => Err(From::from(ExecError::TypeMismatch{
-            lhs: a.type_name(),
-            rhs: b.type_name(),
-        }))
-    }
+/// Returns the bitwise OR of two integers.
+pub fn bit_or_integer(lhs: Value, rhs: &Value) -> Result<Value, Error> {
+    let lhs = expect_integer_owned(lhs)?;
+    let rhs = expect_integer(rhs)?;
+
+    Ok((lhs | rhs).into())
 }
 
 /// `bit-xor` The bitwise XOR operator.
 fn fn_bit_xor(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    let mut v = args[0].take();
+    if args.is_empty() {
+        return Ok(Integer::zero().into());
+    }
 
-    expect_integer(&v)?;
+    let mut v = expect_integer_owned(args[0].take())?;
 
     for arg in &args[1..] {
-        expect_integer(arg)?;
-        v = bit_xor_integer(v, arg)?;
+        v ^= expect_integer(arg)?;
     }
 
-    Ok(v)
+    Ok(v.into())
 }
 
-fn bit_xor_integer(lhs: Value, rhs: &Value) -> Result<Value, Error> {
-    match (lhs, rhs) {
-        (Value::Integer(ref a), &Value::Integer(ref b)) => {
-            Ok((a ^ b).into())
-        },
-        (a, b) => Err(From::from(ExecError::TypeMismatch{
-            lhs: a.type_name(),
-            rhs: b.type_name(),
-        }))
-    }
+/// Returns the bitwise XOR of two integers.
+pub fn bit_xor_integer(lhs: Value, rhs: &Value) -> Result<Value, Error> {
+    let lhs = expect_integer_owned(lhs)?;
+    let rhs = expect_integer(rhs)?;
+
+    Ok((lhs ^ rhs).into())
 }
 
 /// `bit_not` The bitwise NOT operator.
 fn fn_bit_not(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
-    match args[0] {
-        Value::Integer(ref i) => Ok((!i.clone()).into()),
+    match args[0].take() {
+        Value::Integer(i) => Ok((!i).into()),
         ref v => Err(From::from(ExecError::expected("integer", v))),
     }
 }

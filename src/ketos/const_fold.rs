@@ -2,8 +2,11 @@
 
 use error::Error;
 use exec::{Context, ExecError};
-use function::{add_number, div_number, floor_div_number_step,
-    floor_number, sub_number, mul_number};
+use function::{
+    add_number, div_number, floor_div_number_step,
+    floor_number, sub_number, mul_number,
+    bit_and_integer, bit_or_integer, bit_xor_integer,
+};
 use value::Value;
 
 /// Describes an operation that can be constant-folded.
@@ -37,6 +40,9 @@ pub enum FoldSub {}
 pub enum FoldMul {}
 pub enum FoldDiv {}
 pub enum FoldFloorDiv {}
+pub enum FoldBitAnd {}
+pub enum FoldBitOr {}
+pub enum FoldBitXor {}
 
 impl FoldOp for FoldAdd {
     fn is_identity(v: &Value) -> bool { is_zero(v) }
@@ -85,6 +91,27 @@ impl FoldOp for FoldFloorDiv {
 
     fn finish(value: Value) -> Result<Value, Error> {
         floor_number(value)
+    }
+}
+
+impl FoldOp for FoldBitAnd {
+    fn is_identity(v: &Value) -> bool { is_negative_one(v) }
+    fn fold(_ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error> {
+        bit_and_integer(lhs, rhs)
+    }
+}
+
+impl FoldOp for FoldBitOr {
+    fn is_identity(v: &Value) -> bool { is_zero(v) }
+    fn fold(_ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error> {
+        bit_or_integer(lhs, rhs)
+    }
+}
+
+impl FoldOp for FoldBitXor {
+    fn is_identity(v: &Value) -> bool { is_zero(v) }
+    fn fold(_ctx: &Context, lhs: Value, rhs: &Value) -> Result<Value, Error> {
+        bit_xor_integer(lhs, rhs)
     }
 }
 

@@ -13,7 +13,6 @@ keywords = [ "scripting", "extension", "functional", "language", "lisp" ]
 license = "MIT/Apache-2.0"
 readme = "README.md"
 
-
 [[bin]]
 name = "ketos"
 path = "src/bin/repl.rs"

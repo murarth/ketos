@@ -5,17 +5,24 @@ use std::fmt;
 use std::mem::replace;
 use std::rc::Rc;
 
-use bytecode::{code_flags, Code, CodeBlock,
-    Instruction, JumpInstruction, MAX_SHORT_OPERAND};
-use const_fold::{is_one, is_negative_one,
-    FoldOp, FoldAdd, FoldSub, FoldDiv, FoldMul, FoldFloorDiv};
+use bytecode::{
+    code_flags, Code, CodeBlock,
+    Instruction, JumpInstruction, MAX_SHORT_OPERAND,
+};
+use const_fold::{
+    is_one, is_negative_one,
+    FoldOp, FoldAdd, FoldSub, FoldDiv, FoldMul, FoldFloorDiv,
+    FoldBitAnd, FoldBitOr, FoldBitXor,
+};
 use error::Error;
 use exec::{Context, ExecError, execute_lambda};
 use function::{Arity, Lambda};
 use function::Arity::*;
-use name::{get_system_fn, is_system_operator, standard_names,
+use name::{
+    get_system_fn, is_system_operator, standard_names,
     Name, NameDisplay, NameMap, NameSet, NameStore,
-    NUM_SYSTEM_OPERATORS, SYSTEM_OPERATORS_BEGIN};
+    NUM_SYSTEM_OPERATORS, SYSTEM_OPERATORS_BEGIN,
+};
 use scope::{GlobalScope, ImportSet, MasterScope, Scope};
 use structs::{StructDef, StructValueDef};
 use trace::{Trace, TraceItem, set_traceback, take_traceback};
@@ -719,6 +726,18 @@ impl<'a> Compiler<'a> {
                 fold_anticommutative::<FoldDiv>(self, name, standard_names::MUL, args),
             standard_names::FLOOR_DIV if args.len() >= 2 =>
                 fold_anticommutative::<FoldFloorDiv>(self, name, standard_names::FLOOR, args),
+            standard_names::BIT_AND if args.is_empty() =>
+                Ok(ConstResult::Constant((-1).into())),
+            standard_names::BIT_AND =>
+                fold_commutative::<FoldBitAnd>(self, name, args),
+            standard_names::BIT_OR if args.is_empty() =>
+                Ok(ConstResult::Constant(0.into())),
+            standard_names::BIT_OR =>
+                fold_commutative::<FoldBitOr>(self, name, args),
+            standard_names::BIT_XOR if args.is_empty() =>
+                Ok(ConstResult::Constant(0.into())),
+            standard_names::BIT_XOR =>
+                fold_commutative::<FoldBitXor>(self, name, args),
             _ if is_const_system_fn(name) =>
                 eval_system_fn(self, name, args),
             _ => Ok(ConstResult::IsRuntime)
@@ -1436,7 +1455,7 @@ fn is_const_system_fn(name: Name) -> bool {
 
     match name {
         ADD | SUB | MUL | POW | DIV | FLOOR_DIV |
-        REM | SHL | SHR |
+        REM | SHL | SHR | BIT_AND | BIT_OR | BIT_XOR | BIT_NOT |
         EQ | NOT_EQ | WEAK_EQ | WEAK_NE | LT | GT | LE | GE |
         ZERO | MIN | MAX |
         APPEND | ELT | CONCAT | JOIN | LEN | SLICE |

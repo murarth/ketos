@@ -629,13 +629,19 @@ fn test_shift() {
 
 #[test]
 fn test_bitwise() {
+    assert_eq!(eval("(bit&)").unwrap(), "-1");
     assert_eq!(eval("(bit& 15 6)").unwrap(), "6");
     assert_eq!(eval("(bit& 5 15 1)").unwrap(), "1");
     assert_eq!(eval("(bit& 5 15 2)").unwrap(), "0");
+
+    assert_eq!(eval("(bit|)").unwrap(), "0");
     assert_eq!(eval("(bit| 5 20)").unwrap(), "21");
     assert_eq!(eval("(bit| 5 20 29)").unwrap(), "29");
+
+    assert_eq!(eval("(bit^)").unwrap(), "0");
     assert_eq!(eval("(bit^ 2 3)").unwrap(), "1");
     assert_eq!(eval("(bit^ 2 3 6 9)").unwrap(), "14");
+
     assert_eq!(eval("(bit! 0)").unwrap(), "-1");
     assert_eq!(eval("(bit! -5)").unwrap(), "4");
 }
