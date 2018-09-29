@@ -15,7 +15,7 @@ use restrict::RestrictError;
 use string;
 use value::Value;
 
-const MODULE_DOC_COMMENT: &'static str = ";;;";
+const MODULE_DOC_COMMENT: &str = ";;;";
 
 /// Parses a stream of tokens into an expression.
 pub struct Parser<'a, 'lex> {
@@ -37,10 +37,7 @@ pub struct ParseError {
 impl ParseError {
     /// Creates a new `ParseError`.
     pub fn new(span: Span, kind: ParseErrorKind) -> ParseError {
-        ParseError{
-            span: span,
-            kind: kind,
-        }
+        ParseError{ span, kind }
     }
 }
 
@@ -496,7 +493,7 @@ fn parse_path(s: &str) -> Result<PathBuf, ParseError> {
     } else {
         string::parse_string(&s[2..], 0)?
     };
-    Ok(PathBuf::from(s).into())
+    Ok(PathBuf::from(s))
 }
 
 fn parse_string(s: &str) -> Result<String, ParseError> {

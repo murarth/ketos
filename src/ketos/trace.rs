@@ -24,10 +24,7 @@ pub struct Trace {
 impl Trace {
     /// Creates a new `Trace` from a series of items.
     pub fn new(items: Vec<TraceItem>, expr: Option<Value>) -> Trace {
-        Trace{
-            items: items,
-            expr: expr,
-        }
+        Trace{ items, expr }
     }
 
     /// Creates a new `Trace` from a single item.

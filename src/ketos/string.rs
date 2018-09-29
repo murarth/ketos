@@ -113,14 +113,13 @@ impl<'a> StringReader<'a> {
 
     fn parse_byte_string(&mut self) -> Result<(Vec<u8>, usize), ParseError> {
         let mut res = Vec::new();
-        let mut n_hash = 0;
-
-        if self.ty == StringType::Raw {
-            n_hash = self.parse_raw_prefix()?;
+        let n_hash = if self.ty == StringType::Raw {
+            self.parse_raw_prefix()?
         } else {
             self.expect('"', |slf, ch| ParseError::new(slf.span_one(),
-                ParseErrorKind::InvalidChar(ch)))?;
-        }
+                                                       ParseErrorKind::InvalidChar(ch)))?;
+            0
+        };
 
         loop {
             match self.consume_char()? {
@@ -150,14 +149,13 @@ impl<'a> StringReader<'a> {
     fn parse_string(&mut self) -> Result<(String, usize), ParseError> {
         let mut res = String::new();
 
-        let mut n_hash = 0;
-
-        if self.ty == StringType::Raw {
-            n_hash = self.parse_raw_prefix()?;
+        let n_hash = if self.ty == StringType::Raw {
+            self.parse_raw_prefix()?
         } else {
             self.expect('"', |slf, ch| ParseError::new(slf.span_one(),
-                ParseErrorKind::InvalidChar(ch)))?;
-        }
+                                                       ParseErrorKind::InvalidChar(ch)))?;
+            0usize
+        };
 
         loop {
             match self.consume_char()? {

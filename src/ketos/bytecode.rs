@@ -814,7 +814,7 @@ impl<'a> CodeReader<'a> {
     /// Creates a new `CodeReader` wrapping a series of bytes.
     /// The first instruction will be read from `offset`.
     pub fn new(bytes: &[u8], offset: usize) -> CodeReader {
-        CodeReader{bytes: bytes, offset: offset}
+        CodeReader { bytes, offset }
     }
 
     /// Returns the offset, in bytes, at which the next instruction will be read.

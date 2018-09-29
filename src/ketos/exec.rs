@@ -740,7 +740,7 @@ impl Machine {
 
     fn get_sys_fn(&self, n: u32) -> Result<(Name, &'static SystemFn), ExecError> {
         get_standard_name(n).and_then(|n| get_system_fn(n).map(|f| (n, f)))
-            .ok_or(ExecError::InvalidSystemFn(n))
+            .ok_or_else(|| ExecError::InvalidSystemFn(n))
     }
 
     fn call_sys(&mut self, frame: &mut StackFrame, n: u32) -> Result<(), Error> {
@@ -941,7 +941,7 @@ impl Machine {
                 self.push_iter(li.to_vec())?;
                 Ok(n)
             }
-            ref v => return Err(From::from(ExecError::expected("list", v)))
+            ref v => Err(From::from(ExecError::expected("list", v))),
         }
     }
 
@@ -990,7 +990,7 @@ impl Machine {
         let end = len - n_args as usize;
 
         let n = self.stack[start..end].iter()
-            .map(|v| v.size()).fold(0, |a, b| a + b);
+            .map(|v| v.size()).sum();
         self.context.set_memory(|m| m.saturating_sub(n));
 
         let _ = self.stack.drain(start..end);
@@ -1005,7 +1005,7 @@ impl Machine {
     /// All values `stack[pos..]` are removed.
     fn clean_stack(&mut self, pos: usize) {
         let n = self.stack[pos..].iter()
-            .map(|v| v.size()).fold(0, |a, b| a + b);
+            .map(|v| v.size()).sum();
         self.context.set_memory(|m| m.saturating_sub(n));
 
         let _ = self.stack.drain(pos..);
@@ -1114,7 +1114,7 @@ impl Machine {
     fn get_value(&self, frame: &StackFrame, name: Name) -> Result<Value, ExecError> {
         MasterScope::get(name)
             .or_else(|| frame.scope.get_value(name))
-            .ok_or(ExecError::NameError(name))
+            .ok_or_else(|| ExecError::NameError(name))
     }
 
     fn get_def_push(&mut self, frame: &StackFrame, n: u32) -> Result<(), Error> {
@@ -1130,10 +1130,10 @@ impl Machine {
             return Err(From::from(ExecError::CannotDefine(name)));
         }
 
-        if !frame.scope.contains_value(name) {
-            if frame.scope.num_values() >= self.context.restrict().namespace_size {
-                return Err(From::from(RestrictError::NamespaceSizeExceeded));
-            }
+        if !frame.scope.contains_value(name)
+            && frame.scope.num_values() >= self.context.restrict().namespace_size
+        {
+            return Err(From::from(RestrictError::NamespaceSizeExceeded));
         }
 
         // Resulting value is the definition name
@@ -1218,7 +1218,7 @@ impl Machine {
             let start = len - n as usize;
 
             let n = self.stack[start..].iter()
-                .map(|v| v.size()).fold(0, |a, b| a + b);
+                .map(|v| v.size()).sum();
             self.context.set_memory(|m| m.saturating_sub(n));
 
             Ok(self.stack.drain(start..))
@@ -1228,18 +1228,18 @@ impl Machine {
     }
 
     fn get_stack(&self, n: u32) -> Result<&Value, ExecError> {
-        self.stack.get(n as usize).ok_or(ExecError::InvalidStack(n))
+        self.stack.get(n as usize).ok_or_else(|| ExecError::InvalidStack(n))
     }
 
     /// Returns a reference to an enclosed value.
     fn get_closure_value<'f>(&self, frame: &'f StackFrame, n: u32)
             -> Result<&'f Value, ExecError> {
         frame.values.as_ref().and_then(|v| v.get(n as usize))
-            .ok_or(ExecError::InvalidClosureValue(n))
+            .ok_or_else(|| ExecError::InvalidClosureValue(n))
     }
 
     fn get_stack_mut(&mut self, n: u32) -> Result<&mut Value, ExecError> {
-        self.stack.get_mut(n as usize).ok_or(ExecError::InvalidStack(n))
+        self.stack.get_mut(n as usize).ok_or_else(|| ExecError::InvalidStack(n))
     }
 
     /// Returns a value from the stack `n` values from the top.
@@ -1249,7 +1249,7 @@ impl Machine {
 
         if n as usize <= len {
             self.stack.get(len - 1 - n as usize)
-                .ok_or(ExecError::InvalidStack(len as u32))
+                .ok_or_else(|| ExecError::InvalidStack(len as u32))
         } else {
             Err(ExecError::InvalidStack(n))
         }
@@ -1492,7 +1492,7 @@ fn get_bool(v: &Value) -> Result<bool, ExecError> {
 }
 
 fn get_const(code: &Code, n: u32) -> Result<&Value, ExecError> {
-    code.consts.get(n as usize).ok_or(ExecError::InvalidConst(n))
+    code.consts.get(n as usize).ok_or_else(|| ExecError::InvalidConst(n))
 }
 
 fn get_keyword(v: &Value) -> Result<Name, ExecError> {

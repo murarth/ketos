@@ -535,30 +535,28 @@ impl<'a> Compiler<'a> {
 
                 if pushed_fn {
                     self.push_instruction(Instruction::Call(n_args))?;
-                } else {
-                    if let Value::Name(name) = *fn_v {
-                        if self.self_name == Some(name) {
-                            self.push_instruction(
-                                Instruction::CallSelf(n_args))?;
-                        } else {
-                            match get_system_fn(name) {
-                                Some(sys_fn) => {
-                                    if !sys_fn.arity.accepts(n_args) {
-                                        self.set_trace_expr(&value);
-                                        return Err(From::from(CompileError::ArityError{
-                                            name: name,
-                                            expected: sys_fn.arity,
-                                            found: n_args,
-                                        }));
-                                    }
+                } else if let Value::Name(name) = *fn_v {
+                    if self.self_name == Some(name) {
+                        self.push_instruction(
+                            Instruction::CallSelf(n_args))?;
+                    } else {
+                        match get_system_fn(name) {
+                            Some(sys_fn) => {
+                                if !sys_fn.arity.accepts(n_args) {
+                                    self.set_trace_expr(&value);
+                                    return Err(From::from(CompileError::ArityError{
+                                        name: name,
+                                        expected: sys_fn.arity,
+                                        found: n_args,
+                                    }));
+                                }
 
-                                    self.write_call_sys(name, sys_fn.arity, n_args)?;
-                                }
-                                None => {
-                                    let c = self.add_const(Owned(Value::Name(name)));
-                                    self.push_instruction(
-                                        Instruction::CallConst(c, n_args))?;
-                                }
+                                self.write_call_sys(name, sys_fn.arity, n_args)?;
+                            }
+                            None => {
+                                let c = self.add_const(Owned(Value::Name(name)));
+                                self.push_instruction(
+                                    Instruction::CallConst(c, n_args))?;
                             }
                         }
                     }
@@ -1685,8 +1683,7 @@ fn block_returns<'a>(mut b: &'a CodeBlock, blocks: &'a [CodeBlock]) -> bool {
 }
 
 fn estimate_size(blocks: &[CodeBlock]) -> usize {
-    blocks.iter().map(|b| b.calculate_size(false))
-        .fold(0, |a, b| a + b) + 1 // Plus one for final Return
+    blocks.iter().map(|b| b.calculate_size(false)).sum::<usize>() + 1usize // Plus one for final Return
 }
 
 struct Operator {

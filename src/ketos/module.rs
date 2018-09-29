@@ -36,10 +36,7 @@ impl Module {
     /// Creates a new module using the given scope.
     pub fn new(name: &str, scope: Scope) -> Module {
         let name = scope.add_name(name);
-        Module{
-            name: name,
-            scope: scope,
-        }
+        Module{ name, scope }
     }
 }
 
@@ -81,9 +78,9 @@ impl ModuleBuilder {
         self.add_value_with_name(name, |name| Value::Function(Function{
                 name: name,
                 sys_fn: SystemFn{
-                    arity: arity,
-                    callback: callback,
-                    doc: doc,
+                    arity,
+                    callback,
+                    doc,
                 },
             }))
     }
@@ -356,10 +353,10 @@ pub struct FileModuleLoader {
 }
 
 /// File extension for `ketos` source files.
-pub const FILE_EXTENSION: &'static str = "ket";
+pub const FILE_EXTENSION: &str = "ket";
 
 /// File extension for `ketos` compiled bytecode files.
-pub const COMPILED_FILE_EXTENSION: &'static str = "ketc";
+pub const COMPILED_FILE_EXTENSION: &str = "ketc";
 
 impl FileModuleLoader {
     /// Creates a new `FileModuleLoader` that will search the current

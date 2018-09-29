@@ -78,10 +78,7 @@ impl Value {
     /// Returns a value containing a foreign function.
     pub fn new_foreign_fn<F>(name: Name, f: F) -> Value
             where F: AnyValue + Fn(&Context, &mut [Value]) -> Result<Value, Error> {
-        Value::new_foreign(ForeignFn{
-            name: name,
-            f: f,
-        })
+        Value::new_foreign(ForeignFn{ name, f })
     }
 
     /// Compares two values; returns an error if the values cannot be compared.
@@ -302,8 +299,7 @@ impl Value {
                 let denom = r.denom().bits();
                 1 + numer + denom
             }
-            Value::Struct(ref s) =>
-                1 + s.fields().iter().map(|f| f.size()).fold(0, |a, b| a + b),
+            Value::Struct(ref s) => 1 + s.fields().iter().map(|f| f.size()).sum::<usize>(),
             Value::StructDef(ref d) => d.def().size(),
             Value::String(ref s) => 1 + s.len(),
             Value::Bytes(ref s) => 1 + s.len(),
@@ -312,11 +308,9 @@ impl Value {
             Value::CommaAt(ref v, _) |
             Value::Quasiquote(ref v, _) |
             Value::Quote(ref v, _) => 1 + v.size(),
-            Value::List(ref li) =>
-                1 + li.iter().map(|v| v.size()).fold(0, |a, b| a + b),
+            Value::List(ref li) => 1 + li.iter().map(|v| v.size()).sum::<usize>(),
             Value::Lambda(ref l) =>
-                1 + l.values.as_ref().map_or(0,
-                    |v| v.iter().map(|v| v.size()).fold(0, |a, b| a + b)),
+                1 + l.values.as_ref().map_or(0, |v| v.iter().map(|v| v.size()).sum()),
             Value::Foreign(ref v) => v.size(),
             _ => 1
         }
