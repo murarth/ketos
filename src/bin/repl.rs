@@ -1,5 +1,5 @@
 extern crate dirs;
-#[macro_use] extern crate gumdrop;
+extern crate gumdrop;
 extern crate ketos;
 extern crate linefeed;
 

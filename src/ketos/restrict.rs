@@ -85,10 +85,10 @@ pub enum RestrictError {
 
 impl RestrictError {
     /// Returns a string describing the error that occurred.
-    pub fn description(&self) -> &'static str {
+    pub fn description(self) -> &'static str {
         use self::RestrictError::*;
 
-        match *self {
+        match self {
             ExecutionTimeExceeded => "execution time exceeded",
             CallStackExceeded => "max call stack exceeded",
             ValueStackExceeded => "max value stack exceeded",

@@ -119,7 +119,7 @@ mod test {
         let args = [];
 
         let f = || -> Result<(), Error> {
-            let () = ketos_args!(&args, ());
+            ketos_args!(&args, ());
             ketos_args!(&args, ());
 
             Ok(())

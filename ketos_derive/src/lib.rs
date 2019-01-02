@@ -250,7 +250,7 @@ pub fn derive_struct_value(input: TokenStream) -> TokenStream {
         // It must not conflict with any other bindings in method implementations.
         let local_ident = Ident::from(format!("__{}", ident));
 
-        local.push(local_ident.clone());
+        local.push(local_ident);
         field_name.push(ident.clone());
         field_str.push(field_s);
 

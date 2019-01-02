@@ -23,7 +23,7 @@ impl Name {
     }
 
     /// Returns the integer key referring to this name.
-    pub fn get(&self) -> u32 {
+    pub fn get(self) -> u32 {
         self.0
     }
 }
@@ -323,10 +323,7 @@ pub struct NameInputConversion {
 impl NameInputConversion {
     /// Creates a new `NameInputConversion` from a local-to-global mapping.
     pub fn new() -> NameInputConversion {
-        NameInputConversion{
-            map: HashMap::new(),
-            next_value: NUM_STANDARD_NAMES,
-        }
+        NameInputConversion::default()
     }
 
     /// Returns the global name value for the given module-local value.
@@ -338,6 +335,15 @@ impl NameInputConversion {
     pub fn insert(&mut self, name: Name) {
         self.map.insert(self.next_value, name);
         self.next_value += 1;
+    }
+}
+
+impl Default for NameInputConversion {
+    fn default() -> NameInputConversion {
+        NameInputConversion{
+            map: HashMap::new(),
+            next_value: NUM_STANDARD_NAMES,
+        }
     }
 }
 
@@ -404,9 +410,7 @@ pub struct NameStore {
 impl NameStore {
     /// Constructs an empty `NameStore`.
     pub fn new() -> NameStore {
-        NameStore{
-            names: Vec::new(),
-        }
+        NameStore::default()
     }
 
     /// Adds a name to the `NameStore` if it is not present.
@@ -447,6 +451,14 @@ impl NameStore {
     /// Iterates over all stored names.
     pub fn iter(&self) -> NameIter {
         NameIter(self.names.iter())
+    }
+}
+
+impl Default for NameStore {
+    fn default() -> NameStore {
+        NameStore{
+            names: Vec::new(),
+        }
     }
 }
 

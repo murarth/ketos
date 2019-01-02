@@ -62,16 +62,7 @@ macro_rules! exclude {
 impl Builder {
     /// Creates a new `Builder`.
     pub fn new() -> Builder {
-        Builder{
-            name: None,
-            context: None,
-            scope: None,
-            restrict: None,
-            io: None,
-            struct_defs: None,
-            module_loader: None,
-            search_paths: None,
-        }
+        Builder::default()
     }
 
     /// Sets the name of the new scope.
@@ -197,6 +188,21 @@ impl Builder {
     }
 }
 
+impl Default for Builder {
+    fn default() -> Builder {
+        Builder{
+            name: None,
+            context: None,
+            scope: None,
+            restrict: None,
+            io: None,
+            struct_defs: None,
+            module_loader: None,
+            search_paths: None,
+        }
+    }
+}
+
 /// Provides a context in which to compile and execute code.
 ///
 /// Values created by one interpreter are exclusive to that interpreter.
@@ -213,7 +219,7 @@ pub struct Interpreter {
 impl Interpreter {
     /// Creates a new `Interpreter`.
     pub fn new() -> Interpreter {
-        Interpreter::with_loader(Box::new(BuiltinModuleLoader))
+        Interpreter::default()
     }
 
     /// Creates a new `Interpreter` using the given `ModuleLoader` instance.
@@ -485,5 +491,11 @@ impl Interpreter {
             .collect::<Result<Vec<_>, _>>()?;
         self.execute_program(code)?;
         self.call_main()
+    }
+}
+
+impl Default for Interpreter {
+    fn default() -> Interpreter {
+        Interpreter::with_loader(Box::new(BuiltinModuleLoader))
     }
 }

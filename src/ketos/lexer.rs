@@ -148,10 +148,7 @@ struct File {
 impl CodeMap {
     /// Creates a new `CodeMap`.
     pub fn new() -> CodeMap {
-        CodeMap{
-            text: String::new(),
-            files: Vec::new(),
-        }
+        CodeMap::default()
     }
 
     /// Adds a source to the codemap, returning its offset in the internal buffer.
@@ -201,6 +198,15 @@ impl CodeMap {
         }
     }
 }
+
+impl Default for CodeMap {
+    fn default() -> CodeMap {
+        CodeMap{
+            text: String::new(),
+            files: Vec::new(),
+        }
+    }
+} 
 
 /// Produces `Token`s from an input string.
 pub struct Lexer<'lex> {

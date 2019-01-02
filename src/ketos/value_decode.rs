@@ -266,7 +266,7 @@ impl<'a, 'de: 'a> Deserializer<'de> for &'a mut VDeserializer<'de> {
 
     fn deserialize_unit<V: Visitor<'de>>(self, visitor: V)
             -> Result<V::Value, ExecError> {
-        let _ = self.next_value().and_then(<()>::from_value_ref)?;
+        self.next_value().and_then(<()>::from_value_ref)?;
         visitor.visit_unit()
     }
 

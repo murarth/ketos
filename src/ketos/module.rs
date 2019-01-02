@@ -164,7 +164,7 @@ impl ModuleCode {
                 |values| values.iter()
                     .filter(|&&(_, ref v)| is_lambda(v))
                     .filter(|&&(name, _)| !scope.is_imported(name))
-                    .map(|pair| pair.clone()).collect()),
+                    .cloned().collect()),
             exports: scope.with_exports(|e| e.clone())
                 .unwrap_or_else(NameSetSlice::default),
             imports: scope.with_imports(|i| i.to_vec()),
@@ -362,7 +362,7 @@ impl FileModuleLoader {
     /// Creates a new `FileModuleLoader` that will search the current
     /// directory for modules.
     pub fn new() -> FileModuleLoader {
-        FileModuleLoader::with_search_paths(vec![PathBuf::new()])
+        FileModuleLoader::default()
     }
 
     /// Creates a new `FileModuleLoader` that will search the given series
@@ -404,6 +404,12 @@ impl FileModuleLoader {
         self.chain.borrow_mut().pop();
 
         r
+    }
+}
+
+impl Default for FileModuleLoader {
+    fn default() -> FileModuleLoader {
+        FileModuleLoader::with_search_paths(vec![PathBuf::new()])
     }
 }
 
