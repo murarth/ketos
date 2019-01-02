@@ -438,8 +438,8 @@ fn format_doc_comment(doc: &str) -> String {
         // Multi-line doc comments may contain "  ;; foo",
         // so we strip leading whitespace, semicolons, then one whitespace char.
         buf.push_str(trim_first(
-            line.trim_left_matches(char::is_whitespace)
-                .trim_left_matches(';'), char::is_whitespace));
+            line.trim_start_matches(char::is_whitespace)
+                .trim_start_matches(';'), char::is_whitespace));
         buf.push('\n');
     }
 
@@ -543,9 +543,9 @@ fn check_integer(ctx: &Context, mut s: &str, base: u32) -> Result<(), RestrictEr
     }
 
     if s.starts_with('-') {
-        s = &s[1..].trim_left_matches('0');
+        s = &s[1..].trim_start_matches('0');
     } else {
-        s = s.trim_left_matches('0');
+        s = s.trim_start_matches('0');
     }
 
     // Approximate the number of bits that could be represented by a number of bytes.
