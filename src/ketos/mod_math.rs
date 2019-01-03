@@ -47,6 +47,8 @@ Computes the four quadrant arctangent of `y` and `x`.
             Some("Hyperbolic cosine function."))
         .add_function("degrees",    fn_degrees, Exact(1),
             Some("Converts a value in radians to degrees."))
+        .add_function("lerp", fn_lerp, Exact(3),
+            Some("Linear interpolation function."))
         .add_function("ln",         fn_ln,      Exact(1),
             Some("Returns the natural logarithm of a number."))
         .add_function("log",        fn_log,     Exact(2), Some("\
@@ -136,6 +138,14 @@ fn fn_cosh(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 fn fn_degrees(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
     let f = get_float(&args[0])?;
     Ok(f.to_degrees().into())
+}
+
+/// `lerp` is the linear interpolation function.
+fn fn_lerp(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
+    let a = get_float(&args[0])?;
+    let b = get_float(&args[1])?;
+    let alpha = get_float(&args[2])?;
+    Ok(((1.0 - alpha) * a + alpha * b).into())
 }
 
 /// `ln` returns the natural logarithm of a number.
