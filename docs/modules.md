@@ -30,6 +30,8 @@ These functions are identical to their Rust counterparts and include:
 `degrees`, `ln`, `log`, `log2`, `log10`, `radians`, `sin`, `sinh`, `sqrt`,
 `tan`, and `tanh`.
 
+Other functions only include `lerp` for now.
+
 Constants included are: `e` (Euler's number) and `pi`.
 
 ## `random`
