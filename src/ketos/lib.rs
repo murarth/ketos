@@ -5,7 +5,7 @@
 //! use ketos::{Interpreter, FromValueRef};
 //!
 //! // Create an interpreter.
-//! let interp = Interpreter::new();
+//! let interp = Interpreter::default();
 //!
 //! // Define a function.
 //! interp.run_code(r#"

@@ -32,7 +32,7 @@ use value::Value;
 /// ```
 /// # use ketos::Builder;
 ///
-/// let interp = Builder::new()
+/// let interp = Builder::default()
 ///     .name("foo")
 ///     // ...
 ///     .finish();
@@ -59,9 +59,9 @@ macro_rules! exclude {
     }
 }
 
-impl Builder {
+impl Default for Builder {
     /// Creates a new `Builder`.
-    pub fn new() -> Builder {
+    fn default() -> Builder {
         Builder{
             name: None,
             context: None,
@@ -73,7 +73,9 @@ impl Builder {
             search_paths: None,
         }
     }
+}
 
+impl Builder {
     /// Sets the name of the new scope.
     pub fn name(mut self, name: &'static str) -> Self {
         exclude!(self.context, "name", "context");
@@ -173,11 +175,11 @@ impl Builder {
     fn build_scope(&mut self) -> Scope {
         let loader = self.build_loader();
 
-        let mut names = NameStore::new();
+        let mut names = NameStore::default();
         let name = names.add(self.name.unwrap_or("main"));
 
         let names = Rc::new(RefCell::new(names));
-        let codemap = Rc::new(RefCell::new(CodeMap::new()));
+        let codemap = Rc::new(RefCell::new(CodeMap::default()));
         let modules = Rc::new(ModuleRegistry::new(loader));
         let io = self.io.take().unwrap_or_else(|| Rc::new(GlobalIo::default()));
         let defs = self.struct_defs.take().unwrap_or_else(
@@ -210,19 +212,21 @@ pub struct Interpreter {
     context: Context,
 }
 
-impl Interpreter {
+impl Default for Interpreter {
     /// Creates a new `Interpreter`.
-    pub fn new() -> Interpreter {
+    fn default() -> Interpreter {
         Interpreter::with_loader(Box::new(BuiltinModuleLoader))
     }
+}
 
+impl Interpreter {
     /// Creates a new `Interpreter` using the given `ModuleLoader` instance.
     pub fn with_loader(loader: Box<ModuleLoader>) -> Interpreter {
-        let mut names = NameStore::new();
+        let mut names = NameStore::default();
         let name = names.add("main");
 
         let names = Rc::new(RefCell::new(names));
-        let codemap = Rc::new(RefCell::new(CodeMap::new()));
+        let codemap = Rc::new(RefCell::new(CodeMap::default()));
         let modules = Rc::new(ModuleRegistry::new(loader));
         let io = Rc::new(GlobalIo::default());
         let defs = Rc::new(RefCell::new(StructDefMap::new()));

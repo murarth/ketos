@@ -20,7 +20,7 @@ struct Thing {
 
 fn main() {
     // First, create the interpreter.
-    let interp = Interpreter::new();
+    let interp = Interpreter::default();
 
     // Before Ketos code can construct a Thing value, it needs to know about it.
     interp.scope().register_struct_value::<Thing>();

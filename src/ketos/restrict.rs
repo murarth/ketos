@@ -19,7 +19,7 @@
 //! use std::rc::Rc;
 //! use ketos::{Builder, GlobalIo, BuiltinModuleLoader, RestrictConfig};
 //!
-//! let interp = Builder::new()
+//! let interp = Builder::default()
 //!     .restrict(RestrictConfig::strict())
 //!     .io(Rc::new(GlobalIo::null()))
 //!     .module_loader(Box::new(BuiltinModuleLoader))
@@ -85,10 +85,10 @@ pub enum RestrictError {
 
 impl RestrictError {
     /// Returns a string describing the error that occurred.
-    pub fn description(&self) -> &'static str {
+    pub fn description(self) -> &'static str {
         use self::RestrictError::*;
 
-        match *self {
+        match self {
             ExecutionTimeExceeded => "execution time exceeded",
             CallStackExceeded => "max call stack exceeded",
             ValueStackExceeded => "max value stack exceeded",

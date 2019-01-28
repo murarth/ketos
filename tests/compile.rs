@@ -5,7 +5,7 @@ use ketos::bytecode::opcodes::*;
 use ketos::name::standard_names;
 
 fn lambda(s: &str) -> Result<Vec<u8>, Error> {
-    let interp = Interpreter::new();
+    let interp = Interpreter::default();
     let _exprs = interp.compile_exprs(s)?;
 
     match interp.scope().get_named_value("test") {

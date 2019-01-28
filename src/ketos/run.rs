@@ -41,7 +41,7 @@ mod test {
 
     #[test]
     fn test_run() {
-        let interp = Interpreter::new();
+        let interp = Interpreter::default();
 
         run_code(interp.context(), "(define foo ())").unwrap();
 

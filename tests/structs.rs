@@ -18,7 +18,7 @@ struct Bar {
 }
 
 fn interp() -> Interpreter {
-    let interp = Interpreter::new();
+    let interp = Interpreter::default();
 
     interp.scope().register_struct_value::<Foo>();
     interp.scope().register_struct_value::<Bar>();

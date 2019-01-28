@@ -11,7 +11,7 @@ use ketos::{
 };
 
 fn run(restrict: RestrictConfig, code: &str) -> Result<(), Error> {
-    let interp = Builder::new()
+    let interp = Builder::default()
         .restrict(restrict)
         .finish();
 

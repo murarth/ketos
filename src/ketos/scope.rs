@@ -57,7 +57,7 @@ impl ImportSet {
     /// Convenience method to create an empty `ImportSet` for the named module.
     pub fn new(module_name: Name) -> ImportSet {
         ImportSet{
-            module_name: module_name,
+            module_name,
             names: Vec::new(),
         }
     }
@@ -78,23 +78,23 @@ impl GlobalScope {
             io: Rc<GlobalIo>,
             struct_defs: Rc<RefCell<StructDefMap>>) -> GlobalScope {
         GlobalScope{
-            name: name,
+            name,
             namespace: RefCell::new(Namespace::new()),
             name_store: names,
-            codemap: codemap,
+            codemap,
             modules: registry,
-            io: io,
-            struct_defs: struct_defs,
+            io,
+            struct_defs,
         }
     }
 
     /// Creates a new global scope with the given name and default environment.
     pub fn default(name: &str) -> GlobalScope {
-        let mut names = NameStore::new();
+        let mut names = NameStore::default();
         let name = names.add(name);
 
         let names = Rc::new(RefCell::new(names));
-        let codemap = Rc::new(RefCell::new(CodeMap::new()));
+        let codemap = Rc::new(RefCell::new(CodeMap::default()));
         let modules = Rc::new(ModuleRegistry::new(Box::new(BuiltinModuleLoader)));
         let io = Rc::new(GlobalIo::default());
         let struct_defs = Rc::new(RefCell::new(StructDefMap::new()));
@@ -517,8 +517,8 @@ impl MasterScope {
 
     fn get_function(name: Name) -> Option<Value> {
         get_system_fn(name).map(|f| Value::Function(Function{
-            name: name,
-            sys_fn: f.clone(),
+            name,
+            sys_fn: *f,
         }))
     }
 }

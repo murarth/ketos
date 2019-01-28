@@ -148,8 +148,8 @@ impl<'a, 'lex> Parser<'a, 'lex> {
     /// Identifiers received from the lexer will be inserted into the given context.
     pub fn new(ctx: &'a Context, lexer: Lexer<'lex>) -> Parser<'a, 'lex> {
         Parser{
-            lexer: lexer,
-            ctx: ctx,
+            lexer,
+            ctx,
             name_cache: HashMap::new(),
             cur_token: None,
         }
@@ -575,7 +575,7 @@ mod test {
     use value::Value;
 
     fn parse(s: &str) -> Result<Value, ParseError> {
-        let interp = Interpreter::new();
+        let interp = Interpreter::default();
 
         let mut p = Parser::new(interp.context(), Lexer::new(s, 0));
         p.parse_single_expr().map_err(|e| {
@@ -608,7 +608,7 @@ mod test {
 
     #[test]
     fn test_lexer_position() {
-        let interp = Interpreter::new();
+        let interp = Interpreter::default();
 
         let mut p = Parser::new(interp.context(),
             Lexer::new("(foo 1 2 3) bar", 0));

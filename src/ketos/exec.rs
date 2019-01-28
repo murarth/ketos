@@ -69,8 +69,8 @@ impl Context {
     /// Creates a new execution context.
     pub fn new(scope: Scope, restrict: RestrictConfig) -> Context {
         Context{
-            scope: scope,
-            restrict: restrict,
+            scope,
+            restrict,
             run_start: Cell::new(None),
             run_level: Cell::new(0),
             memory_held: Cell::new(0),
@@ -265,7 +265,7 @@ impl ExecError {
     /// type is expected, but some other type of value is found.
     pub fn expected(expected: &'static str, v: &Value) -> ExecError {
         ExecError::TypeError{
-            expected: expected,
+            expected,
             found: v.type_name(),
             value: Some(v.clone()),
         }
@@ -276,9 +276,9 @@ impl ExecError {
     pub fn expected_field(struct_name: Name, field: Name,
             expected: Name, v: &Value) -> ExecError {
         ExecError::FieldTypeError{
-            struct_name: struct_name,
-            field: field,
-            expected: expected,
+            struct_name,
+            field,
+            expected,
             found: v.type_name(),
             value: Some(v.clone()),
         }
@@ -519,7 +519,7 @@ impl Machine {
         }
 
         self.start(StackFrame{
-            code: code,
+            code,
             scope: scope.clone(),
             values: None,
             iptr: 0,
@@ -565,7 +565,7 @@ impl Machine {
 
         self.start(StackFrame{
             code: lambda.code,
-            scope: scope,
+            scope,
             values: lambda.values,
             iptr: 0,
             sptr: 0,
@@ -846,11 +846,11 @@ impl Machine {
 
         let old_frame = replace(frame, StackFrame{
             code: lambda.code,
-            scope: scope,
+            scope,
             values: lambda.values,
             iptr: 0,
             sptr: self.stack.len() as u32 - n_args,
-            fn_on_stack: fn_on_stack,
+            fn_on_stack,
         });
 
         self.save_frame(old_frame)?;

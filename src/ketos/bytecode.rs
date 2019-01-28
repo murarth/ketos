@@ -694,11 +694,11 @@ impl JumpInstruction {
     }
 
     /// Length, in bytes, of this jump instruction.
-    pub fn len(&self, short: bool) -> usize {
+    pub fn len(self, short: bool) -> usize {
         use self::JumpInstruction::*;
         let len = if short { 1 } else { 2 };
 
-        match *self {
+        match self {
             Jump |
             JumpIf |
             JumpIfNot |
@@ -838,12 +838,12 @@ impl<'a> CodeReader<'a> {
     }
 
     fn read_operand(&mut self) -> Result<u32, ExecError> {
-        let a = self.read_byte()? as u32;
+        let a = u32::from(self.read_byte()?);
         if a & 0x80 == 0 {
             Ok(a)
         } else {
             let a = (a & 0x7f) << 8;
-            let b = self.read_byte()? as u32;
+            let b = u32::from(self.read_byte()?);
             Ok(a | b)
         }
     }
@@ -862,9 +862,9 @@ pub struct CodeBlock {
     pub next: Option<u32>,
 }
 
-impl CodeBlock {
+impl Default for CodeBlock {
     /// Creates an empty `CodeBlock` with a small reserved buffer.
-    pub fn new() -> CodeBlock {
+    fn default() -> CodeBlock {
         CodeBlock{
             bytes: Vec::with_capacity(16),
             instr_part: None,
@@ -872,7 +872,9 @@ impl CodeBlock {
             next: None,
         }
     }
+}
 
+impl CodeBlock {
     /// Creates an empty `CodeBlock` without reserving data.
     pub fn empty() -> CodeBlock {
         CodeBlock{

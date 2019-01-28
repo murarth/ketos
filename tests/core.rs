@@ -5,14 +5,14 @@ extern crate ketos;
 use ketos::{CompileError, Error, ExecError, Interpreter, FromValue, Value};
 
 fn eval(s: &str) -> Result<String, Error> {
-    let interp = Interpreter::new();
+    let interp = Interpreter::default();
 
     let v = interp.run_single_expr(s, None)?;
     Ok(interp.format_value(&v))
 }
 
 fn eval_str(s: &str) -> Result<String, Error> {
-    let interp = Interpreter::new();
+    let interp = Interpreter::default();
 
     let v = interp.run_single_expr(s, None)?;
 
@@ -21,7 +21,7 @@ fn eval_str(s: &str) -> Result<String, Error> {
 }
 
 fn run(s: &str) -> Result<Vec<String>, Error> {
-    let interp = Interpreter::new();
+    let interp = Interpreter::default();
 
     let c = interp.compile_exprs(s)?;
     c.into_iter().map(|c| interp.execute(c)

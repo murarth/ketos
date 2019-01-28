@@ -145,15 +145,17 @@ struct File {
     begin: BytePos,
 }
 
-impl CodeMap {
+impl Default for CodeMap {
     /// Creates a new `CodeMap`.
-    pub fn new() -> CodeMap {
+    fn default() -> CodeMap {
         CodeMap{
             text: String::new(),
             files: Vec::new(),
         }
     }
+}
 
+impl CodeMap {
     /// Adds a source to the codemap, returning its offset in the internal buffer.
     pub fn add_source(&mut self, text: &str, path: Option<String>) -> BytePos {
         let begin = self.text.len() as BytePos;
@@ -239,7 +241,7 @@ impl<'lex> Lexer<'lex> {
     /// Creates a new `Lexer` to read tokens from the input string.
     pub fn new(input: &str, offset: BytePos) -> Lexer {
         Lexer{
-            input: input,
+            input,
             cur_pos: 0,
             code_offset: offset,
         }
@@ -337,7 +339,7 @@ impl<'lex> Lexer<'lex> {
             self.cur_pos += size as BytePos;
             self.input = &self.input[ind + size..];
 
-            let sp = Span{lo: lo, hi: lo + size as BytePos};
+            let sp = Span{lo, hi: lo + size as BytePos};
 
             return Ok((self.span(sp), tok));
         }
@@ -634,7 +636,7 @@ mod test {
     use parser::ParseErrorKind;
 
     fn sp(lo: BytePos, hi: BytePos) -> Span {
-        Span{lo: lo, hi: hi}
+        Span{lo, hi}
     }
 
     fn tokens(s: &str) -> Vec<(Span, Token)> {

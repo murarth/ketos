@@ -43,7 +43,7 @@ fn eval(interp: &Interpreter, input: &str) -> Result<String, Error> {
 
 #[test]
 fn test_foreign_value() {
-    let interp = Interpreter::new();
+    let interp = Interpreter::default();
 
     interp.scope().add_named_value("my-value", MyType{a: 123}.into());
 
@@ -58,7 +58,7 @@ fn reflect_args(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 
 #[test]
 fn test_raw_foreign_fn() {
-    let interp = Interpreter::new();
+    let interp = Interpreter::default();
 
     interp.scope().add_value_with_name("reflect-args",
         |name| Value::new_foreign_fn(name, reflect_args));
@@ -89,7 +89,7 @@ fn hello(s: &str) -> Result<String, Error> {
 
 #[test]
 fn test_foreign_fn() {
-    let interp = Interpreter::new();
+    let interp = Interpreter::default();
     let scope = interp.scope();
 
     ketos_fn!{ scope => "new-my-type" => fn new_my_type(a: i32) -> MyType }
@@ -108,7 +108,7 @@ fn test_foreign_fn() {
 
 #[test]
 fn test_compare_foreign_value() {
-    let interp = Interpreter::new();
+    let interp = Interpreter::default();
     let scope = interp.scope();
 
     ketos_fn!{ scope => "new-my-type" => fn new_my_type(a: i32) -> MyType }

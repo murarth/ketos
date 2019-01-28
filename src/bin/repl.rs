@@ -81,7 +81,7 @@ fn run() -> i32 {
 
     paths.extend(opts.include.into_iter().map(PathBuf::from));
 
-    let mut builder = Builder::new()
+    let mut builder = Builder::default()
         .search_paths(paths);
 
     if let Some(ref res) = opts.restrict {

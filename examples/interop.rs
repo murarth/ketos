@@ -61,7 +61,7 @@ fn count(counter: &Counter) -> Result<u32, Error> {
 
 fn main() {
     // First, create an interpreter.
-    let interp = Interpreter::new();
+    let interp = Interpreter::default();
 
     // Create a shared `Hello` value.
     let hello = Rc::new(Hello::new("world".into()));

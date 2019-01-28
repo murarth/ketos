@@ -76,7 +76,7 @@ impl ModuleBuilder {
     pub fn add_function(self, name: &str,
             callback: FunctionImpl, arity: Arity, doc: Option<&'static str>) -> Self {
         self.add_value_with_name(name, |name| Value::Function(Function{
-                name: name,
+                name,
                 sys_fn: SystemFn{
                     arity,
                     callback,
@@ -154,7 +154,7 @@ impl ModuleCode {
         code.retain(|code| !code.is_trivial());
 
         ModuleCode{
-            code: code,
+            code,
             constants: scope.with_constants(
                 |consts| consts.iter().cloned().collect()),
             macros: scope.with_macros(
@@ -164,7 +164,7 @@ impl ModuleCode {
                 |values| values.iter()
                     .filter(|&&(_, ref v)| is_lambda(v))
                     .filter(|&&(name, _)| !scope.is_imported(name))
-                    .map(|pair| pair.clone()).collect()),
+                    .cloned().collect()),
             exports: scope.with_exports(|e| e.clone())
                 .unwrap_or_else(NameSetSlice::default),
             imports: scope.with_imports(|i| i.to_vec()),
@@ -219,7 +219,7 @@ impl ModuleRegistry {
     /// to load new modules.
     pub fn new(loader: Box<ModuleLoader>) -> ModuleRegistry {
         ModuleRegistry{
-            loader: loader,
+            loader,
             modules: RefCell::new(NameMap::new()),
         }
     }
@@ -272,7 +272,7 @@ pub trait ModuleLoader {
             where Self: Sized {
         ChainModuleLoader{
             first: self,
-            second: second,
+            second,
         }
     }
 }
@@ -358,19 +358,21 @@ pub const FILE_EXTENSION: &str = "ket";
 /// File extension for `ketos` compiled bytecode files.
 pub const COMPILED_FILE_EXTENSION: &str = "ketc";
 
-impl FileModuleLoader {
+impl Default for FileModuleLoader {
     /// Creates a new `FileModuleLoader` that will search the current
     /// directory for modules.
-    pub fn new() -> FileModuleLoader {
+    fn default() -> FileModuleLoader {
         FileModuleLoader::with_search_paths(vec![PathBuf::new()])
     }
+}
 
+impl FileModuleLoader {
     /// Creates a new `FileModuleLoader` that will search the given series
     /// of directories to load modules.
     pub fn with_search_paths(paths: Vec<PathBuf>) -> FileModuleLoader {
         FileModuleLoader{
             chain: RefCell::new(Vec::new()),
-            paths: paths,
+            paths,
             read_bytecode: true,
             write_bytecode: true,
         }
@@ -436,7 +438,7 @@ impl ModuleLoader for FileModuleLoader {
                                 m.load_in_context(&ctx)?;
 
                                 Ok(Module{
-                                    name: name,
+                                    name,
                                     scope: ctx.scope().clone(),
                                 })
                             }
@@ -565,7 +567,7 @@ fn load_module_from_file(ctx: Context, name: Name,
     }
 
     Ok(Module{
-        name: name,
+        name,
         scope: ctx.scope().clone(),
     })
 }
@@ -617,7 +619,7 @@ fn check_exports(scope: &Scope, mod_name: Name) -> Result<(), CompileError> {
             if !scope.contains_name(name) {
                 return Err(CompileError::ExportError{
                     module: mod_name,
-                    name: name,
+                    name,
                 });
             }
         }
