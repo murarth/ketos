@@ -1,7 +1,7 @@
 //! Represents any possible value type.
 
 use std::cmp::Ordering;
-use std::f64::{INFINITY, NEG_INFINITY};
+use std::f64::{INFINITY, NEG_INFINITY, EPSILON};
 use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::mem::replace;
@@ -173,7 +173,7 @@ impl Value {
         let eq = match (self, rhs) {
             (&Value::Unit, &Value::Unit) => true,
             (&Value::Bool(a), &Value::Bool(b)) => a == b,
-            (&Value::Float(a), &Value::Float(b)) => a == b,
+            (&Value::Float(a), &Value::Float(b)) => (a - b).abs() < EPSILON,
             (&Value::Integer(ref a), &Value::Integer(ref b)) => a == b,
             (&Value::Ratio(ref a), &Value::Ratio(ref b)) => a == b,
 
@@ -720,7 +720,7 @@ fn coerce_equal_float(f: f64, other: Option<f64>) -> bool {
     if f.is_infinite() || f.is_nan() {
         false
     } else {
-        other.map_or(false, |other| f == other)
+        other.map_or(false, |other| (f - other).abs() < EPSILON)
     }
 }
 

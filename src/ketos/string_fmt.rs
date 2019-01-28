@@ -6,6 +6,7 @@ use std::f64;
 use std::fmt;
 use std::iter::repeat;
 use std::str::CharIndices;
+use std::f64::EPSILON;
 
 use num::ToPrimitive;
 
@@ -575,7 +576,7 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
 
         let arg = self.consume_arg(dir.span)?;
         let is_one = match *arg {
-            Value::Float(f) => f == 1.0,
+            Value::Float(f) => (f - 1.0).abs() < EPSILON,
             Value::Integer(ref i) => i == &Integer::one(),
             Value::Ratio(ref r) => r.numer() == r.denom(),
             ref v => return Err(self.error(dir.span,
