@@ -1654,7 +1654,7 @@ fn make_first_uppercase(s: &mut String, start: usize) {
     };
 
     if ch.is_ascii() {
-        s[ind..ind + 1].make_ascii_uppercase();
+        s[ind..=ind].make_ascii_uppercase();
     } else {
         // Removing and inserting is slow, but what alternative do we have?
         let ch = s.remove(ind);
