@@ -251,6 +251,10 @@ Creates a struct value."),
 "Prints a formatted string to `stdout`."),
     sys_fn!(fn_println,     Min(1),
 "Prints a formatted string to `stdout`, followed by a newline."),
+    sys_fn!(fn_eprint,       Min(1),
+"Prints a formatted string to `stderr`."),
+    sys_fn!(fn_eprintln,     Min(1),
+"Prints a formatted string to `stderr`, followed by a newline."),
     sys_fn!(fn_panic,       Range(0, 1),
 "Immediately interrupts execution upon evaluation.
 
@@ -1387,6 +1391,35 @@ fn fn_println(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 
     scope.io().stdout.write_all(s.as_bytes())?;
     scope.io().stdout.flush()?;
+
+    Ok(Value::Unit)
+}
+
+/// `eprint` prints a formatted string to `stderr`.
+fn fn_eprint(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
+    let fmt = get_string(&args[0])?;
+    let scope = ctx.scope();
+
+    let s = format_string(&scope.borrow_names(), fmt, &args[1..])?;
+
+    scope.io().stderr.write_all(s.as_bytes())?;
+    scope.io().stderr.flush()?;
+
+    Ok(Value::Unit)
+}
+
+/// `println` prints a formatted string to `stdout`, followed by a newline.
+fn fn_eprintln(ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
+    let fmt = get_string(&args[0])?;
+    let scope = ctx.scope();
+
+    let mut s = format_string(&scope.borrow_names(), fmt, &args[1..])?;
+    if !s.ends_with('\n') {
+        s.push('\n');
+    }
+
+    scope.io().stderr.write_all(s.as_bytes())?;
+    scope.io().stderr.flush()?;
 
     Ok(Value::Unit)
 }

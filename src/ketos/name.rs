@@ -169,74 +169,76 @@ standard_names!{
     "format" => FORMAT = 63,
     "print" => PRINT = 64,
     "println" => PRINTLN = 65,
-    "panic" => PANIC = 66,
-    "xor" => XOR = 67,
-    "not" => NOT = 68,
+    "eprint" => EPRINT = 66,
+    "eprintln" => EPRINTLN = 67,
+    "panic" => PANIC = 68,
+    "xor" => XOR = 69,
+    "not" => NOT = 70,
     // End of names referring to system functions.
     // The constant `NUM_SYSTEM_FNS` below should be one greater than
     // the value immediately above this comment.
 
     // Boolean names; the parser will replace these with boolean values.
     // These names must follow immediately after system function names.
-    "false" => FALSE = 69,
-    "true" => TRUE = 70,
+    "false" => FALSE = 71,
+    "true" => TRUE = 72,
     // End of names referring to standard values.
     // The constant `NUM_STANDARD_VALUES` below should be one greater than
     // the value immediately above this comment.
 
     // Special operators follow; these are not represented as values in global
     // scope. They are only handled by the compiler.
-    "apply" => APPLY = 71,
-    "do" => DO = 72,
-    "let" => LET = 73,
-    "define" => DEFINE = 74,
-    "macro" => MACRO = 75,
-    "struct" => STRUCT = 76,
-    "if" => IF = 77,
-    "and" => AND = 78,
-    "or" => OR = 79,
-    "case" => CASE = 80,
-    "cond" => COND = 81,
-    "lambda" => LAMBDA = 82,
-    "export" => EXPORT = 83,
-    "use" => USE = 84,
-    "const" => CONST = 85,
-    "set-module-doc" => SET_MODULE_DOC = 86,
+    "apply" => APPLY = 73,
+    "do" => DO = 74,
+    "let" => LET = 75,
+    "define" => DEFINE = 76,
+    "macro" => MACRO = 77,
+    "struct" => STRUCT = 78,
+    "if" => IF = 79,
+    "and" => AND = 80,
+    "or" => OR = 81,
+    "case" => CASE = 82,
+    "cond" => COND = 83,
+    "lambda" => LAMBDA = 84,
+    "export" => EXPORT = 85,
+    "use" => USE = 86,
+    "const" => CONST = 87,
+    "set-module-doc" => SET_MODULE_DOC = 88,
 
     // Just plain names follow; these are used by system functions or operators
     // to delineate syntactical constructs or just as name values.
-    "all" => ALL = 87,
-    "else" => ELSE = 88,
-    "optional" => OPTIONAL = 89,
-    "key" => KEY = 90,
-    "rest" => REST = 91,
-    "unbound" => UNBOUND = 92,
-    "unit" => UNIT = 93,
-    "bool" => BOOL = 94,
-    "char" => CHAR = 95,
-    "integer" => INTEGER = 96,
-    "ratio" => RATIO = 97,
-    "struct-def" => STRUCT_DEF = 98,
-    "keyword" => KEYWORD = 99,
-    "object" => OBJECT = 100,
-    "name" => NAME = 101,
-    "number" => NUMBER = 102,
-    "function" => FUNCTION = 103,
+    "all" => ALL = 89,
+    "else" => ELSE = 90,
+    "optional" => OPTIONAL = 91,
+    "key" => KEY = 92,
+    "rest" => REST = 93,
+    "unbound" => UNBOUND = 94,
+    "unit" => UNIT = 95,
+    "bool" => BOOL = 96,
+    "char" => CHAR = 97,
+    "integer" => INTEGER = 98,
+    "ratio" => RATIO = 99,
+    "struct-def" => STRUCT_DEF = 100,
+    "keyword" => KEYWORD = 101,
+    "object" => OBJECT = 102,
+    "name" => NAME = 103,
+    "number" => NUMBER = 104,
+    "function" => FUNCTION = 105,
 }
 
 /// Number of standard names
-pub const NUM_STANDARD_NAMES: u32 = 104;
+pub const NUM_STANDARD_NAMES: u32 = 106;
 
 /// Number of names, starting at `0`, which refer to system functions.
-pub const NUM_SYSTEM_FNS: usize = 69;
+pub const NUM_SYSTEM_FNS: usize = 71;
 
 /// Number of names, starting at `0`, which refer to standard values.
-pub const NUM_STANDARD_VALUES: u32 = 71;
+pub const NUM_STANDARD_VALUES: u32 = 73;
 
 /// First standard name which refers to a system operator.
 pub const SYSTEM_OPERATORS_BEGIN: u32 = NUM_STANDARD_VALUES;
 /// One-past-the-end of standard names which refer to system operators.
-pub const SYSTEM_OPERATORS_END: u32 = 87;
+pub const SYSTEM_OPERATORS_END: u32 = 89;
 
 /// Number of system operators, beginning at `SYSTEM_OPERATORS_BEGIN`.
 pub const NUM_SYSTEM_OPERATORS: usize =

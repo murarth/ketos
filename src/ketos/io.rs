@@ -12,24 +12,28 @@ use name::{NameDisplay, NameStore};
 pub struct GlobalIo {
     /// Shared standard output writer
     pub stdout: Rc<SharedWrite>,
+
+    /// Shared standard error writer
+    pub stderr: Rc<SharedWrite>,
 }
 
 impl GlobalIo {
-    /// Creates a `GlobalIo` instance using the given `stdout` writer.
-    pub fn new(stdout: Rc<SharedWrite>) -> GlobalIo {
-        GlobalIo{ stdout }
+    /// Creates a `GlobalIo` instance using the given `stdout` and `stderr`
+    /// writers.
+    pub fn new(stdout: Rc<SharedWrite>, stderr: Rc<SharedWrite>) -> GlobalIo {
+        GlobalIo{ stdout, stderr }
     }
 
-    /// Creates a `GlobalIo` instance whose `stdout` ignores all output.
+    /// Creates a `GlobalIo` instance that ignores all output.
     pub fn null() -> GlobalIo {
-        GlobalIo::new(Rc::new(Sink))
+        GlobalIo::new(Rc::new(Sink), Rc::new(Sink))
     }
 }
 
 impl Default for GlobalIo {
-    /// Creates a `GlobalIo` instance using standard output writer.
+    /// Creates a `GlobalIo` instance using `stdout`/`stderr` writers.
     fn default() -> GlobalIo {
-        GlobalIo::new(Rc::new(io::stdout()))
+        GlobalIo::new(Rc::new(io::stdout()), Rc::new(io::stderr()))
     }
 }
 
