@@ -1054,7 +1054,7 @@ value_from!{ String; s => Value::String(RcString::new(s)) }
 value_from!{ Bytes; s => Value::Bytes(s) }
 value_from!{ PathBuf; p => Value::Path(p) }
 value_from!{ OsString; s => Value::Path(PathBuf::from(s)) }
-value_from!{ f32; f => Value::Float(f as f64) }
+value_from!{ f32; f => Value::Float(f64::from(f)) }
 value_from!{ f64; f => Value::Float(f) }
 
 impl<'a> From<&'a str> for Value {
