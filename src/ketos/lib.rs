@@ -25,6 +25,8 @@
 //! See `examples/` for more examples on interacting with the Ketos interpreter.
 
 #![deny(missing_docs)]
+#![allow(clippy::new_without_default)]
+#![allow(clippy::float_cmp)]
 
 extern crate byteorder;
 extern crate num;
