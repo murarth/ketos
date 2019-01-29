@@ -52,9 +52,9 @@ impl IoError {
     /// Creates a new `IoError`.
     pub fn new(mode: IoMode, path: &Path, err: io::Error) -> IoError {
         IoError{
-            mode: mode,
+            mode,
             path: path.to_owned(),
-            err: err,
+            err,
         }
     }
 }

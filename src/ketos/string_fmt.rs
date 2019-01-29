@@ -161,8 +161,8 @@ impl Group {
         }
     }
 
-    fn close_delim(&self) -> char {
-        match *self {
+    fn close_delim(self) -> char {
+        match self {
             Group::CaseConversion => ')',
             Group::Conditional => ']',
             Group::Iteration => '}',
@@ -198,7 +198,7 @@ struct FieldParser<'a> {
 
 impl<'a> FieldParser<'a> {
     fn new(s: &str) -> FieldParser {
-        FieldParser{s: s, chars: s.char_indices()}
+        FieldParser{s, chars: s.char_indices()}
     }
 
     fn rest(mut self) -> &'a str {
@@ -252,8 +252,8 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
             fmt: s,
             full_fmt: s,
             chars: s.char_indices(),
-            values: values,
-            names: names,
+            values,
+            names,
             groups: Vec::new(),
             close_dir: None,
             terminate: false,
@@ -461,10 +461,10 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
                 }
                 Some(ch) => {
                     return Ok(Directive{
-                        at: at,
-                        colon: colon,
+                        at,
+                        colon,
                         command: ch.to_ascii_lowercase(),
-                        fields: fields,
+                        fields,
                         span: self.span_start(start),
                     })
                 }
@@ -1456,7 +1456,7 @@ impl<'fmt, 'names, 'value> StringFormatter<'fmt, 'names, 'value> {
         ExecError::FormatError{
             fmt: self.full_fmt.to_owned().into_boxed_str(),
             span: Span{lo: span.lo + off, hi: span.hi + off},
-            err: err,
+            err,
         }
     }
 
@@ -1654,7 +1654,7 @@ fn make_first_uppercase(s: &mut String, start: usize) {
     };
 
     if ch.is_ascii() {
-        s[ind..ind + 1].make_ascii_uppercase();
+        s[ind..=ind].make_ascii_uppercase();
     } else {
         // Removing and inserting is slow, but what alternative do we have?
         let ch = s.remove(ind);

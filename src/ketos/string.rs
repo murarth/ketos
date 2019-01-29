@@ -63,7 +63,7 @@ impl<'a> StringReader<'a> {
             start: pos,
             last_index: 0,
             end_index: 0,
-            ty: ty,
+            ty,
         }
     }
 
