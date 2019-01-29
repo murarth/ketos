@@ -239,12 +239,12 @@ pub fn read_bytecode<R: Read>(r: &mut R, path: &Path, ctx: &Context)
     Ok(ModuleCode{
         code: exprs,
         constants: consts,
-        macros: macros,
-        values: values,
+        macros,
+        values,
         exports: exports.into_slice(),
-        imports: imports,
+        imports,
         module_doc: doc,
-        docs: docs,
+        docs,
     })
 }
 
@@ -371,7 +371,7 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
     fn new(ctx: &'a Context, data: &'data [u8]) -> ValueDecoder<'a, 'data> {
         ValueDecoder{
             data: Cursor::new(data),
-            ctx: ctx,
+            ctx,
         }
     }
 
@@ -557,14 +557,14 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
         }
 
         Ok(Code{
-            name: name,
+            name,
             consts: consts.into_boxed_slice(),
             code: code.into_boxed_slice(),
             kw_params: kw_params.into_boxed_slice(),
-            n_params: n_params,
-            req_params: req_params,
-            flags: flags,
-            doc: doc,
+            n_params,
+            req_params,
+            flags,
+            doc,
         })
     }
 

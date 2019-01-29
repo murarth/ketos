@@ -241,7 +241,7 @@ impl<'a> Compiler<'a> {
             stack: Vec::new(),
             stack_offset: 0,
             captures: Vec::new(),
-            outer: outer,
+            outer,
             self_name: name,
             macro_recursion: 0,
             trace: Vec::new(),
@@ -347,7 +347,7 @@ impl<'a> Compiler<'a> {
 
         Ok(Code{
             name: None,
-            code: code,
+            code,
             consts: consts.into_boxed_slice(),
             kw_params: vec![].into_boxed_slice(),
             n_params: 0,
@@ -443,13 +443,13 @@ impl<'a> Compiler<'a> {
         let captures = replace(&mut self.captures, Vec::new());
 
         let code = Code{
-            name: name,
-            code: code,
+            name,
+            code,
             consts: consts.into_boxed_slice(),
             kw_params: kw_names.into_boxed_slice(),
             n_params: n_params as u32,
-            req_params: req_params,
-            flags: flags,
+            req_params,
+            flags,
             doc: None,
         };
 
@@ -545,7 +545,7 @@ impl<'a> Compiler<'a> {
                                 if !sys_fn.arity.accepts(n_args) {
                                     self.set_trace_expr(&value);
                                     return Err(From::from(CompileError::ArityError{
-                                        name: name,
+                                        name,
                                         expected: sys_fn.arity,
                                         found: n_args,
                                     }));
@@ -889,7 +889,7 @@ impl<'a> Compiler<'a> {
         if !op.arity.accepts(n_args) {
             self.set_trace_expr(expr);
             Err(From::from(CompileError::ArityError{
-                name: name,
+                name,
                 expected: op.arity,
                 found: n_args,
             }))
@@ -1628,7 +1628,7 @@ fn eval_system_fn(compiler: &mut Compiler, name: Name, args: &[Value])
 
     if !sys_fn.arity.accepts(n_args) {
         return Err(From::from(CompileError::ArityError{
-            name: name,
+            name,
             expected: sys_fn.arity,
             found: n_args,
         }));

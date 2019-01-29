@@ -57,7 +57,7 @@ impl ImportSet {
     /// Convenience method to create an empty `ImportSet` for the named module.
     pub fn new(module_name: Name) -> ImportSet {
         ImportSet{
-            module_name: module_name,
+            module_name,
             names: Vec::new(),
         }
     }
@@ -78,13 +78,13 @@ impl GlobalScope {
             io: Rc<GlobalIo>,
             struct_defs: Rc<RefCell<StructDefMap>>) -> GlobalScope {
         GlobalScope{
-            name: name,
+            name,
             namespace: RefCell::new(Namespace::new()),
             name_store: names,
-            codemap: codemap,
+            codemap,
             modules: registry,
-            io: io,
-            struct_defs: struct_defs,
+            io,
+            struct_defs,
         }
     }
 
@@ -517,7 +517,7 @@ impl MasterScope {
 
     fn get_function(name: Name) -> Option<Value> {
         get_system_fn(name).map(|f| Value::Function(Function{
-            name: name,
+            name,
             sys_fn: f.clone(),
         }))
     }

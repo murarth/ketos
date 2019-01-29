@@ -148,8 +148,8 @@ impl<'a, 'lex> Parser<'a, 'lex> {
     /// Identifiers received from the lexer will be inserted into the given context.
     pub fn new(ctx: &'a Context, lexer: Lexer<'lex>) -> Parser<'a, 'lex> {
         Parser{
-            lexer: lexer,
-            ctx: ctx,
+            lexer,
+            ctx,
             name_cache: HashMap::new(),
             cur_token: None,
         }

@@ -340,7 +340,7 @@ impl Lambda {
     /// Creates a new `Lambda`.
     pub fn new(code: Rc<Code>, scope: &Scope) -> Lambda {
         Lambda{
-            code: code,
+            code,
             scope: Rc::downgrade(scope),
             values: None,
         }
@@ -349,8 +349,8 @@ impl Lambda {
     /// Creates a new `Lambda` enclosing a set of values.
     pub fn new_closure(code: Rc<Code>, scope: WeakScope, values: Box<[Value]>) -> Lambda {
         Lambda{
-            code: code,
-            scope: scope,
+            code,
+            scope,
             values: Some(Rc::new(values)),
         }
     }

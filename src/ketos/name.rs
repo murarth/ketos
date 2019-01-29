@@ -358,7 +358,7 @@ impl<'a> NameOutputConversion<'a> {
         NameOutputConversion{
             names: Vec::new(),
             map: HashMap::new(),
-            store: store,
+            store,
         }
     }
 
