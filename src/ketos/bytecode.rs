@@ -838,12 +838,12 @@ impl<'a> CodeReader<'a> {
     }
 
     fn read_operand(&mut self) -> Result<u32, ExecError> {
-        let a = self.read_byte()? as u32;
+        let a = u32::from(self.read_byte()?);
         if a & 0x80 == 0 {
             Ok(a)
         } else {
             let a = (a & 0x7f) << 8;
-            let b = self.read_byte()? as u32;
+            let b = u32::from(self.read_byte()?);
             Ok(a | b)
         }
     }

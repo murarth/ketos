@@ -450,22 +450,22 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
                 Ok(Value::StructDef(Rc::new(StructDef::new(name, Box::new(def)))))
             }
             QUASI_QUOTE => {
-                let n = self.read_u8()? as u32;
+                let n = u32::from(self.read_u8()?);
                 self.read_value(names).map(|v| v.quasiquote(n))
             }
             QUASI_QUOTE_ONE => self.read_value(names).map(|v| v.quasiquote(1)),
             COMMA => {
-                let n = self.read_u8()? as u32;
+                let n = u32::from(self.read_u8()?);
                 self.read_value(names).map(|v| v.comma(n))
             }
             COMMA_ONE => self.read_value(names).map(|v| v.comma(1)),
             COMMA_AT => {
-                let n = self.read_u8()? as u32;
+                let n = u32::from(self.read_u8()?);
                 self.read_value(names).map(|v| v.comma_at(n))
             }
             COMMA_AT_ONE => self.read_value(names).map(|v| v.comma_at(1)),
             QUOTE => {
-                let n = self.read_u8()? as u32;
+                let n = u32::from(self.read_u8()?);
                 self.read_value(names).map(|v| v.quote(n))
             }
             QUOTE_ONE => self.read_value(names).map(|v| v.quote(1)),
@@ -499,7 +499,7 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
     fn read_code(&mut self, names: &NameInputConversion) -> Result<Code, DecodeError> {
         use bytecode::code_flags::*;
 
-        let flags = self.read_u8()? as u32;
+        let flags = u32::from(self.read_u8()?);
 
         if flags & ALL_FLAGS != flags {
             return Err(DecodeError::InvalidCodeFlags(flags));
@@ -608,13 +608,13 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
     }
 
     fn read_uint(&mut self) -> Result<u32, DecodeError> {
-        let hi = self.read_u8()? as u32;
+        let hi = u32::from(self.read_u8()?);
 
         if hi & 0x80 == 0 {
             Ok(hi)
         } else {
             let hi = (hi & 0x7f) << 8;
-            let lo = self.read_u8()? as u32;
+            let lo = u32::from(self.read_u8()?);
             Ok(hi | lo)
         }
     }
