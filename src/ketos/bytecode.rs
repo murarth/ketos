@@ -694,11 +694,11 @@ impl JumpInstruction {
     }
 
     /// Length, in bytes, of this jump instruction.
-    pub fn len(&self, short: bool) -> usize {
+    pub fn len(self, short: bool) -> usize {
         use self::JumpInstruction::*;
         let len = if short { 1 } else { 2 };
 
-        match *self {
+        match self {
             Jump |
             JumpIf |
             JumpIfNot |

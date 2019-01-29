@@ -161,8 +161,8 @@ impl Group {
         }
     }
 
-    fn close_delim(&self) -> char {
-        match *self {
+    fn close_delim(self) -> char {
+        match self {
             Group::CaseConversion => ')',
             Group::Conditional => ']',
             Group::Iteration => '}',

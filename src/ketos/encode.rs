@@ -134,11 +134,11 @@ pub fn read_bytecode<R: Read>(r: &mut R, path: &Path, ctx: &Context)
 
     r.read_exact(&mut buf)
         .map_err(|e| IoError::new(IoMode::Read, path, e))?;
-    check_magic_number(&buf)?;
+    check_magic_number(buf)?;
 
     r.read_exact(&mut buf)
         .map_err(|e| IoError::new(IoMode::Read, path, e))?;
-    check_version(&buf)?;
+    check_version(buf)?;
 
     let mut buf = Vec::new();
     r.read_to_end(&mut buf)
@@ -340,16 +340,16 @@ pub fn write_bytecode<W: Write>(w: &mut W, path: &Path, module: &ModuleCode,
     Ok(())
 }
 
-fn check_magic_number(num: &[u8; 4]) -> Result<(), DecodeError> {
-    if num == MAGIC_NUMBER {
+fn check_magic_number(num: [u8; 4]) -> Result<(), DecodeError> {
+    if &num == MAGIC_NUMBER {
         Ok(())
     } else {
-        Err(DecodeError::IncorrectMagicNumber(*num))
+        Err(DecodeError::IncorrectMagicNumber(num))
     }
 }
 
-fn check_version(num: &[u8; 4]) -> Result<(), DecodeError> {
-    let version = BigEndian::read_u32(num);
+fn check_version(num: [u8; 4]) -> Result<(), DecodeError> {
+    let version = BigEndian::read_u32(&num);
 
     if version == BYTECODE_VERSION {
         Ok(())

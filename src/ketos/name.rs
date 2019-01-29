@@ -23,7 +23,7 @@ impl Name {
     }
 
     /// Returns the integer key referring to this name.
-    pub fn get(&self) -> u32 {
+    pub fn get(self) -> u32 {
         self.0
     }
 }
