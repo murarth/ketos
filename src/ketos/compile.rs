@@ -488,24 +488,24 @@ impl<'a> Compiler<'a> {
                         if self.load_local_name(name)? {
                             self.push_instruction(Instruction::Push)?;
                             pushed_fn = true;
-                        } else if self.self_name == Some(name) {
-                            () // This is handled later
-                        } else if self.is_macro(name) {
-                            self.trace.push(TraceItem::CallMacro(
-                                self.ctx.scope().name(), name));
+                        } else if self.self_name != Some(name) {
+                            if self.is_macro(name) {
+                                self.trace.push(TraceItem::CallMacro(
+                                    self.ctx.scope().name(), name));
 
-                            self.macro_recursion += 1;
-                            let v = self.expand_macro(name, &li[1..], &value)?;
-                            self.compile_value(&v)?;
-                            self.macro_recursion -= 1;
+                                self.macro_recursion += 1;
+                                let v = self.expand_macro(name, &li[1..], &value)?;
+                                self.compile_value(&v)?;
+                                self.macro_recursion -= 1;
 
-                            self.trace.pop();
+                                self.trace.pop();
 
-                            return Ok(());
-                        } else if is_system_operator(name) {
-                            return self.compile_operator(name, &li[1..], &value);
-                        } else if self.specialize_call(name, &li[1..])? {
-                            return Ok(());
+                                return Ok(());
+                            } else if is_system_operator(name) {
+                                return self.compile_operator(name, &li[1..], &value);
+                            } else if self.specialize_call(name, &li[1..])? {
+                                return Ok(());
+                            }
                         }
 
                         self.trace.push(TraceItem::CallCode(
