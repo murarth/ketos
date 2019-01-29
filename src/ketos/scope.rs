@@ -518,7 +518,7 @@ impl MasterScope {
     fn get_function(name: Name) -> Option<Value> {
         get_system_fn(name).map(|f| Value::Function(Function{
             name,
-            sys_fn: f.clone(),
+            sys_fn: *f,
         }))
     }
 }
