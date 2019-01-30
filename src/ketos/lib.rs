@@ -26,6 +26,7 @@
 
 #![deny(missing_docs)]
 #![allow(clippy::new_without_default)]
+#![allow(clippy::new_without_default_derive)]
 #![allow(clippy::float_cmp)]
 
 extern crate byteorder;
