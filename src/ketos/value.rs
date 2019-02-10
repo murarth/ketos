@@ -565,6 +565,7 @@ macro_rules! ketos_fn {
 /// ```ignore
 /// ketos_closure!(scope, "my-fn", |a: &str| -> String { ... })
 /// ```
+#[macro_export]
 macro_rules! ketos_closure {
     ( $scope:expr, $name:expr, || -> $res:ty $code:block ) => {
         ketos_closure!($scope, $name, | | -> $res $code)
