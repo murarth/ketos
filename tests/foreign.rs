@@ -107,6 +107,22 @@ fn test_foreign_fn() {
 }
 
 #[test]
+fn test_foreign_closure() {
+    let interp = Interpreter::new();
+    let scope = interp.scope();
+
+    ketos_closure!{ scope, "hello",
+        |s: &str| -> String { Ok(format!("Hello, {}!", s)) } }
+
+    let value = 1;
+    ketos_closure!{ scope, "get-value",
+        || -> i32 { Ok(value) } }
+
+    assert_eq!(eval(&interp, r#"(hello "world")"#).unwrap(), r#""Hello, world!""#);
+    assert_eq!(eval(&interp, "(get-value)").unwrap(), "1");
+}
+
+#[test]
 fn test_compare_foreign_value() {
     let interp = Interpreter::new();
     let scope = interp.scope();
