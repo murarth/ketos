@@ -556,6 +556,48 @@ macro_rules! ketos_fn {
     }
 }
 
+/// Similar to `ketos_fn`, this is a convenience macro fo redefining foreign
+/// functions, with automatic conversion between rust and ketos values. The
+/// difference is that this takes a closure instead.
+///
+/// This function is added to the given scope with the given name.
+///
+/// ```ignore
+/// ketos_closure!(scope, "my-fn", |a: &str| -> String { ... })
+/// ```
+#[macro_export]
+macro_rules! ketos_closure {
+    ( $scope:expr, $name:expr, || -> $res:ty $code:block ) => {
+        ketos_closure!($scope, $name, | | -> $res $code)
+    };
+    ( $scope:expr, $name:expr, | $( $arg:ident : $arg_ty:ty ),* | -> $res:ty $code:block ) => {
+        $scope.add_value_with_name($name, |name| Value::new_foreign_fn(name, move |_, args| {
+            let expected = 0 $( + { stringify!($arg); 1 } )*;
+
+            if args.len() != expected {
+                return Err(From::from($crate::exec::ExecError::ArityError{
+                    name: Some(name),
+                    expected: $crate::function::Arity::Exact(expected as u32),
+                    found: args.len() as u32,
+                }));
+            }
+
+            #[allow(unused_mut, unused_variables)]
+            let mut iter = (&*args).iter();
+
+            let f = |$( $arg : $arg_ty ),*| -> Result<$res, Error> { $code };
+            let res = f(
+                $( {
+                    let v = iter.next().unwrap();
+                    <$arg_ty as $crate::value::FromValueRef>::from_value_ref(v)?
+                } ),*
+            )?;
+
+            Ok(<$res as Into<$crate::value::Value>>::into(res))
+        }))
+    }
+}
+
 impl NameDebug for Value {
     fn fmt(&self, names: &NameStore, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
