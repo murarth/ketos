@@ -542,11 +542,11 @@ macro_rules! ketos_fn {
                     }));
                 }
 
-                let mut iter = (&*args).iter();
+                let mut _iter = (&*args).iter();
 
                 let res = $ident(
                     $( {
-                        let v = iter.next().unwrap();
+                        let v = _iter.next().unwrap();
                         <$arg_ty as $crate::value::FromValueRef>::from_value_ref(v)?
                     } ),*
                 )?;
