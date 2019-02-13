@@ -1,6 +1,6 @@
 //! Performs name-based text completion using a `GlobalScope`.
 
-use scope::{GlobalScope, MasterScope};
+use crate::scope::{GlobalScope, MasterScope};
 
 /// Returns a sorted list of possible name completions for the given prefix.
 ///

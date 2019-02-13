@@ -2,12 +2,12 @@
 
 use rand::{thread_rng, Rng};
 
-use error::Error;
-use exec::{Context, ExecError};
-use function::Arity::Exact;
-use module::{Module, ModuleBuilder};
-use scope::Scope;
-use value::Value;
+use crate::error::Error;
+use crate::exec::{Context, ExecError};
+use crate::function::Arity::Exact;
+use crate::module::{Module, ModuleBuilder};
+use crate::scope::Scope;
+use crate::value::Value;
 
 /// Loads the `random` module into the given scope.
 pub fn load(scope: Scope) -> Module {

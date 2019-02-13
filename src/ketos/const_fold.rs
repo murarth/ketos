@@ -1,13 +1,13 @@
 //! Implements constant folding for arithmetic functions.
 
-use error::Error;
-use exec::{Context, ExecError};
-use function::{
+use crate::error::Error;
+use crate::exec::{Context, ExecError};
+use crate::function::{
     add_number, div_number, floor_div_number_step,
     floor_number, sub_number, mul_number,
     bit_and_integer, bit_or_integer, bit_xor_integer,
 };
-use value::Value;
+use crate::value::Value;
 
 /// Describes an operation that can be constant-folded.
 ///

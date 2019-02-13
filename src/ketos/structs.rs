@@ -6,13 +6,13 @@ use std::fmt;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
-use any::AnyValue;
-use error::Error;
-use exec::ExecError;
-use function::value_is;
-use name::{Name, NameMapSlice, NameStore};
-use scope::Scope;
-use value::{ForeignValue, Value};
+use crate::any::AnyValue;
+use crate::error::Error;
+use crate::exec::ExecError;
+use crate::function::value_is;
+use crate::name::{Name, NameMapSlice, NameStore};
+use crate::scope::Scope;
+use crate::value::{ForeignValue, Value};
 
 /// Implements functionality for Ketos `struct` values on a Rust type.
 ///

@@ -9,17 +9,17 @@ use std::rc::Rc;
 
 use num::{Float, Zero};
 
-use bytecode::Code;
-use bytes::Bytes;
-use error::Error;
-use exec::{Context, ExecError};
-use integer::{Integer, Ratio};
-use name::{Name, NUM_SYSTEM_FNS};
-use restrict::RestrictError;
-use scope::{Scope, WeakScope};
-use string_fmt::format_string;
-use structs::StructDef;
-use value::{FromValueRef, Value};
+use crate::bytecode::Code;
+use crate::bytes::Bytes;
+use crate::error::Error;
+use crate::exec::{Context, ExecError};
+use crate::integer::{Integer, Ratio};
+use crate::name::{Name, NUM_SYSTEM_FNS};
+use crate::restrict::RestrictError;
+use crate::scope::{Scope, WeakScope};
+use crate::string_fmt::format_string;
+use crate::structs::StructDef;
+use crate::value::{FromValueRef, Value};
 
 use self::Arity::*;
 
@@ -458,7 +458,7 @@ fn test_zero<T: Zero>(t: &T) -> Result<(), ExecError> {
 ///
 /// The type name `number` will match `integer`, `float`, or `ratio` values.
 pub fn value_is(scope: &Scope, a: &Value, ty: Name) -> bool {
-    use name::standard_names::*;
+    use crate::name::standard_names::*;
 
     match *a {
         Value::Float(_) | Value::Integer(_) | Value::Ratio(_)
@@ -1250,7 +1250,7 @@ fn fn_null(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 }
 
 fn type_of(scope: &Scope, v: &Value) -> Name {
-    use name::standard_names::*;
+    use crate::name::standard_names::*;
 
     match *v {
         Value::Unit => UNIT,

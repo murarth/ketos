@@ -2,12 +2,12 @@
 
 use std::rc::Rc;
 
-use compile::compile;
-use error::Error;
-use exec::{Context, execute};
-use lexer::Lexer;
-use parser::Parser;
-use value::Value;
+use crate::compile::compile;
+use crate::error::Error;
+use crate::exec::{Context, execute};
+use crate::lexer::Lexer;
+use crate::parser::Parser;
+use crate::value::Value;
 
 /// Parses, compiles, and executes the given code within a context.
 pub fn run_code(ctx: &Context, input: &str) -> Result<Value, Error> {
@@ -34,8 +34,8 @@ pub fn run_code(ctx: &Context, input: &str) -> Result<Value, Error> {
 
 #[cfg(test)]
 mod test {
-    use interpreter::Interpreter;
-    use value::Value;
+    use crate::interpreter::Interpreter;
+    use crate::value::Value;
 
     use super::run_code;
 

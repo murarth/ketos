@@ -9,9 +9,9 @@ use std::cell::RefCell;
 use std::fmt::{self, Write};
 use std::mem::replace;
 
-use name::{Name, NameDisplay, NameStore};
-use pretty::pretty_print;
-use value::Value;
+use crate::name::{Name, NameDisplay, NameStore};
+use crate::pretty::pretty_print;
+use crate::value::Value;
 
 /// Represents a series of items, beginning with the outermost context
 /// and culminating with the context in which an error was generated.

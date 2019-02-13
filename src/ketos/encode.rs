@@ -10,19 +10,19 @@ use std::str::from_utf8;
 
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
 
-use bytecode::{BYTECODE_VERSION, Code};
-use bytes::Bytes;
-use error::Error;
-use exec::Context;
-use function::Lambda;
-use integer::{Integer, Ratio, Sign};
-use io::{IoError, IoMode};
-use module::ModuleCode;
-use name::{Name, NameDisplay, NameMap, NameSet, NameStore,
+use crate::bytecode::{BYTECODE_VERSION, Code};
+use crate::bytes::Bytes;
+use crate::error::Error;
+use crate::exec::Context;
+use crate::function::Lambda;
+use crate::integer::{Integer, Ratio, Sign};
+use crate::io::{IoError, IoMode};
+use crate::module::ModuleCode;
+use crate::name::{Name, NameDisplay, NameMap, NameSet, NameStore,
     NameInputConversion, NameOutputConversion};
-use scope::ImportSet;
-use structs::{StructDef, StructValueDef};
-use value::Value;
+use crate::scope::ImportSet;
+use crate::structs::{StructDef, StructValueDef};
+use crate::value::Value;
 
 /// First four bytes written to a compiled bytecode file.
 pub const MAGIC_NUMBER: &[u8; 4] = b"\0MUR";
@@ -497,7 +497,7 @@ impl<'a, 'data> ValueDecoder<'a, 'data> {
     }
 
     fn read_code(&mut self, names: &NameInputConversion) -> Result<Code, DecodeError> {
-        use bytecode::code_flags::*;
+        use crate::bytecode::code_flags::*;
 
         let flags = u32::from(self.read_u8()?);
 
@@ -821,7 +821,7 @@ impl ValueEncoder {
     }
 
     fn write_code(&mut self, code: &Code, names: &mut NameOutputConversion) -> Result<(), EncodeError> {
-        use bytecode::code_flags::*;
+        use crate::bytecode::code_flags::*;
 
         self.write_u8(code.flags as u8);
 

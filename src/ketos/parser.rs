@@ -5,15 +5,15 @@ use std::collections::HashMap;
 use std::fmt;
 use std::path::PathBuf;
 
-use bytes::Bytes;
-use error::Error;
-use exec::Context;
-use integer::{Integer, Ratio};
-use lexer::{Lexer, Span, Token};
-use name::{get_standard_name_for, standard_names, Name, NameDisplay, NameStore};
-use restrict::RestrictError;
-use string;
-use value::Value;
+use crate::bytes::Bytes;
+use crate::error::Error;
+use crate::exec::Context;
+use crate::integer::{Integer, Ratio};
+use crate::lexer::{Lexer, Span, Token};
+use crate::name::{get_standard_name_for, standard_names, Name, NameDisplay, NameStore};
+use crate::restrict::RestrictError;
+use crate::string;
+use crate::value::Value;
 
 const MODULE_DOC_COMMENT: &str = ";;;";
 
@@ -569,10 +569,10 @@ fn strip_underscores(s: &str) -> Cow<str> {
 #[cfg(test)]
 mod test {
     use super::{ParseError, ParseErrorKind, Parser};
-    use error::Error;
-    use interpreter::Interpreter;
-    use lexer::{Span, Lexer};
-    use value::Value;
+    use crate::error::Error;
+    use crate::interpreter::Interpreter;
+    use crate::lexer::{Span, Lexer};
+    use crate::value::Value;
 
     fn parse(s: &str) -> Result<Value, ParseError> {
         let interp = Interpreter::new();

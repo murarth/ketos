@@ -4,15 +4,15 @@ use std::any::TypeId;
 use std::cell::{Ref, RefMut, RefCell};
 use std::rc::{Rc, Weak};
 
-use function::{Function, Lambda};
-use io::GlobalIo;
-use lexer::CodeMap;
-use module::{BuiltinModuleLoader, ModuleRegistry};
-use name::{get_standard_name, get_system_fn, is_system_operator,
+use crate::function::{Function, Lambda};
+use crate::io::GlobalIo;
+use crate::lexer::CodeMap;
+use crate::module::{BuiltinModuleLoader, ModuleRegistry};
+use crate::name::{get_standard_name, get_system_fn, is_system_operator,
     is_standard_value, NUM_STANDARD_VALUES,
     SYSTEM_OPERATORS_END, Name, NameMap, NameSetSlice, NameStore};
-use structs::{ForeignStructDef, StructDef, StructDefMap, StructValue};
-use value::Value;
+use crate::structs::{ForeignStructDef, StructDef, StructDefMap, StructValue};
+use crate::value::Value;
 
 /// Represents the global namespace of an execution context.
 pub struct GlobalScope {
@@ -506,7 +506,7 @@ impl MasterScope {
     }
 
     fn get_bool(name: Name) -> Option<bool> {
-        use name::standard_names::{TRUE, FALSE};
+        use crate::name::standard_names::{TRUE, FALSE};
 
         match name {
             TRUE => Some(true),

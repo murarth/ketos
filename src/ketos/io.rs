@@ -6,7 +6,7 @@ use std::io::{self, Stdout, Stderr, Write};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use name::{NameDisplay, NameStore};
+use crate::name::{NameDisplay, NameStore};
 
 /// Contains global shared I/O objects
 pub struct GlobalIo {

@@ -2,16 +2,16 @@
 
 use std::rc::Rc;
 
-use bytecode::{CodeReader, Instruction};
-use compile::compile;
-use error::Error;
-use exec::{Context, ExecError};
-use function::{plural, Lambda};
-use function::Arity::*;
-use module::{Module, ModuleBuilder};
-use name::{debug_names, get_standard_name};
-use scope::Scope;
-use value::{FromValueRef, Value};
+use crate::bytecode::{CodeReader, Instruction};
+use crate::compile::compile;
+use crate::error::Error;
+use crate::exec::{Context, ExecError};
+use crate::function::{plural, Lambda};
+use crate::function::Arity::*;
+use crate::module::{Module, ModuleBuilder};
+use crate::name::{debug_names, get_standard_name};
+use crate::scope::Scope;
+use crate::value::{FromValueRef, Value};
 
 /// Loads the `code` module into the given scope.
 pub fn load(scope: Scope) -> Module {
@@ -151,7 +151,7 @@ fn get_instructions(code: &[u8]) -> Result<Vec<(u32, Instruction)>, ExecError> {
 fn print_instruction(ctx: &Context, lambda: &Lambda,
         offset: u32, instr: Instruction, is_label: bool)
         -> Result<(), Error> {
-    use bytecode::Instruction::*;
+    use crate::bytecode::Instruction::*;
 
     let scope = ctx.scope();
     let label_str = if is_label { ">>" } else { "  " };

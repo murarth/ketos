@@ -5,7 +5,7 @@ use std::fmt;
 use std::ops;
 use std::slice::Iter;
 
-use rc_vec::{RangeArgument, RcVec};
+use crate::rc_vec::{RangeArgument, RcVec};
 
 /// Shared byte string container
 #[derive(Clone)]
