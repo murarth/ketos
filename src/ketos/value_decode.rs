@@ -11,11 +11,11 @@ use serde::de::{
     EnumAccess, MapAccess, SeqAccess, VariantAccess, Visitor,
 };
 
-use exec::{ExecError, panic};
-use error::Error;
-use name::Name;
-use scope::Scope;
-use value::{FromValueRef, Value};
+use crate::exec::{ExecError, panic};
+use crate::error::Error;
+use crate::name::Name;
+use crate::scope::Scope;
+use crate::value::{FromValueRef, Value};
 
 /// Decodes a Rust type from a `Value`.
 ///
