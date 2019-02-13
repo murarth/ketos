@@ -2,6 +2,7 @@
 name = "ketos"
 version = "0.10.0"
 authors = ["Murarth <murarth@gmail.com>"]
+edition = "2018"
 
 description = "Lisp dialect scripting and extension language"
 
