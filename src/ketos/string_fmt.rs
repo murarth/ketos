@@ -9,12 +9,12 @@ use std::str::CharIndices;
 
 use num::ToPrimitive;
 
-use exec::ExecError;
-use integer::Integer;
-use lexer::{BytePos, Span};
-use name::{debug_names, display_names, NameStore};
-use pretty::pretty_print;
-use value::Value;
+use crate::exec::ExecError;
+use crate::integer::Integer;
+use crate::lexer::{BytePos, Span};
+use crate::name::{debug_names, display_names, NameStore};
+use crate::pretty::pretty_print;
+use crate::value::Value;
 
 /// Represents an error in formatting a string.
 #[derive(Clone, Debug, Eq, PartialEq)]

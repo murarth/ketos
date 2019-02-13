@@ -9,7 +9,7 @@ use std::rc::Rc;
 use std::slice;
 use std::sync::Arc;
 
-use function::{SystemFn, SYSTEM_FNS};
+use crate::function::{SystemFn, SYSTEM_FNS};
 
 /// Represents a name interned within a `NameStore`.
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]

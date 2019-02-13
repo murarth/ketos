@@ -17,11 +17,11 @@
 //! with a single opcode, e.g. the `CONST_0` opcode replaces the two-byte
 //! sequence `CONST`, followed by operand `0`.
 
-use compile::CompileError;
-use exec::ExecError;
-use function::Arity;
-use name::Name;
-use value::Value;
+use crate::compile::CompileError;
+use crate::exec::ExecError;
+use crate::function::Arity;
+use crate::name::Name;
+use crate::value::Value;
 
 /// Bytecode version number, indicating the version of the most recent breaking
 /// change to the bytecode format. The version represents a `ketos` version

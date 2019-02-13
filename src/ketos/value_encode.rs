@@ -28,11 +28,11 @@ use std::fmt;
 
 use serde::ser::{self, Serialize, Serializer};
 
-use exec::{ExecError, panic};
-use error::Error;
-use name::Name;
-use scope::Scope;
-use value::Value;
+use crate::exec::{ExecError, panic};
+use crate::error::Error;
+use crate::name::Name;
+use crate::scope::Scope;
+use crate::value::Value;
 
 /// Encodes a Rust type into a `Value`.
 ///

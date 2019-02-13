@@ -94,7 +94,7 @@ macro_rules! ketos_args {
 
 #[cfg(test)]
 mod test {
-    use error::Error;
+    use crate::error::Error;
 
     #[test]
     fn test_args() {

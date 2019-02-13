@@ -8,15 +8,15 @@ use std::mem::replace;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use any::AnyValue;
-use bytes::Bytes;
-use error::Error;
-use exec::{Context, ExecError};
-use function::{Function, Lambda};
-use integer::{Integer, Ratio};
-use name::{Name, NameDebug, NameDisplay, NameStore};
-use rc_vec::{RcString, RcVec};
-use structs::{Struct, StructDef, StructValueDef};
+use crate::any::AnyValue;
+use crate::bytes::Bytes;
+use crate::error::Error;
+use crate::exec::{Context, ExecError};
+use crate::function::{Function, Lambda};
+use crate::integer::{Integer, Ratio};
+use crate::name::{Name, NameDebug, NameDisplay, NameStore};
+use crate::rc_vec::{RcString, RcVec};
+use crate::structs::{Struct, StructDef, StructValueDef};
 
 /// Represents a value.
 #[derive(Clone, Debug)]

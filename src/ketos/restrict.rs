@@ -32,7 +32,7 @@
 use std::fmt;
 use std::time::Duration;
 
-use name::{NameDisplay, NameStore};
+use crate::name::{NameDisplay, NameStore};
 
 /// Contains parameters configuring restrictions of runtime code execution
 ///

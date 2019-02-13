@@ -31,18 +31,18 @@ use std::rc::Rc;
 use std::time::Instant;
 use std::vec::Drain;
 
-use bytecode::{Code, CodeReader};
-use error::Error;
-use function::{Arity, Function, Lambda, SystemFn, first, last, init, tail};
-use integer::{Integer, Ratio};
-use lexer::{highlight_span, Span};
-use restrict::{RestrictConfig, RestrictError};
-use scope::{MasterScope, Scope};
-use string_fmt::FormatError;
-use name::{debug_names, display_names, get_standard_name, get_system_fn,
+use crate::bytecode::{Code, CodeReader};
+use crate::error::Error;
+use crate::function::{Arity, Function, Lambda, SystemFn, first, last, init, tail};
+use crate::integer::{Integer, Ratio};
+use crate::lexer::{highlight_span, Span};
+use crate::restrict::{RestrictConfig, RestrictError};
+use crate::scope::{MasterScope, Scope};
+use crate::string_fmt::FormatError;
+use crate::name::{debug_names, display_names, get_standard_name, get_system_fn,
     Name, NameDisplay, NameStore};
-use trace::{Trace, TraceItem, set_traceback};
-use value::{FromValueRef, Value};
+use crate::trace::{Trace, TraceItem, set_traceback};
+use crate::value::{FromValueRef, Value};
 
 /// Interval, in instructions run, between checking time limit
 const TIME_CHECK_INTERVAL: u32 = 100;
@@ -590,7 +590,7 @@ impl Machine {
     }
 
     fn run(&mut self, frame: &mut StackFrame) -> Result<(), Error> {
-        use bytecode::Instruction::*;
+        use crate::bytecode::Instruction::*;
 
         let mut n_instructions = 0;
 
@@ -1512,8 +1512,8 @@ fn get_const_name(code: &Code, n: u32) -> Result<Name, ExecError> {
 #[cfg(test)]
 mod test {
     use super::{ExecError, panic, panic_none};
-    use error::Error;
-    use value::Value;
+    use crate::error::Error;
+    use crate::value::Value;
 
     #[test]
     fn test_panic_fn() {

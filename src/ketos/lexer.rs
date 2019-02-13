@@ -3,8 +3,8 @@
 use std::iter::{once, repeat};
 use std::str::CharIndices;
 
-use parser::{ParseError, ParseErrorKind};
-use string;
+use crate::parser::{ParseError, ParseErrorKind};
+use crate::string;
 
 /// Represents a single unit of code input.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -631,7 +631,7 @@ fn parse_raw_string(input: &str, pos: BytePos) -> Result<(Token, usize), ParseEr
 #[cfg(test)]
 mod test {
     use super::{BytePos, Lexer, Span, Token};
-    use parser::ParseErrorKind;
+    use crate::parser::ParseErrorKind;
 
     fn sp(lo: BytePos, hi: BytePos) -> Span {
         Span{lo, hi}

@@ -6,20 +6,20 @@ use std::io::{stderr, Read, Write};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use bytecode::Code;
-use compile::compile;
-use error::Error;
-use exec::{call_function, execute, Context, ExecError};
-use io::{GlobalIo, IoError, IoMode};
-use lexer::{CodeMap, Lexer};
-use module::{BuiltinModuleLoader, FileModuleLoader, ModuleLoader, ModuleRegistry};
-use name::{debug_names, display_names, NameStore};
-use parser::{ParseError, Parser};
-use restrict::RestrictConfig;
-use scope::{GlobalScope, Scope};
-use structs::{StructDefMap};
-use trace::{get_traceback, take_traceback, Trace};
-use value::Value;
+use crate::bytecode::Code;
+use crate::compile::compile;
+use crate::error::Error;
+use crate::exec::{call_function, execute, Context, ExecError};
+use crate::io::{GlobalIo, IoError, IoMode};
+use crate::lexer::{CodeMap, Lexer};
+use crate::module::{BuiltinModuleLoader, FileModuleLoader, ModuleLoader, ModuleRegistry};
+use crate::name::{debug_names, display_names, NameStore};
+use crate::parser::{ParseError, Parser};
+use crate::restrict::RestrictConfig;
+use crate::scope::{GlobalScope, Scope};
+use crate::structs::{StructDefMap};
+use crate::trace::{get_traceback, take_traceback, Trace};
+use crate::value::Value;
 
 /// Builds an `Interpreter` with configured parameters.
 ///

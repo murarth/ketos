@@ -2,8 +2,8 @@
 
 use std::fmt::{self, Write};
 
-use name::{debug_names, NameStore};
-use value::Value;
+use crate::name::{debug_names, NameStore};
+use crate::value::Value;
 
 /// Writes a human-readable representation of a `Value` to the given `fmt::Write`.
 ///

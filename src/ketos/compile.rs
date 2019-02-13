@@ -5,28 +5,28 @@ use std::fmt;
 use std::mem::replace;
 use std::rc::Rc;
 
-use bytecode::{
+use crate::bytecode::{
     code_flags, Code, CodeBlock,
     Instruction, JumpInstruction, MAX_SHORT_OPERAND,
 };
-use const_fold::{
+use crate::const_fold::{
     is_one, is_negative_one,
     FoldOp, FoldAdd, FoldSub, FoldDiv, FoldMul, FoldFloorDiv,
     FoldBitAnd, FoldBitOr, FoldBitXor,
 };
-use error::Error;
-use exec::{Context, ExecError, execute_lambda};
-use function::{Arity, Lambda};
-use function::Arity::*;
-use name::{
+use crate::error::Error;
+use crate::exec::{Context, ExecError, execute_lambda};
+use crate::function::{Arity, Lambda};
+use crate::function::Arity::*;
+use crate::name::{
     get_system_fn, is_system_operator, standard_names,
     Name, NameDisplay, NameMap, NameSet, NameStore,
     NUM_SYSTEM_OPERATORS, SYSTEM_OPERATORS_BEGIN,
 };
-use scope::{GlobalScope, ImportSet, MasterScope, Scope};
-use structs::{StructDef, StructValueDef};
-use trace::{Trace, TraceItem, set_traceback, take_traceback};
-use value::{Value, FromValueRef};
+use crate::scope::{GlobalScope, ImportSet, MasterScope, Scope};
+use crate::structs::{StructDef, StructValueDef};
+use crate::trace::{Trace, TraceItem, set_traceback, take_traceback};
+use crate::value::{Value, FromValueRef};
 
 const MAX_MACRO_RECURSION: u32 = 100;
 
@@ -1449,7 +1449,7 @@ impl<'a> Compiler<'a> {
 }
 
 fn is_const_system_fn(name: Name) -> bool {
-    use name::standard_names::*;
+    use crate::name::standard_names::*;
 
     match name {
         ADD | SUB | MUL | POW | DIV | FLOOR_DIV |

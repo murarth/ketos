@@ -3,13 +3,13 @@
 use std::error::Error as StdError;
 use std::fmt;
 
-use compile::CompileError;
-use encode::{DecodeError, EncodeError};
-use exec::ExecError;
-use io::IoError;
-use name::{NameDisplay, NameStore};
-use parser::ParseError;
-use restrict::RestrictError;
+use crate::compile::CompileError;
+use crate::encode::{DecodeError, EncodeError};
+use crate::exec::ExecError;
+use crate::io::IoError;
+use crate::name::{NameDisplay, NameStore};
+use crate::parser::ParseError;
+use crate::restrict::RestrictError;
 
 macro_rules! error_type {
     ( $( #[$meta:meta] )* pub enum $name:ident

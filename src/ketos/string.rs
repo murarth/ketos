@@ -2,8 +2,8 @@
 
 use std::str::CharIndices;
 
-use lexer::{BytePos, Span};
-use parser::{ParseError, ParseErrorKind};
+use crate::lexer::{BytePos, Span};
+use crate::parser::{ParseError, ParseErrorKind};
 
 /// Parses a byte constant
 pub fn parse_byte(s: &str, pos: BytePos) -> Result<(u8, usize), ParseError> {
@@ -414,7 +414,7 @@ impl<'a> StringReader<'a> {
 
 #[cfg(test)]
 mod test {
-    use parser::ParseError;
+    use crate::parser::ParseError;
     use super::{StringReader, StringType};
 
     fn parse_bytes(s: &str) -> Result<Vec<u8>, ParseError> {

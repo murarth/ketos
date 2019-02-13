@@ -6,22 +6,22 @@ use std::io::{stderr, Read, Write};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use bytecode::Code;
-use compile::{compile, CompileError};
-use encode::{DecodeError, read_bytecode_file, write_bytecode_file};
-use error::Error;
-use exec::{Context, execute};
-use function::{Arity, Function, FunctionImpl, Lambda, SystemFn};
-use io::{IoError, IoMode};
-use lexer::Lexer;
-use name::{Name, NameMap, NameSetSlice};
-use parser::Parser;
-use scope::{GlobalScope, ImportSet, Scope};
-use value::Value;
+use crate::bytecode::Code;
+use crate::compile::{compile, CompileError};
+use crate::encode::{DecodeError, read_bytecode_file, write_bytecode_file};
+use crate::error::Error;
+use crate::exec::{Context, execute};
+use crate::function::{Arity, Function, FunctionImpl, Lambda, SystemFn};
+use crate::io::{IoError, IoMode};
+use crate::lexer::Lexer;
+use crate::name::{Name, NameMap, NameSetSlice};
+use crate::parser::Parser;
+use crate::scope::{GlobalScope, ImportSet, Scope};
+use crate::value::Value;
 
-use mod_code;
-use mod_math;
-use mod_random;
+use crate::mod_code;
+use crate::mod_math;
+use crate::mod_random;
 
 /// Contains the values in a loaded module's namespace.
 #[derive(Clone)]
