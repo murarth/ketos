@@ -101,9 +101,14 @@ The `zero` function tests whether given values are equal to zero.
   Additionally, the type `'number` will match any numeric type.
 * `null` returns whether the given value is `()`.
 * `format` returns a formatted string; see [string_formatting.md]
-* `print` prints a formatted string to stdout; see [string_formatting.md]
+* `print` prints a formatted string to stdout; see
+  [string_formatting.md](./string_formatting.md)
 * `println` prints a formatted string to stdout, followed by a newline;
-  see [string_formatting.md]
+  see [string_formatting.md](./string_formatting.md)
+* `eprint` prints a formatted string to stderr; see
+  [string_formatting.md](./string_formatting.md)
+* `eprintln` prints a formatted string to stderr, followed by a newline;
+  see [string_formatting.md](./string_formatting.md)
 * `panic` causes a panic; similar in concept to a Rust panic.
 * `xor` returns the logical XOR of two `bool` values
 * `not` returns the logical NOT of a `bool` value
