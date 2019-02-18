@@ -244,9 +244,41 @@ Exported names may be imported from another module using the `use` operator.
 ## `use`
 
 ```
-(use module-name { :all | ( [ name ... ] ) })
+(use module-name { :all | :self | ( [ [ dest ] name ... ] ) })
 ```
 
-The `use` operator loads a module and imports a series of named constants,
-macros, or values from its global scope. `:all` may be used in place of a name
-list to import all public names from a module.
+The `use` operator loads a module and imports a set of named constants,
+macros, or values from its global scope.
+
+The set of names imported may be specified using a list of names or the
+`:all` or `:self` keywords.
+
+### Examples
+
+```lisp
+(use foo (alpha beta))
+```
+
+Imports names `alpha` and `beta` from the module `foo`.
+
+```lisp
+(use foo
+  (alpha
+   :my-beta beta))
+```
+
+Imports `alpha` into the local scope and imports `beta` into the local scope
+under the name `my-beta`.
+
+```lisp
+(use foo :all)
+```
+
+Imports all exported names from `foo` into the local scope.
+
+```lisp
+(use foo :self)
+```
+
+Imports all exported names from `foo`, each name prefixed with `foo/`;
+e.g. `foo/alpha`, `foo/beta`.

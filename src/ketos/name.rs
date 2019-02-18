@@ -224,10 +224,11 @@ standard_names!{
     "name" => NAME = 103,
     "number" => NUMBER = 104,
     "function" => FUNCTION = 105,
+    "self" => SELF = 106,
 }
 
 /// Number of standard names
-pub const NUM_STANDARD_NAMES: u32 = 106;
+pub const NUM_STANDARD_NAMES: u32 = 107;
 
 /// Number of names, starting at `0`, which refer to system functions.
 pub const NUM_SYSTEM_FNS: usize = 71;

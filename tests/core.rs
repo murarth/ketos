@@ -1454,6 +1454,12 @@ fn test_use() {
         ").unwrap(),
         ["()", "2.0"]);
 
+    assert_eq!(run("
+        (use math :self)
+        (math/sqrt 16.0)
+        ").unwrap(),
+        ["()", "4.0"]);
+
     assert_matches!(run("
         (use math (does-not-exist))
         ").unwrap_err(),

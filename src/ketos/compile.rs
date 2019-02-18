@@ -2315,6 +2315,8 @@ fn op_export(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
 ///
 /// ```lisp
 /// (use foo (alpha beta gamma))
+///
+/// (use foo :self)
 /// ```
 fn op_use(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
     let mod_name = get_name(compiler, &args[0])?;
@@ -2334,6 +2336,10 @@ fn op_use(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
         Value::Keyword(standard_names::ALL) => {
             let names = compiler.scope().import_all(&m.scope);
             imp_set.names.extend(names.iter().map(|&n| (n, n)));
+        }
+        Value::Keyword(standard_names::SELF) => {
+            let names = compiler.scope().import_qualified(&m.scope);
+            imp_set.names.extend(names);
         }
         Value::Unit => (),
         Value::List(ref li) => {

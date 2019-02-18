@@ -49,7 +49,9 @@ struct Namespace {
 pub struct ImportSet {
     /// Name of module from which to import
     pub module_name: Name,
-    /// Names which are imported
+    /// For each name imported, `(src, dest)`;
+    /// where `src` is the name of the value in the imported module and
+    /// `dest` is the name to which the value is assigned in the local scope.
     pub names: Vec<(Name, Name)>,
 }
 
@@ -318,6 +320,16 @@ impl GlobalScope {
             .import_all(&other.namespace.borrow())
     }
 
+    /// Imports all exported values from a scope into this scope,
+    /// prefixing the name of the scope to the name of each imported value.
+    pub fn import_qualified(&self, other: &GlobalScope) -> Vec<(Name, Name)> {
+        let mut names = self.name_store.borrow_mut();
+        let prefix = names.get(other.name).to_owned();
+
+        self.namespace.borrow_mut().import_qualified(
+            &prefix, &mut *names, &other.namespace.borrow())
+    }
+
     /// Returns whether the given name has been exported in this scope.
     pub fn is_exported(&self, name: Name) -> bool {
         self.namespace.borrow().exports.as_ref()
@@ -440,21 +452,48 @@ impl Namespace {
 
         if let Some(ref exports) = other.exports {
             for name in exports {
+                names.push(name);
+                self.import_doc(name, other);
+
                 if let Some(v) = other.constants.get(name).cloned() {
-                    names.push(name);
                     self.constants.insert(name, v);
-                    self.import_doc(name, other);
                 }
 
                 if let Some(v) = other.macros.get(name).cloned() {
-                    names.push(name);
                     self.macros.insert(name, v);
                 }
 
                 if let Some(v) = other.values.get(name).cloned() {
-                    names.push(name);
                     self.values.insert(name, v);
-                    self.import_doc(name, other);
+                }
+            }
+        }
+
+        names
+    }
+
+    fn import_qualified(&mut self, prefix: &str,
+            store: &mut NameStore, other: &Namespace) -> Vec<(Name, Name)> {
+        let mut names = Vec::new();
+
+        if let Some(ref exports) = other.exports {
+            for src in exports {
+                let dest_name = format!("{}/{}", prefix, store.get(src));
+                let dest = store.add(&dest_name);
+
+                names.push((src, dest));
+                self.import_doc_as(src, dest, other);
+
+                if let Some(v) = other.constants.get(src).cloned() {
+                    self.constants.insert(dest, v);
+                }
+
+                if let Some(v) = other.macros.get(src).cloned() {
+                    self.macros.insert(dest, v);
+                }
+
+                if let Some(v) = other.values.get(src).cloned() {
+                    self.values.insert(dest, v);
                 }
             }
         }
@@ -463,8 +502,12 @@ impl Namespace {
     }
 
     fn import_doc(&mut self, name: Name, other: &Namespace) {
+        self.import_doc_as(name, name, other);
+    }
+
+    fn import_doc_as(&mut self, name: Name, dest: Name, other: &Namespace) {
         if let Some(doc) = other.docs.get(name) {
-            self.docs.insert(name, doc.clone());
+            self.docs.insert(dest, doc.clone());
         }
     }
 
