@@ -100,7 +100,7 @@ The `zero` function tests whether given values are equal to zero.
   e.g. `(is 'integer 0)`.  
   Additionally, the type `'number` will match any numeric type.
 * `null` returns whether the given value is `()`.
-* `format` returns a formatted string; see [string_formatting.md]
+* `format` returns a formatted string; see [string_formatting.md](./string_formatting.md)
 * `print` prints a formatted string to stdout; see
   [string_formatting.md](./string_formatting.md)
 * `println` prints a formatted string to stdout, followed by a newline;
