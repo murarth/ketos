@@ -879,6 +879,17 @@ integer_from_ref!{ u32 to_u32 }
 integer_from_ref!{ u64 to_u64 }
 integer_from_ref!{ usize to_usize }
 
+impl<'a, T> FromValueRef<'a> for Option<T> where T: FromValueRef<'a> {
+    fn from_value_ref(v: &'a Value) -> Result<Option<T>, ExecError> {
+        if let Value::Unit = *v {
+            Ok(None)
+        } else {
+            let v = T::from_value_ref(v)?;
+            Ok(Some(v))
+        }
+    }
+}
+
 impl<'a> FromValueRef<'a> for &'a str {
     fn from_value_ref(v: &'a Value) -> Result<&'a str, ExecError> {
         match *v {
@@ -1098,6 +1109,16 @@ value_from!{ PathBuf; p => Value::Path(p) }
 value_from!{ OsString; s => Value::Path(PathBuf::from(s)) }
 value_from!{ f32; f => Value::Float(f64::from(f)) }
 value_from!{ f64; f => Value::Float(f) }
+
+impl<T: Into<Value>> From<Option<T>> for Value {
+    fn from(v: Option<T>) -> Value {
+        if let Some(v) = v {
+            v.into()
+        } else {
+            Value::Unit
+        }
+    }
+}
 
 impl<'a> From<&'a str> for Value {
     fn from(s: &str) -> Value {
