@@ -21,6 +21,9 @@ fn into<T: Into<Value>>(t: T) -> Value {
 
 #[test]
 fn test_from_value() {
+    assert_eq!(from::<Option<String>>(Value::Unit).unwrap(), None);
+    assert_eq!(from::<Option<String>>(into("foo")).unwrap(), Some("foo".to_string()));
+
     assert_eq!(from::<()>(Value::Unit).unwrap(), ());
     assert_eq!(from::<i32>(into(123)).unwrap(), 123);
     assert_eq!(from::<String>(into("foo")).unwrap(), "foo");

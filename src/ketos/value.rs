@@ -1088,6 +1088,15 @@ impl<T: FromValue> FromValue for Vec<T> {
     }
 }
 
+impl<T: FromValue> FromValue for Option<T> {
+    fn from_value(v: Value) -> Result<Option<T>, ExecError> {
+        match v {
+            Value::Unit => Ok(None),
+            v => Ok(Some(T::from_value(v)?)),
+        }
+    }
+}
+
 macro_rules! value_from {
     ( $ty:ty ; $pat:pat => $expr:expr ) => {
         impl From<$ty> for Value {
