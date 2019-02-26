@@ -21,6 +21,9 @@ fn into<T: Into<Value>>(t: T) -> Value {
 
 #[test]
 fn test_from_value() {
+    assert_eq!(from::<Option<String>>(Value::Unit).unwrap(), None);
+    assert_eq!(from::<Option<String>>(into("foo")).unwrap(), Some("foo".to_string()));
+
     assert_eq!(from::<()>(Value::Unit).unwrap(), ());
     assert_eq!(from::<i32>(into(123)).unwrap(), 123);
     assert_eq!(from::<String>(into("foo")).unwrap(), "foo");
@@ -40,6 +43,9 @@ fn test_from_value() {
 
 #[test]
 fn test_from_value_ref() {
+    assert_eq!(from_ref::<Option<&str>>(&into("foo")).unwrap(), Some("foo"));
+    assert_eq!(from_ref::<Option<&str>>(&Value::Unit).unwrap(), None);
+
     assert_eq!(from_ref::<()>(&Value::Unit).unwrap(), ());
     assert_eq!(from_ref::<i32>(&into(456)).unwrap(), 456);
     assert_eq!(from_ref::<&str>(&into("foo")).unwrap(), "foo");
@@ -57,6 +63,9 @@ fn test_from_value_ref() {
 
 #[test]
 fn test_into_value() {
+    assert_matches!(into::<Option<bool>>(None), Value::Unit);
+    assert_matches!(into(Some(false)), Value::Bool(false));
+
     assert_matches!(into(()), Value::Unit);
     assert_matches!(into(true), Value::Bool(true));
     assert_matches!(into(1.0_f64), Value::Float(f) if f == 1.0);
