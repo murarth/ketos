@@ -1,4 +1,5 @@
-#[macro_use] extern crate ketos;
+extern crate ketos;
+#[macro_use] extern crate ketos_derive;
 
 use std::fmt;
 

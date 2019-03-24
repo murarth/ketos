@@ -13,5 +13,3 @@ script:
     - cargo test  --verbose
     - cargo build --verbose --all-features
     - cargo test  --verbose --all-features
-    - ( cd ketos_derive && cargo build --verbose )
-    - ( cd ketos_derive && cargo test  --verbose )
