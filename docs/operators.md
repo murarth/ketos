@@ -17,6 +17,26 @@ concatenated to positional arguments.
 (apply + 1 2 3 '(4 5 6))
 ```
 
+## `call-self`
+
+```
+(call-self [ arguments ... ] )
+```
+
+The `call-self` operator recursively calls the function currently being executed.
+This operator can be used to trigger recursion in anonymous lambda functions.
+It may also be used in named functions and has the same effect as a recursive call
+by name.
+
+```lisp
+(let ((factorial
+        (lambda (n :optional (acc 1))
+          (if (<= n 1)
+            acc
+            (call-self (- n 1) (* n acc))))))
+  (factorial 10))
+```
+
 ## `const`
 
 ```

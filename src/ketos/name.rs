@@ -204,31 +204,32 @@ standard_names!{
     "use" => USE = 86,
     "const" => CONST = 87,
     "set-module-doc" => SET_MODULE_DOC = 88,
+    "call-self" => CALL_SELF = 89,
 
     // Just plain names follow; these are used by system functions or operators
     // to delineate syntactical constructs or just as name values.
-    "all" => ALL = 89,
-    "else" => ELSE = 90,
-    "optional" => OPTIONAL = 91,
-    "key" => KEY = 92,
-    "rest" => REST = 93,
-    "unbound" => UNBOUND = 94,
-    "unit" => UNIT = 95,
-    "bool" => BOOL = 96,
-    "char" => CHAR = 97,
-    "integer" => INTEGER = 98,
-    "ratio" => RATIO = 99,
-    "struct-def" => STRUCT_DEF = 100,
-    "keyword" => KEYWORD = 101,
-    "object" => OBJECT = 102,
-    "name" => NAME = 103,
-    "number" => NUMBER = 104,
-    "function" => FUNCTION = 105,
-    "self" => SELF = 106,
+    "all" => ALL = 90,
+    "else" => ELSE = 91,
+    "optional" => OPTIONAL = 92,
+    "key" => KEY = 93,
+    "rest" => REST = 94,
+    "unbound" => UNBOUND = 95,
+    "unit" => UNIT = 96,
+    "bool" => BOOL = 97,
+    "char" => CHAR = 98,
+    "integer" => INTEGER = 99,
+    "ratio" => RATIO = 100,
+    "struct-def" => STRUCT_DEF = 101,
+    "keyword" => KEYWORD = 102,
+    "object" => OBJECT = 103,
+    "name" => NAME = 104,
+    "number" => NUMBER = 105,
+    "function" => FUNCTION = 106,
+    "self" => SELF = 107,
 }
 
 /// Number of standard names
-pub const NUM_STANDARD_NAMES: u32 = 107;
+pub const NUM_STANDARD_NAMES: u32 = 108;
 
 /// Number of names, starting at `0`, which refer to system functions.
 pub const NUM_SYSTEM_FNS: usize = 71;
@@ -239,7 +240,7 @@ pub const NUM_STANDARD_VALUES: u32 = 73;
 /// First standard name which refers to a system operator.
 pub const SYSTEM_OPERATORS_BEGIN: u32 = NUM_STANDARD_VALUES;
 /// One-past-the-end of standard names which refer to system operators.
-pub const SYSTEM_OPERATORS_END: u32 = 89;
+pub const SYSTEM_OPERATORS_END: u32 = 90;
 
 /// Number of system operators, beginning at `SYSTEM_OPERATORS_BEGIN`.
 pub const NUM_SYSTEM_OPERATORS: usize =

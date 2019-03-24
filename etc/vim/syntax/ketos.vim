@@ -25,8 +25,8 @@ syn keyword ketosFunc list max min nan new not null numer panic print println
 syn keyword ketosFunc rat recip rem reverse round second slice string tail
 syn keyword ketosFunc trunc type-of xor zero
 
-syn keyword ketosOperator and apply case cond define do export if lambda let
-syn keyword ketosOperator macro or struct use
+syn keyword ketosOperator and apply call-self case cond define do export if
+syn keyword ketosOperator lambda let macro or set-module-doc struct use
 
 syn match ketosKey ":\k\+\>"
 

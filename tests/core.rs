@@ -1429,6 +1429,34 @@ fn test_apply() {
 }
 
 #[test]
+fn test_call_self() {
+    assert_eq!(eval("
+        (let ((factorial
+                (lambda (n :optional (acc 1))
+                  (if (<= n 1)
+                    acc
+                    (call-self (- n 1) (* n acc))))))
+          (factorial 10))
+        ").unwrap(),
+        "3628800");
+
+    assert_eq!(run("
+        (define (factorial n :optional (acc 1))
+          (if (<= n 1)
+            acc
+            (call-self (- n 1) (* n acc))))
+
+        (factorial 9)
+        ").unwrap(),
+        ["factorial", "362880"]);
+
+    assert_matches!(eval("(call-self 1)").unwrap_err(),
+        Error::CompileError(CompileError::SyntaxError(_)));
+    assert_matches!(eval("(if true (call-self))").unwrap_err(),
+        Error::CompileError(CompileError::SyntaxError(_)));
+}
+
+#[test]
 fn test_panic() {
     assert_matches!(eval("(panic)").unwrap_err(),
         Error::ExecError(ExecError::Panic(None)));

@@ -257,6 +257,10 @@ impl<'a> Compiler<'a> {
         self.outer.is_empty() && self.cur_block == 0
     }
 
+    fn is_inside_lambda(&self) -> bool {
+        !self.outer.is_empty()
+    }
+
     fn assemble_code(&mut self) -> Result<Box<[u8]>, CompileError> {
         let total = self.write_jumps()?;
         let mut res = Vec::with_capacity(total);
@@ -1727,6 +1731,7 @@ static SYSTEM_OPERATORS: [Operator; NUM_SYSTEM_OPERATORS] = [
     sys_op!(op_use, Exact(2)),
     sys_op!(op_const, Range(2, 3)),
     sys_op!(op_set_module_doc, Exact(1)),
+    sys_op!(op_call_self, Min(0)),
 ];
 
 /// `apply` calls a function or lambda with a series of arguments.
@@ -2434,6 +2439,27 @@ fn op_set_module_doc(compiler: &mut Compiler, args: &[Value]) -> Result<(), Erro
             Err(From::from(CompileError::DuplicateModuleDoc))
         }
     })
+}
+
+/// Calls the function currently being executed.
+///
+/// This operator enables lambda functions to be recursive.
+///
+/// ```lisp
+/// (lambda (n) (call-self (+ n 1)))
+/// ```
+fn op_call_self(compiler: &mut Compiler, args: &[Value]) -> Result<(), Error> {
+    if !compiler.is_inside_lambda() {
+        return Err(CompileError::SyntaxError("`call-self` outside lambda").into());
+    }
+
+    for arg in args {
+        compiler.compile_value(arg)?;
+        compiler.push_instruction(Instruction::Push)?;
+    }
+
+    compiler.push_instruction(Instruction::CallSelf(args.len() as u32))?;
+    Ok(())
 }
 
 fn import_names(mod_name: Name, imps: &mut ImportSet,
