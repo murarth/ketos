@@ -7,7 +7,6 @@ any struct or enum value. For example:
 
 ```rust
 extern crate ketos;
-#[macro_use] extern crate ketos_derive;
 
 #[derive(Clone, Debug, ForeignValue, FromValue, IntoValue)]
 struct Foo {

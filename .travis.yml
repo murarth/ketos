@@ -11,7 +11,7 @@ branches:
 script:
     - cargo build --verbose
     - cargo test  --verbose
-    - cargo build --verbose --features 'serde serde_derive'
-    - cargo test  --verbose --features 'serde serde_derive'
+    - cargo build --verbose --all-features
+    - cargo test  --verbose --all-features
     - ( cd ketos_derive && cargo build --verbose )
     - ( cd ketos_derive && cargo test  --verbose )

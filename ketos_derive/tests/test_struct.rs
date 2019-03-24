@@ -1,5 +1,4 @@
-extern crate ketos;
-#[macro_use] extern crate ketos_derive;
+#[macro_use] extern crate ketos;
 
 use ketos::{FromValue, Interpreter};
 

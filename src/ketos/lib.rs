@@ -29,13 +29,12 @@
 #![allow(clippy::new_without_default_derive)]
 #![allow(clippy::float_cmp)]
 
-extern crate byteorder;
-extern crate num;
-extern crate rand;
-#[cfg(feature = "serde")] extern crate serde;
-
 #[cfg(test)]
 #[macro_use] extern crate assert_matches;
+
+#[cfg(feature = "derive")]
+#[doc(hidden)]
+pub use ketos_derive::*;
 
 pub use crate::bytecode::Code;
 pub use crate::bytes::Bytes;

@@ -24,4 +24,4 @@ syn = "0.13"
 
 [dev-dependencies]
 assert_matches = "1.1"
-ketos = { version = "0.10", path = ".." }
+ketos = { version = "0.10", path = "..", features = ["derive"] }

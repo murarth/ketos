@@ -27,6 +27,7 @@ path = "src/ketos/lib.rs"
 byteorder = "0.5.1"
 dirs = "1.0"
 gumdrop = "0.5"
+ketos_derive = { version = "0.10", path = "ketos_derive", optional = true }
 linefeed = "0.5.3"
 num = "0.2"
 rand = "0.5"
@@ -37,3 +38,9 @@ serde_derive = { version = "1.0", optional = true }
 [dev-dependencies]
 assert_matches = "1.0"
 ketos_derive = { version = "0.10", path = "ketos_derive" }
+
+[features]
+default = []
+derive = ["ketos_derive"]
+
+[workspace]
