@@ -19,7 +19,7 @@ To build Ketos into your Rust project, add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-ketos = "0.10"
+ketos = "0.11"
 ```
 
 And add the following to your crate root:

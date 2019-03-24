@@ -1,6 +1,6 @@
 [package]
 name = "ketos_derive"
-version = "0.10.0"
+version = "0.11.0"
 authors = ["Murarth <murarth@gmail.com>"]
 
 description = "Derive traits for Ketos scripting language"
