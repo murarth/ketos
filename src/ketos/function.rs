@@ -9,7 +9,6 @@ use std::rc::Rc;
 
 use num::{Float, Zero};
 
-use crate::any::AnyValue;
 use crate::bytecode::Code;
 use crate::bytes::Bytes;
 use crate::error::Error;
@@ -412,7 +411,7 @@ fn get_struct_def_for(scope: &Scope, v: &Value) -> Result<Rc<StructDef>, ExecErr
 fn get_foreign_value_struct_def(scope: &Scope, v: &Value) -> Result<Rc<StructDef>, ExecError> {
     match *v {
         Value::Foreign(ref fv) => {
-            scope.get_struct_def(AnyValue::type_id(&**fv))
+            scope.get_struct_def(fv.type_id())
                 .ok_or_else(|| ExecError::expected("struct", v))
         }
         _ => unreachable!()
