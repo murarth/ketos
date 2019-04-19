@@ -29,7 +29,7 @@ macro_rules! impl_any_cast {
         impl $ty {
             /// Returns whether the contained value is of the given type.
             pub fn is<T: $ty>(&self) -> bool {
-                self.type_id() == ::std::any::TypeId::of::<T>()
+                crate::any::AnyValue::type_id(self) == ::std::any::TypeId::of::<T>()
             }
 
             /// Attempts to downcast a `Box<Trait>` to a concrete type.
