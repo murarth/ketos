@@ -69,9 +69,10 @@ extern crate proc_macro2;
 extern crate syn;
 
 use proc_macro::TokenStream;
-use proc_macro2::Span;
-use quote::{ToTokens, Tokens};
+use proc_macro2::{Span, TokenStream as TokenStream2};
+use quote::ToTokens;
 use syn::{
+    parse::Error, spanned::Spanned,
     AttrStyle, Attribute, Data, DataStruct, DeriveInput, Fields,
     GenericParam, Generics, Ident, Lifetime, LifetimeDef, Lit, Meta, NestedMeta,
     Path, PathArguments, TypeGenerics, WhereClause,
@@ -79,30 +80,84 @@ use syn::{
 
 #[proc_macro_derive(ForeignValue)]
 pub fn derive_foreign_value(input: TokenStream) -> TokenStream {
-    let ast: DeriveInput = syn::parse(input).expect("syn::parse");
-
-    let name = ast.ident;
-    let name_str: &str = name.as_ref();
-    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
-
-    let expr = quote!{
-        impl #impl_generics ::ketos::ForeignValue for #name #ty_generics #where_clause {
-            fn type_name(&self) -> &'static str { #name_str }
-        }
-    };
-
-    expr.to_string().parse().expect("parse quote!")
+    match gen_foreign_value(input) {
+        Ok(output) => output.into(),
+        Err(e) => e.to_compile_error().into()
+    }
 }
 
 #[proc_macro_derive(FromValue)]
 pub fn derive_from_value(input: TokenStream) -> TokenStream {
+    match gen_from_value(input) {
+        Ok(output) => output.into(),
+        Err(e) => e.to_compile_error().into()
+    }
+}
+
+#[proc_macro_derive(FromValueClone)]
+pub fn derive_from_value_clone(input: TokenStream) -> TokenStream {
+    match gen_from_value_clone(input) {
+        Ok(output) => output.into(),
+        Err(e) => e.to_compile_error().into()
+    }
+}
+
+#[proc_macro_derive(FromValueRef)]
+pub fn derive_from_value_ref(input: TokenStream) -> TokenStream {
+    match gen_from_value_ref(input) {
+        Ok(output) => output.into(),
+        Err(e) => e.to_compile_error().into()
+    }
+}
+
+#[proc_macro_derive(IntoValue)]
+pub fn derive_into_value(input: TokenStream) -> TokenStream {
     let ast: DeriveInput = syn::parse(input).expect("syn::parse");
 
     let name = ast.ident;
-    let name_str: &str = name.as_ref();
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
     let expr = quote!{
+        impl #impl_generics Into<::ketos::Value> for #name #ty_generics #where_clause {
+            fn into(self) -> ::ketos::Value {
+                ::ketos::Value::new_foreign(self)
+            }
+        }
+    };
+
+    expr.into()
+}
+
+#[proc_macro_derive(StructValue, attributes(ketos))]
+pub fn derive_struct_value(input: TokenStream) -> TokenStream {
+    match gen_struct_value(input) {
+        Ok(output) => output.into(),
+        Err(e) => e.to_compile_error().into()
+    }
+}
+
+fn gen_foreign_value(input: TokenStream) -> Result<TokenStream2, Error> {
+    let ast: DeriveInput = syn::parse(input)?;
+
+    let name = ast.ident;
+    let name_str = name.to_string();
+    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
+
+    Ok(quote!{
+        impl #impl_generics ::ketos::ForeignValue for #name #ty_generics #where_clause {
+            fn type_name(&self) -> &'static str { #name_str }
+        }
+    })
+}
+
+fn gen_from_value(input: TokenStream) -> Result<TokenStream2, Error> {
+    let ast: DeriveInput = syn::parse(input)?;
+
+    let name = ast.ident;
+    let name_str = name.to_string();
+    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
+
+    Ok(quote!{
         impl #impl_generics ::ketos::FromValue for #name #ty_generics #where_clause {
             fn from_value(v: ::ketos::Value) -> ::std::result::Result<Self, ::ketos::ExecError> {
                 match v {
@@ -127,20 +182,17 @@ pub fn derive_from_value(input: TokenStream) -> TokenStream {
                 }
             }
         }
-    };
-
-    expr.to_string().parse().expect("parse quote!")
+    })
 }
 
-#[proc_macro_derive(FromValueClone)]
-pub fn derive_from_value_clone(input: TokenStream) -> TokenStream {
-    let ast: DeriveInput = syn::parse(input).expect("syn::parse");
+fn gen_from_value_clone(input: TokenStream) -> Result<TokenStream2, Error> {
+    let ast: DeriveInput = syn::parse(input)?;
 
     let name = ast.ident;
-    let name_str: &str = name.as_ref();
+    let name_str = name.to_string();
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
-    let expr = quote!{
+    Ok(quote!{
         impl #impl_generics ::ketos::FromValue for #name #ty_generics #where_clause {
             fn from_value(v: ::ketos::Value) -> ::std::result::Result<Self, ::ketos::ExecError> {
                 match v {
@@ -164,23 +216,20 @@ pub fn derive_from_value_clone(input: TokenStream) -> TokenStream {
                 }
             }
         }
-    };
-
-    expr.to_string().parse().expect("parse quote!")
+    })
 }
 
-#[proc_macro_derive(FromValueRef)]
-pub fn derive_from_value_ref(input: TokenStream) -> TokenStream {
-    let ast: DeriveInput = syn::parse(input).expect("syn::parse");
+fn gen_from_value_ref(input: TokenStream) -> Result<TokenStream2, Error> {
+    let ast: DeriveInput = syn::parse(input)?;
 
     let name = ast.ident;
-    let name_str: &str = name.as_ref();
+    let name_str = name.to_string();
     let (impl_generics, ty_generics, where_clause) = split_with_lifetime(&ast.generics);
 
-    let expr = quote!{
+    Ok(quote!{
         impl #impl_generics ::ketos::FromValueRef<'value> for &'value #name #ty_generics #where_clause {
             fn from_value_ref(v: &'value ::ketos::Value) -> ::std::result::Result<Self, ::ketos::ExecError> {
-                if let ::ketos::Value::Foreign(ref fv) = *v {
+                if let ::ketos::Value::Foreign(fv) = v {
                     if let ::std::option::Option::Some(v) = fv.downcast_ref() {
                         return ::std::result::Result::Ok(v);
                     }
@@ -190,47 +239,32 @@ pub fn derive_from_value_ref(input: TokenStream) -> TokenStream {
                     ::ketos::ExecError::expected(#name_str, v))
             }
         }
-    };
-
-    expr.to_string().parse().expect("parse quote!")
+    })
 }
 
-#[proc_macro_derive(IntoValue)]
-pub fn derive_into_value(input: TokenStream) -> TokenStream {
-    let ast: DeriveInput = syn::parse(input).expect("syn::parse");
+fn gen_struct_value(input: TokenStream) -> Result<TokenStream2, Error> {
+    let ast: DeriveInput = syn::parse(input)?;
 
+    let span = ast.ident.span();
     let name = ast.ident;
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
-    let expr = quote!{
-        impl #impl_generics Into<::ketos::Value> for #name #ty_generics #where_clause {
-            fn into(self) -> ::ketos::Value {
-                ::ketos::Value::new_foreign(self)
-            }
-        }
-    };
-
-    expr.to_string().parse().expect("parse quote!")
-}
-
-#[proc_macro_derive(StructValue, attributes(ketos))]
-pub fn derive_struct_value(input: TokenStream) -> TokenStream {
-    let ast: DeriveInput = syn::parse(input).expect("syn::parse");
-
-    let name = ast.ident;
-    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
-
-    let fields = match ast.data {
-        Data::Enum(_) => panic!("cannot derive StructValue for enum types"),
+    let fields = match &ast.data {
+        Data::Enum(_) =>
+            return Err(Error::new(span,
+                "cannot derive StructValue for enum types")),
         Data::Struct(DataStruct{fields: Fields::Unit, ..}) =>
-            panic!("cannot derive StructValue for unit struct types"),
+            return Err(Error::new(span,
+                "cannot derive StructValue for unit struct types")),
         Data::Struct(DataStruct{fields: Fields::Unnamed(..), ..}) =>
-            panic!("cannot derive StructValue for tuple struct types"),
-        Data::Struct(DataStruct{ref fields, ..}) => fields,
-        Data::Union(_) => panic!("cannot derive StructValue for union types"),
+            return Err(Error::new(span,
+                "cannot derive StructValue for tuple struct types")),
+        Data::Struct(DataStruct{fields, ..}) => fields,
+        Data::Union(_) =>
+            return Err(Error::new(span, "cannot derive StructValue for union types")),
     };
 
-    let name_str: &str = name.as_ref();
+    let name_str = name.to_string();
     let mut local = Vec::new();
     let mut field_name = Vec::new();
     let mut field_str = Vec::new();
@@ -238,17 +272,17 @@ pub fn derive_struct_value(input: TokenStream) -> TokenStream {
     let mut handle_set_field = Vec::new();
 
     for field in fields {
-        let opts = parse_attrs(&field.attrs);
+        let opts = AttrOpts::parse(&field.attrs)?;
 
         let ident = field.ident.as_ref().unwrap();
         let ty = &field.ty;
 
         let field_s = opts.rename.unwrap_or_else(
-            || make_field_name(ident.as_ref()));
+            || make_field_name(&ident.to_string()));
 
         // A local binding is created for each field name.
         // It must not conflict with any other bindings in method implementations.
-        let local_ident = Ident::from(format!("__{}", ident));
+        let local_ident = Ident::new(&format!("__{}", ident), Span::call_site());
 
         local.push(local_ident.clone());
         field_name.push(ident.clone());
@@ -269,7 +303,7 @@ pub fn derive_struct_value(input: TokenStream) -> TokenStream {
     let local = &local;
     let field_str = &field_str;
 
-    let expr = quote!{
+    Ok(quote!{
         impl #impl_generics ::ketos::StructValue for #name #ty_generics #where_clause {
             fn struct_name() -> &'static str {
                 #name_str
@@ -283,17 +317,16 @@ pub fn derive_struct_value(input: TokenStream) -> TokenStream {
 
                 let mut iter = fields.iter_mut();
 
-                while let ::std::option::Option::Some(
-                        &mut (name, ref mut field)) = iter.next() {
+                while let ::std::option::Option::Some((name, field)) = iter.next() {
                     let value = field.take();
 
-                    scope.with_name(name, |name_str| {
+                    scope.with_name(*name, |name_str| {
                         match name_str {
                             #( #field_str => { #handle_field } , )*
                             _ => return ::std::result::Result::Err(::ketos::Error::ExecError(
                                 ::ketos::ExecError::MissingField{
                                     struct_name: def.name(),
-                                    field: name,
+                                    field: *name,
                                 }))
                         }
 
@@ -335,16 +368,16 @@ pub fn derive_struct_value(input: TokenStream) -> TokenStream {
                     def: &::std::rc::Rc<::ketos::StructDef>,
                     fields: &mut [(::ketos::Name, ::ketos::Value)])
                     -> ::std::result::Result<(), ::ketos::Error> {
-                for &mut (name, ref mut value) in fields {
+                for (name, value) in fields {
                     let value = value.take();
 
-                    scope.with_name(name, |name_str| {
+                    scope.with_name(*name, |name_str| {
                         match name_str {
                             #( #field_str => { #handle_set_field } , )*
                             _ => return ::std::result::Result::Err(::ketos::Error::ExecError(
                                 ::ketos::ExecError::FieldError{
                                     struct_name: def.name(),
-                                    field: name,
+                                    field: *name,
                                 }))
                         }
 
@@ -355,9 +388,7 @@ pub fn derive_struct_value(input: TokenStream) -> TokenStream {
                 ::std::result::Result::Ok(())
             }
         }
-    };
-
-    expr.to_string().parse().expect("parse quote!")
+    })
 }
 
 #[derive(Default)]
@@ -365,43 +396,55 @@ struct AttrOpts {
     rename: Option<String>,
 }
 
-fn parse_attrs(attrs: &[Attribute]) -> AttrOpts {
-    let mut opts = AttrOpts::default();
+impl AttrOpts {
+    fn parse(attrs: &[Attribute]) -> Result<AttrOpts, Error> {
+        let mut opts = AttrOpts::default();
 
-    for attr in attrs {
-        if is_outer(attr.style) && path_eq(&attr.path, "ketos") {
-            let meta = attr.interpret_meta().unwrap_or_else(
-                || panic!("invalid attribute: {}", tokens_str(attr)));
+        for attr in attrs {
+            if is_outer(attr.style) && path_eq(&attr.path, "ketos") {
+                let meta = attr.parse_meta()?;
 
-            match meta {
-                Meta::Word(_) =>
-                    panic!("#[ketos] is not a valid attribute"),
-                Meta::NameValue(..) =>
-                    panic!("#[ketos = ...] is not a valid attribute"),
-                Meta::List(ref items) => {
-                    for item in &items.nested {
-                        match *item {
-                            NestedMeta::Literal(_) =>
-                                panic!("unexpected meta item `{}`", tokens_str(item)),
-                            NestedMeta::Meta(ref item) => {
-                                match *item {
-                                    Meta::NameValue(ref nv) => {
-                                        match nv.ident.as_ref() {
-                                            "rename" => opts.rename = Some(lit_str(&nv.lit)),
-                                            _ => panic!("unexpected meta item `{}`", tokens_str(item))
-                                        }
-                                    }
-                                    _ => panic!("unexpected meta item `{}`", tokens_str(item))
-                                }
-                            }
+                match meta {
+                    Meta::Word(ident) =>
+                        return Err(Error::new(ident.span(),
+                            "`#[ketos]` is not a valid attribute")),
+                    Meta::NameValue(nv) =>
+                        return Err(Error::new(nv.ident.span(),
+                            "`#[ketos = ...]` is not a valid attribute")),
+                    Meta::List(items) => {
+                        for item in &items.nested {
+                            opts.parse_item(item)?;
                         }
                     }
                 }
             }
         }
+
+        Ok(opts)
     }
 
-    opts
+    fn parse_item(&mut self, item: &NestedMeta) -> Result<(), Error> {
+        match item {
+            NestedMeta::Literal(lit) =>
+                return Err(unexpected_meta_item(lit.span())),
+            NestedMeta::Meta(item) => {
+                match item {
+                    Meta::NameValue(nv) => {
+                        match &nv.ident.to_string()[..] {
+                            "rename" => self.rename = Some(lit_str(&nv.lit)?),
+                            _ => return Err(unexpected_meta_item(nv.ident.span()))
+                        }
+                    }
+                    Meta::Word(ident) =>
+                        return Err(unexpected_meta_item(ident.span())),
+                    Meta::List(list) =>
+                        return Err(unexpected_meta_item(list.ident.span())),
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
 fn path_eq(path: &Path, s: &str) -> bool {
@@ -409,7 +452,7 @@ fn path_eq(path: &Path, s: &str) -> bool {
         let seg = path.segments.first().unwrap().into_value();
 
         match seg.arguments {
-            PathArguments::None => seg.ident.as_ref() == s,
+            PathArguments::None => seg.ident == s,
             _ => false
         }
     }
@@ -422,10 +465,10 @@ fn is_outer(style: AttrStyle) -> bool {
     }
 }
 
-fn lit_str(lit: &Lit) -> String {
-    match *lit {
-        Lit::Str(ref s) => s.value(),
-        _ => panic!("unexpected literal `{}`", tokens_str(lit))
+fn lit_str(lit: &Lit) -> Result<String, Error> {
+    match lit {
+        Lit::Str(s) => Ok(s.value()),
+        _ => Err(Error::new(lit.span(), "expected string literal"))
     }
 }
 
@@ -433,10 +476,8 @@ fn make_field_name(name: &str) -> String {
     name.replace("_", "-")
 }
 
-fn tokens_str<T: ToTokens>(t: &T) -> String {
-    let mut tok = Tokens::new();
-    t.to_tokens(&mut tok);
-    tok.to_string()
+fn unexpected_meta_item(span: Span) -> Error {
+    Error::new(span, "unexpected meta item")
 }
 
 fn split_with_lifetime(generics: &Generics)
@@ -449,7 +490,7 @@ fn split_with_lifetime(generics: &Generics)
 struct LtImplGenerics<'a>(&'a Generics);
 
 impl<'a> ToTokens for LtImplGenerics<'a> {
-    fn to_tokens(&self, tokens: &mut Tokens) {
+    fn to_tokens(&self, tokens: &mut TokenStream2) {
         let mut generics = self.0.clone();
 
         let lt = LifetimeDef::new(Lifetime::new("'value", Span::call_site()));

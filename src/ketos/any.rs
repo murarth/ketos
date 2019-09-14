@@ -1,19 +1,5 @@
 //! Support for `Any` trait usage
 
-use std::any::{Any, TypeId};
-
-/// A helper trait that is necessary as long as `Any::get_type_id` is unstable.
-pub trait AnyValue: Any {
-    /// Returns the `TypeId` value for the type.
-    fn type_id(&self) -> TypeId;
-}
-
-impl<T: Any> AnyValue for T {
-    fn type_id(&self) -> TypeId {
-        TypeId::of::<Self>()
-    }
-}
-
 /// Duplicate definition of `std::raw::TraitObject`, which is unstable.
 #[repr(C)]
 pub struct TraitObject {
@@ -89,12 +75,11 @@ macro_rules! impl_any_cast {
 
 #[cfg(test)]
 mod test {
-    use super::AnyValue;
-
+    use std::any::Any;
     use std::fmt;
     use std::rc::Rc;
 
-    trait SomeTrait: AnyValue + fmt::Debug {}
+    trait SomeTrait: Any + fmt::Debug {}
 
     impl_any_cast!{ SomeTrait }
 

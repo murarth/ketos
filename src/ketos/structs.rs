@@ -1,12 +1,11 @@
 //! Implementation of `Struct` and `StructDef` values
 
-use std::any::TypeId;
+use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::fmt;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
-use crate::any::AnyValue;
 use crate::error::Error;
 use crate::exec::ExecError;
 use crate::function::value_is;
@@ -49,7 +48,7 @@ pub trait StructValue: Sized + Clone + ForeignValue {
 }
 
 /// Implements construction and field access for `Struct` and `struct`-like values.
-pub trait StructDefinition: AnyValue {
+pub trait StructDefinition: Any {
     /// Returns whether the given value is an instance of the given `StructDef`.
     ///
     /// `def` is the `StructDef` instance for this definition.

@@ -1,5 +1,6 @@
 //! Represents any possible value type.
 
+use std::any::Any;
 use std::cmp::Ordering;
 use std::f64::{INFINITY, NEG_INFINITY};
 use std::ffi::{OsStr, OsString};
@@ -8,7 +9,6 @@ use std::mem::replace;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use crate::any::AnyValue;
 use crate::bytes::Bytes;
 use crate::error::Error;
 use crate::exec::{Context, ExecError};
@@ -77,7 +77,7 @@ impl Value {
 
     /// Returns a value containing a foreign function.
     pub fn new_foreign_fn<F>(name: Name, f: F) -> Value
-            where F: AnyValue + Fn(&Context, &mut [Value]) -> Result<Value, Error> {
+            where F: Any + Fn(&Context, &mut [Value]) -> Result<Value, Error> {
         Value::new_foreign(ForeignFn{ name, f })
     }
 
@@ -388,7 +388,7 @@ impl Value {
 
 /// Represents a type of value defined outside the core interpreter.
 #[allow(unused_variables)]
-pub trait ForeignValue: AnyValue + fmt::Debug {
+pub trait ForeignValue: Any + fmt::Debug {
     /// Performs ordered comparison between two values of a foreign type.
     ///
     /// If a true, `Ord`-like comparison cannot be made,
@@ -500,7 +500,7 @@ impl<F> fmt::Debug for ForeignFn<F> {
 }
 
 impl<F> ForeignValue for ForeignFn<F>
-        where F: AnyValue + Fn(&Context, &mut [Value]) -> Result<Value, Error> {
+        where F: Any + Fn(&Context, &mut [Value]) -> Result<Value, Error> {
     fn compare_to(&self, _rhs: &ForeignValue) -> Result<Ordering, ExecError> {
         Err(ExecError::CannotCompare("foreign-fn"))
     }
