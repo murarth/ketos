@@ -1,6 +1,6 @@
 [package]
 name = "ketos_derive"
-version = "0.11.0"
+version = "0.12.0"
 authors = ["Murarth <murarth@gmail.com>"]
 edition = "2018"
 
