@@ -1,6 +1,6 @@
 //! Implements builtin `random` module.
 
-use rand::{thread_rng, Rng};
+use rand::{seq::SliceRandom, thread_rng, Rng};
 
 use crate::error::Error;
 use crate::exec::{Context, ExecError};
@@ -31,7 +31,7 @@ fn fn_shuffle(_ctx: &Context, args: &mut [Value]) -> Result<Value, Error> {
 
     match v {
         Value::Unit => (),
-        Value::List(ref mut li) => thread_rng().shuffle(li),
+        Value::List(ref mut li) => li.shuffle(&mut thread_rng()),
         ref v => return Err(From::from(ExecError::expected("list", v)))
     }
 
