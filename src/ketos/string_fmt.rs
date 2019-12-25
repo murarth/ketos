@@ -1676,29 +1676,29 @@ fn get_roman_digit(n: u32, old: bool) -> Roman {
     if old {
         match n {
             n if n >= 1000  => Roman::One('M', 1000),
-            500 ... 999     => Roman::One('D', 500),
-            100 ... 499     => Roman::One('C', 100),
-            50 ... 99       => Roman::One('L', 50),
-            10 ... 49       => Roman::One('X', 10),
-            5 ... 9         => Roman::One('V', 5),
-            1 ... 4         => Roman::One('I', 1),
+            500 ..= 999     => Roman::One('D', 500),
+            100 ..= 499     => Roman::One('C', 100),
+            50 ..= 99       => Roman::One('L', 50),
+            10 ..= 49       => Roman::One('X', 10),
+            5 ..= 9         => Roman::One('V', 5),
+            1 ..= 4         => Roman::One('I', 1),
             _               => panic!("no roman numeral zero")
         }
     } else {
         match n {
             n if n >= 1000  => Roman::One(     'M', 1000),
-            900 ... 999     => Roman::Two('C', 'M', 900),
-            500 ... 899     => Roman::One(     'D', 500),
-            400 ... 499     => Roman::Two('C', 'D', 400),
-            100 ... 399     => Roman::One(     'C', 100),
-            90 ... 99       => Roman::Two('X', 'C', 90),
-            50 ... 89       => Roman::One(     'L', 50),
-            40 ... 49       => Roman::Two('X', 'L', 40),
-            10 ... 39       => Roman::One(     'X', 10),
+            900 ..= 999     => Roman::Two('C', 'M', 900),
+            500 ..= 899     => Roman::One(     'D', 500),
+            400 ..= 499     => Roman::Two('C', 'D', 400),
+            100 ..= 399     => Roman::One(     'C', 100),
+            90 ..= 99       => Roman::Two('X', 'C', 90),
+            50 ..= 89       => Roman::One(     'L', 50),
+            40 ..= 49       => Roman::Two('X', 'L', 40),
+            10 ..= 39       => Roman::One(     'X', 10),
             9               => Roman::Two('I', 'X', 9),
-            5 ... 8         => Roman::One(     'V', 5),
+            5 ..= 8         => Roman::One(     'V', 5),
             4               => Roman::Two('I', 'V', 4),
-            1 ... 3         => Roman::One(     'I', 1),
+            1 ..= 3         => Roman::One(     'I', 1),
             _               => panic!("no roman numeral zero")
         }
     }

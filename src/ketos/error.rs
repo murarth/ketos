@@ -64,7 +64,7 @@ error_type!{
         /// Code execution breached configured restrictions
         RestrictError(RestrictError),
         /// Customized error value implementing `std::error::Error`
-        Custom(Box<StdError>),
+        Custom(Box<dyn StdError>),
     }
 }
 

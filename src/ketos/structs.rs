@@ -306,7 +306,7 @@ pub struct StructDef {
     /// Struct name
     name: Name,
     /// Implementation of struct definition
-    def: Box<StructDefinition>,
+    def: Box<dyn StructDefinition>,
 }
 
 impl fmt::Debug for StructDef {
@@ -334,7 +334,7 @@ fn ptr_eq<T>(a: *const T, b: *const T) -> bool {
 
 impl StructDef {
     /// Creates a new `StructDef` with the given name and fields.
-    pub fn new(name: Name, def: Box<StructDefinition>) -> StructDef {
+    pub fn new(name: Name, def: Box<dyn StructDefinition>) -> StructDef {
         StructDef{ name, def }
     }
 
@@ -344,7 +344,7 @@ impl StructDef {
     }
 
     /// Returns a reference to the `StructDefinition` implementation.
-    pub fn def(&self) -> &StructDefinition {
+    pub fn def(&self) -> &dyn StructDefinition {
         &*self.def
     }
 }

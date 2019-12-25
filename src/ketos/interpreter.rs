@@ -47,7 +47,7 @@ pub struct Builder {
     restrict: Option<RestrictConfig>,
     io: Option<Rc<GlobalIo>>,
     struct_defs: Option<Rc<RefCell<StructDefMap>>>,
-    module_loader: Option<Box<ModuleLoader>>,
+    module_loader: Option<Box<dyn ModuleLoader>>,
     search_paths: Option<Vec<PathBuf>>,
 }
 
@@ -135,7 +135,7 @@ impl Builder {
     }
 
     /// Sets the module loader in the new scope.
-    pub fn module_loader(mut self, loader: Box<ModuleLoader>) -> Self {
+    pub fn module_loader(mut self, loader: Box<dyn ModuleLoader>) -> Self {
         exclude!(self.context, "module_loader", "context");
         exclude!(self.scope, "module_loader", "scope");
         exclude!(self.search_paths, "module_loader", "search_paths");
@@ -186,7 +186,7 @@ impl Builder {
         Rc::new(GlobalScope::new(name, names, codemap, modules, io, defs))
     }
 
-    fn build_loader(&mut self) -> Box<ModuleLoader> {
+    fn build_loader(&mut self) -> Box<dyn ModuleLoader> {
         match (self.module_loader.take(), self.search_paths.take()) {
             (Some(loader), _) => loader,
             (None, Some(paths)) =>
@@ -217,7 +217,7 @@ impl Interpreter {
     }
 
     /// Creates a new `Interpreter` using the given `ModuleLoader` instance.
-    pub fn with_loader(loader: Box<ModuleLoader>) -> Interpreter {
+    pub fn with_loader(loader: Box<dyn ModuleLoader>) -> Interpreter {
         let mut names = NameStore::new();
         let name = names.add("main");
 

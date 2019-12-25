@@ -11,16 +11,16 @@ use crate::name::{NameDisplay, NameStore};
 /// Contains global shared I/O objects
 pub struct GlobalIo {
     /// Shared standard output writer
-    pub stdout: Rc<SharedWrite>,
+    pub stdout: Rc<dyn SharedWrite>,
 
     /// Shared standard error writer
-    pub stderr: Rc<SharedWrite>,
+    pub stderr: Rc<dyn SharedWrite>,
 }
 
 impl GlobalIo {
     /// Creates a `GlobalIo` instance using the given `stdout` and `stderr`
     /// writers.
-    pub fn new(stdout: Rc<SharedWrite>, stderr: Rc<SharedWrite>) -> GlobalIo {
+    pub fn new(stdout: Rc<dyn SharedWrite>, stderr: Rc<dyn SharedWrite>) -> GlobalIo {
         GlobalIo{ stdout, stderr }
     }
 

@@ -66,7 +66,7 @@ pub enum Value {
     /// Compiled bytecode function
     Lambda(Lambda),
     /// Boxed value of a foreign type
-    Foreign(Rc<ForeignValue>),
+    Foreign(Rc<dyn ForeignValue>),
 }
 
 impl Value {
@@ -395,7 +395,7 @@ pub trait ForeignValue: Any + fmt::Debug {
     /// `ExecError::CannotCompare(..)` should be returned.
     ///
     /// The default implementation unconditionally returns an error.
-    fn compare_to(&self, rhs: &ForeignValue) -> Result<Ordering, ExecError> {
+    fn compare_to(&self, rhs: &dyn ForeignValue) -> Result<Ordering, ExecError> {
         Err(ExecError::CannotCompare(self.type_name()))
     }
 
@@ -417,14 +417,14 @@ pub trait ForeignValue: Any + fmt::Debug {
     /// A type implementing `ForeignValue` need only implement `is_identical`
     /// if it contains a float-type value or emulates some equality relationship
     /// similar to `NaN`.
-    fn is_identical_to(&self, rhs: &ForeignValue) -> bool {
+    fn is_identical_to(&self, rhs: &dyn ForeignValue) -> bool {
         self.is_equal_to(rhs).unwrap_or(false)
     }
 
     /// Tests for equality between two values of a foreign type.
     ///
     /// The default implementation unconditionally returns an error.
-    fn is_equal_to(&self, rhs: &ForeignValue) -> Result<bool, ExecError> {
+    fn is_equal_to(&self, rhs: &dyn ForeignValue) -> Result<bool, ExecError> {
         Err(ExecError::TypeMismatch{
             lhs: self.type_name(),
             rhs: rhs.type_name(),
@@ -501,7 +501,7 @@ impl<F> fmt::Debug for ForeignFn<F> {
 
 impl<F> ForeignValue for ForeignFn<F>
         where F: Any + Fn(&Context, &mut [Value]) -> Result<Value, Error> {
-    fn compare_to(&self, _rhs: &ForeignValue) -> Result<Ordering, ExecError> {
+    fn compare_to(&self, _rhs: &dyn ForeignValue) -> Result<Ordering, ExecError> {
         Err(ExecError::CannotCompare("foreign-fn"))
     }
 

@@ -12,7 +12,7 @@ pub struct TraitObject {
 // Implements downcast methods for a trait object type
 macro_rules! impl_any_cast {
     ( $ty:ident ) => {
-        impl $ty {
+        impl dyn $ty {
             /// Returns whether the contained value is of the given type.
             pub fn is<T: $ty>(&self) -> bool {
                 self.type_id() == ::std::any::TypeId::of::<T>()
@@ -97,7 +97,7 @@ mod test {
 
     #[test]
     fn test_downcast() {
-        let a: Box<SomeTrait> = Box::new(Dummy{a: 0});
+        let a: Box<dyn SomeTrait> = Box::new(Dummy{a: 0});
 
         let b = SomeTrait::downcast::<Dumber>(a).unwrap_err();
         let c = SomeTrait::downcast::<Dummy>(b).unwrap();
@@ -107,7 +107,7 @@ mod test {
 
     #[test]
     fn test_downcast_rc() {
-        let a: Rc<SomeTrait> = Rc::new(Dummy{a: 0});
+        let a: Rc<dyn SomeTrait> = Rc::new(Dummy{a: 0});
 
         let b = SomeTrait::downcast_rc::<Dumber>(a).unwrap_err();
         let c = SomeTrait::downcast_rc::<Dummy>(b).unwrap();
@@ -117,7 +117,7 @@ mod test {
 
     #[test]
     fn test_downcast_ref() {
-        let mut a: Box<SomeTrait> = Box::new(Dummy{a: 0});
+        let mut a: Box<dyn SomeTrait> = Box::new(Dummy{a: 0});
 
         {
             let r = a.downcast_mut::<Dummy>().unwrap();

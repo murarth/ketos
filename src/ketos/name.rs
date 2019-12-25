@@ -290,7 +290,7 @@ impl<'a, T: NameDisplay> fmt::Display for NameDisplayer<'a, T> {
     }
 }
 
-impl NameDisplay for Box<StdError> {
+impl NameDisplay for Box<dyn StdError> {
     fn fmt(&self, _names: &NameStore, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Display::fmt(self, f)
     }

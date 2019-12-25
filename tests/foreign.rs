@@ -13,7 +13,7 @@ pub struct MyType {
 }
 
 impl ketos::ForeignValue for MyType {
-    fn compare_to(&self, rhs: &ForeignValue) -> Result<Ordering, ExecError> {
+    fn compare_to(&self, rhs: &dyn ForeignValue) -> Result<Ordering, ExecError> {
         match rhs.downcast_ref::<MyType>() {
             Some(rhs) => Ok(self.cmp(rhs)),
             None => Err(ExecError::TypeMismatch{
@@ -23,7 +23,7 @@ impl ketos::ForeignValue for MyType {
         }
     }
 
-    fn is_equal_to(&self, rhs: &ForeignValue) -> Result<bool, ExecError> {
+    fn is_equal_to(&self, rhs: &dyn ForeignValue) -> Result<bool, ExecError> {
         match rhs.downcast_ref::<MyType>() {
             Some(rhs) => Ok(*self == *rhs),
             None => Err(ExecError::TypeMismatch{

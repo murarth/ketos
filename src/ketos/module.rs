@@ -210,14 +210,14 @@ impl ModuleCode {
 
 /// Loads modules into the running program and caches previously loaded modules
 pub struct ModuleRegistry {
-    loader: Box<ModuleLoader>,
+    loader: Box<dyn ModuleLoader>,
     modules: RefCell<NameMap<Module>>,
 }
 
 impl ModuleRegistry {
     /// Creates a new `ModuleRegistry` using the given `ModuleLoader`
     /// to load new modules.
-    pub fn new(loader: Box<ModuleLoader>) -> ModuleRegistry {
+    pub fn new(loader: Box<dyn ModuleLoader>) -> ModuleRegistry {
         ModuleRegistry{
             loader,
             modules: RefCell::new(NameMap::new()),

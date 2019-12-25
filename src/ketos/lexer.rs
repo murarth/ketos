@@ -262,7 +262,7 @@ impl<'lex> Lexer<'lex> {
                     Some((_, '@')) => Ok((Token::CommaAt, 2)),
                     _ => Ok((Token::Comma, 1)),
                 },
-                '-' | '0' ... '9' => parse_number(&self.input[ind..]),
+                '-' | '0' ..= '9' => parse_number(&self.input[ind..]),
                 '"' => Ok(parse_string(&self.input[ind..], self.code_offset + lo)?),
                 '#' => match chars.next() {
                     Some((_, 'b')) => {
