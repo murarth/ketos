@@ -6,8 +6,7 @@
 //! any struct or enum value. For example:
 //!
 //! ```ignore
-//! extern crate ketos;
-//! #[macro_use] extern crate ketos_derive;
+//! #[macro_use] extern crate ketos;
 //!
 //! #[derive(Clone, Debug, ForeignValue, FromValue, IntoValue)]
 //! struct Foo {
@@ -64,18 +63,15 @@
 #![recursion_limit = "256"]
 
 extern crate proc_macro;
-extern crate proc_macro2;
-#[macro_use] extern crate quote;
-extern crate syn;
 
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
-use quote::ToTokens;
+use quote::{quote, ToTokens};
 use syn::{
     parse::Error, spanned::Spanned,
     AttrStyle, Attribute, Data, DataStruct, DeriveInput, Fields,
     GenericParam, Generics, Ident, Lifetime, LifetimeDef, Lit, Meta, NestedMeta,
-    Path, PathArguments, TypeGenerics, WhereClause,
+    TypeGenerics, WhereClause,
 };
 
 #[proc_macro_derive(ForeignValue)]
@@ -401,15 +397,15 @@ impl AttrOpts {
         let mut opts = AttrOpts::default();
 
         for attr in attrs {
-            if is_outer(attr.style) && path_eq(&attr.path, "ketos") {
+            if is_outer(attr.style) && attr.path.is_ident("ketos") {
                 let meta = attr.parse_meta()?;
 
                 match meta {
-                    Meta::Word(ident) =>
-                        return Err(Error::new(ident.span(),
+                    Meta::Path(path) =>
+                        return Err(Error::new(path.span(),
                             "`#[ketos]` is not a valid attribute")),
                     Meta::NameValue(nv) =>
-                        return Err(Error::new(nv.ident.span(),
+                        return Err(Error::new(nv.path.span(),
                             "`#[ketos = ...]` is not a valid attribute")),
                     Meta::List(items) => {
                         for item in &items.nested {
@@ -425,36 +421,26 @@ impl AttrOpts {
 
     fn parse_item(&mut self, item: &NestedMeta) -> Result<(), Error> {
         match item {
-            NestedMeta::Literal(lit) =>
+            NestedMeta::Lit(lit) =>
                 return Err(unexpected_meta_item(lit.span())),
             NestedMeta::Meta(item) => {
                 match item {
                     Meta::NameValue(nv) => {
-                        match &nv.ident.to_string()[..] {
-                            "rename" => self.rename = Some(lit_str(&nv.lit)?),
-                            _ => return Err(unexpected_meta_item(nv.ident.span()))
+                        if nv.path.is_ident("rename") {
+                            self.rename = Some(lit_str(&nv.lit)?);
+                        } else {
+                            return Err(unexpected_meta_item(nv.path.span()));
                         }
                     }
-                    Meta::Word(ident) =>
-                        return Err(unexpected_meta_item(ident.span())),
+                    Meta::Path(path) =>
+                        return Err(unexpected_meta_item(path.span())),
                     Meta::List(list) =>
-                        return Err(unexpected_meta_item(list.ident.span())),
+                        return Err(unexpected_meta_item(list.path.span())),
                 }
             }
         }
 
         Ok(())
-    }
-}
-
-fn path_eq(path: &Path, s: &str) -> bool {
-    path.segments.len() == 1 && {
-        let seg = path.segments.first().unwrap().into_value();
-
-        match seg.arguments {
-            PathArguments::None => seg.ident == s,
-            _ => false
-        }
     }
 }
 
