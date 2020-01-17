@@ -38,3 +38,10 @@ The `random` module provides access to random number generation functions.
 
 * `random` returns a random float value in the range `[0.0, 1.0)`.
 * `shuffle` returns a given list in random order.
+
+## `time`
+
+The `time` module provides access to the current time.
+
+* `utc-timestamp` returns the number of non-leap seconds observed in the UTC timezone since January 1st 1970.
+* `local-timestamp` returns the number of non-leap seconds observed in the local timezone since January 1st 1970.

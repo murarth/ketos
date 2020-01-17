@@ -22,6 +22,7 @@ use crate::value::Value;
 use crate::mod_code;
 use crate::mod_math;
 use crate::mod_random;
+use crate::mod_time;
 
 /// Contains the values in a loaded module's namespace.
 #[derive(Clone)]
@@ -327,6 +328,7 @@ fn get_loader(name: &str) -> Option<fn(Scope) -> Module> {
         "code" => Some(mod_code::load),
         "math" => Some(mod_math::load),
         "random" => Some(mod_random::load),
+        "time" => Some(mod_time::load),
         _ => None
     }
 }

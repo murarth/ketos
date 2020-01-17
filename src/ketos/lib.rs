@@ -93,3 +93,4 @@ pub mod value;
 mod mod_code;
 mod mod_math;
 mod mod_random;
+mod mod_time;
