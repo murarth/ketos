@@ -330,7 +330,8 @@ impl<'a> Compiler<'a> {
             }
         }
 
-        replace(&mut self.blocks, new_blocks);
+        // drop the old value
+        let _ = replace(&mut self.blocks, new_blocks);
 
         for block in &mut self.blocks {
             if let Some((_, dest)) = block.jump {

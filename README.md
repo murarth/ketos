@@ -43,6 +43,16 @@ Build optimized executable:
 `ketos` can be run as an interpreter to execute Ketos code files (`.ket`)
 or run as an interactive read-eval-print loop.
 
+## WebAssembly
+
+This library supports compiling to WebAssembly, but some internal APIs are only
+available on the nightly compiler. Include `ketos` in your `Cargo.toml` like so:
+
+```toml
+[dependencies]
+ketos = { version = "x.y.z", default-features = false }
+```
+
 ## License
 
 Ketos is distributed under the terms of both the MIT license and the

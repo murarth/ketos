@@ -113,7 +113,7 @@ impl<T: StructValue> ForeignStructDef<T> {
     fn get_rc(&self, value: Value) -> Rc<T> {
         match value {
             Value::Foreign(fv) => {
-                ForeignValue::downcast_rc::<T>(fv)
+                <dyn ForeignValue>::downcast_rc::<T>(fv)
                     .expect("invalid foreign value for ForeignStructDef")
             }
             _ => panic!("invalid value for ForeignStructDef")
