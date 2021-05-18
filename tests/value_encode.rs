@@ -1,4 +1,4 @@
-#![cfg(all(feature = "serde", feature = "serde_derive"))]
+#![cfg(all(feature = "serde", feature = "serde_derive", not(target_arch = "wasm32")))]
 
 extern crate ketos;
 extern crate serde;

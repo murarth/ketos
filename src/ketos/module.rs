@@ -1,20 +1,29 @@
 //! Implements loading named values from code modules.
 
 use std::cell::RefCell;
+#[cfg(not(target_arch = "wasm32"))]
 use std::fs::{File, Metadata};
+#[cfg(not(target_arch = "wasm32"))]
 use std::io::{stderr, Read, Write};
+#[cfg(not(target_arch = "wasm32"))]
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use crate::bytecode::Code;
-use crate::compile::{compile, CompileError};
+use crate::compile::CompileError;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::compile::compile;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::encode::{DecodeError, read_bytecode_file, write_bytecode_file};
 use crate::error::Error;
 use crate::exec::{Context, execute};
 use crate::function::{Arity, Function, FunctionImpl, Lambda, SystemFn};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::io::{IoError, IoMode};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::lexer::Lexer;
 use crate::name::{Name, NameMap, NameSetSlice};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::parser::Parser;
 use crate::scope::{GlobalScope, ImportSet, Scope};
 use crate::value::Value;
@@ -341,6 +350,7 @@ fn load_builtin_module(name: Name, scope: &Scope) -> Result<Module, Error> {
 }
 
 /// Loads modules from source files and compiled bytecode files.
+#[cfg(not(target_arch = "wasm32"))]
 pub struct FileModuleLoader {
     /// Tracks import chains to prevent infinite recursion
     chain: RefCell<Vec<PathBuf>>,
@@ -358,6 +368,7 @@ pub const FILE_EXTENSION: &str = "ket";
 /// File extension for `ketos` compiled bytecode files.
 pub const COMPILED_FILE_EXTENSION: &str = "ketc";
 
+#[cfg(not(target_arch = "wasm32"))]
 impl FileModuleLoader {
     /// Creates a new `FileModuleLoader` that will search the current
     /// directory for modules.
@@ -407,6 +418,7 @@ impl FileModuleLoader {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl ModuleLoader for FileModuleLoader {
     fn load_module(&self, name: Name, ctx: Context) -> Result<Module, Error> {
         let (src_fname, code_fname) = ctx.scope().with_name(name, |name_str| {
@@ -474,12 +486,14 @@ impl ModuleLoader for FileModuleLoader {
 }
 
 #[derive(Copy, Clone)]
+#[cfg(not(target_arch = "wasm32"))]
 enum ModuleFileResult {
     NotFound,
     UseCode,
     UseSource,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn find_module_file(src_path: &Path, code_path: &Path) -> Result<ModuleFileResult, Error> {
     match (code_path.exists(), src_path.exists()) {
         (true, true) if is_younger(code_path, src_path)? =>
@@ -490,6 +504,7 @@ fn find_module_file(src_path: &Path, code_path: &Path) -> Result<ModuleFileResul
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn find_source_file(src_path: &Path) -> ModuleFileResult {
     if src_path.exists() {
         ModuleFileResult::UseSource
@@ -498,6 +513,7 @@ fn find_source_file(src_path: &Path) -> ModuleFileResult {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn is_younger(a: &Path, b: &Path) -> Result<bool, Error> {
     let ma = a.metadata()
         .map_err(|e| IoError::new(IoMode::Stat, a, e))?;
@@ -519,6 +535,7 @@ fn is_younger_impl(ma: &Metadata, mb: &Metadata) -> bool {
     ma.last_write_time() > mb.last_write_time()
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn load_module_from_file(ctx: Context, name: Name,
         src_path: &Path, code_path: Option<&Path>) -> Result<Module, Error> {
     let mut file = File::open(src_path)
@@ -611,6 +628,7 @@ fn process_imports(ctx: &Context, imports: &[ImportSet]) -> Result<(), Error> {
     Ok(())
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn check_exports(scope: &Scope, mod_name: Name) -> Result<(), CompileError> {
     scope.with_exports(|exports| {
         for name in exports {

@@ -3,7 +3,9 @@
 use std::cell::RefCell;
 use std::fs::File;
 use std::io::{stderr, Read, Write};
-use std::path::{Path, PathBuf};
+use std::path::Path;
+#[cfg(not(target_arch = "wasm32"))]
+use std::path::PathBuf;
 use std::rc::Rc;
 
 use crate::bytecode::Code;
@@ -12,7 +14,9 @@ use crate::error::Error;
 use crate::exec::{call_function, execute, Context, ExecError};
 use crate::io::{GlobalIo, IoError, IoMode};
 use crate::lexer::{CodeMap, Lexer};
-use crate::module::{BuiltinModuleLoader, FileModuleLoader, ModuleLoader, ModuleRegistry};
+use crate::module::{BuiltinModuleLoader, ModuleLoader, ModuleRegistry};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::module::{FileModuleLoader};
 use crate::name::{debug_names, display_names, NameStore};
 use crate::parser::{ParseError, Parser};
 use crate::restrict::RestrictConfig;
@@ -48,6 +52,7 @@ pub struct Builder {
     io: Option<Rc<GlobalIo>>,
     struct_defs: Option<Rc<RefCell<StructDefMap>>>,
     module_loader: Option<Box<dyn ModuleLoader>>,
+    #[cfg(not(target_arch = "wasm32"))]
     search_paths: Option<Vec<PathBuf>>,
 }
 
@@ -70,6 +75,7 @@ impl Builder {
             io: None,
             struct_defs: None,
             module_loader: None,
+            #[cfg(not(target_arch = "wasm32"))]
             search_paths: None,
         }
     }
@@ -90,6 +96,7 @@ impl Builder {
         exclude!(self.restrict, "context", "restrict");
         exclude!(self.io, "context", "io");
         exclude!(self.module_loader, "context", "module_loader");
+        #[cfg(not(target_arch = "wasm32"))]
         exclude!(self.search_paths, "context", "search_paths");
 
         self.context = Some(ctx);
@@ -110,6 +117,7 @@ impl Builder {
         exclude!(self.context, "scope", "context");
         exclude!(self.io, "scope", "io");
         exclude!(self.module_loader, "scope", "module_loader");
+        #[cfg(not(target_arch = "wasm32"))]
         exclude!(self.search_paths, "scope", "search_paths");
 
         self.scope = Some(scope);
@@ -138,6 +146,7 @@ impl Builder {
     pub fn module_loader(mut self, loader: Box<dyn ModuleLoader>) -> Self {
         exclude!(self.context, "module_loader", "context");
         exclude!(self.scope, "module_loader", "scope");
+        #[cfg(not(target_arch = "wasm32"))]
         exclude!(self.search_paths, "module_loader", "search_paths");
 
         self.module_loader = Some(loader);
@@ -145,6 +154,7 @@ impl Builder {
     }
 
     /// Sets the search paths for a new `FileModuleLoader`.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn search_paths(mut self, paths: Vec<PathBuf>) -> Self {
         exclude!(self.context, "search_paths", "context");
         exclude!(self.scope, "search_paths", "scope");
@@ -186,6 +196,7 @@ impl Builder {
         Rc::new(GlobalScope::new(name, names, codemap, modules, io, defs))
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn build_loader(&mut self) -> Box<dyn ModuleLoader> {
         match (self.module_loader.take(), self.search_paths.take()) {
             (Some(loader), _) => loader,
@@ -193,6 +204,14 @@ impl Builder {
                 Box::new(BuiltinModuleLoader.chain(
                     FileModuleLoader::with_search_paths(paths))),
             (None, None) => Box::new(BuiltinModuleLoader)
+        }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn build_loader(&mut self) -> Box<dyn ModuleLoader> {
+        match self.module_loader.take() {
+            Some(loader) => loader,
+            None => Box::new(BuiltinModuleLoader)
         }
     }
 }
@@ -250,6 +269,7 @@ impl Interpreter {
 
     /// Creates a new `Interpreter` that searches for module files in a given
     /// series of directories.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn with_search_paths(paths: Vec<PathBuf>) -> Interpreter {
         Interpreter::with_loader(Box::new(
             BuiltinModuleLoader.chain(FileModuleLoader::with_search_paths(paths))))

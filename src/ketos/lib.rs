@@ -47,7 +47,9 @@ pub use crate::function::Arity;
 pub use crate::interpreter::{Builder, Interpreter};
 pub use crate::integer::{Integer, Ratio};
 pub use crate::io::{File, GlobalIo, IoError, SharedWrite};
-pub use crate::module::{BuiltinModuleLoader, FileModuleLoader, Module, ModuleBuilder, ModuleLoader};
+pub use crate::module::{BuiltinModuleLoader, Module, ModuleBuilder, ModuleLoader};
+#[cfg(not(target_arch = "wasm32"))]
+pub use crate::module::{FileModuleLoader};
 pub use crate::name::{Name, NameStore};
 pub use crate::parser::{ParseError, ParseErrorKind};
 pub use crate::restrict::{RestrictConfig, RestrictError};
